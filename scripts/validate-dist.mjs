@@ -115,13 +115,18 @@ if (
   throw new Error("Manifest must use the bundled module service worker");
 }
 
-const legalFiles = ["terms/privacy.md", "terms/terms.md"];
+const legalFiles = [
+  "terms/privacy.md",
+  "terms/terms.md",
+  "pages/privacy.html",
+  "pages/terms.html",
+];
 await Promise.all(legalFiles.map((file) => access(path.join(process.cwd(), file))));
 const requiredStoreUrls = [
   "https://github.com/interjc/chrome-x-not-brother",
   "https://github.com/interjc/chrome-x-not-brother/issues",
-  "https://github.com/interjc/chrome-x-not-brother/blob/main/terms/privacy.md",
-  "https://github.com/interjc/chrome-x-not-brother/blob/main/terms/terms.md",
+  "https://interjc.github.io/chrome-x-not-brother/privacy.html",
+  "https://interjc.github.io/chrome-x-not-brother/terms.html",
 ];
 for (const url of requiredStoreUrls) {
   if (!storeListing.includes(url)) {

@@ -3,7 +3,8 @@
 - Developer / 开发者：Justin Chen
 - Source / 源码：https://github.com/interjc/chrome-x-not-brother
 - Contact / 联系：https://github.com/interjc/chrome-x-not-brother/issues
-- Terms of use / 使用条款：https://github.com/interjc/chrome-x-not-brother/blob/main/terms/terms.md
+- Public page / 公开页面：https://interjc.github.io/chrome-x-not-brother/privacy.html
+- Terms of use / 使用条款：https://interjc.github.io/chrome-x-not-brother/terms.html
 - Effective date / 生效日期：2026-08-18
 
 Do not paste passwords, cookies, export backups, or other people's account data into Issues.

@@ -138,13 +138,13 @@ https://github.com/interjc/chrome-x-not-brother/issues
 
 ### Privacy policy URL
 
-https://github.com/interjc/chrome-x-not-brother/blob/main/terms/privacy.md
+https://interjc.github.io/chrome-x-not-brother/privacy.html
 
 ### Terms of use URL
 
 Chrome Web Store 没有单独的条款字段时，把该地址写在隐私政策或详细说明中即可。
 
-https://github.com/interjc/chrome-x-not-brother/blob/main/terms/terms.md
+https://interjc.github.io/chrome-x-not-brother/terms.html
 
 ## Permission justifications
 
@@ -199,6 +199,6 @@ Issues: https://github.com/interjc/chrome-x-not-brother/issues
 - Confirm all three descriptions advertise the same features and limitations.
 - Confirm the current version and release notes match `public/manifest.json`.
 - Confirm the permission justifications include every field stored in `chrome.storage.local`.
-- Confirm the public privacy policy URL is the GitHub `blob` page for `terms/privacy.md` and identifies the developer, contact method, and effective date.
+- Confirm the public privacy policy URL is the GitHub Pages page `https://interjc.github.io/chrome-x-not-brother/privacy.html` and identifies the developer, contact method, and effective date.
 - Confirm Homepage URL is the GitHub repository and Support URL is the Issues page.
 - Remove every statement about “no account actions” before submission if the product later gains any X action shortcut, then update consent and privacy review first.

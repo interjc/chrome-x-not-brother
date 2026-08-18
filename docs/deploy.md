@@ -28,8 +28,8 @@
 | --- | --- |
 | Homepage URL | https://github.com/interjc/chrome-x-not-brother |
 | Support URL | https://github.com/interjc/chrome-x-not-brother/issues |
-| Privacy policy URL | https://github.com/interjc/chrome-x-not-brother/blob/main/terms/privacy.md |
-| 条款（无独立字段就写在隐私政策或详细说明里） | https://github.com/interjc/chrome-x-not-brother/blob/main/terms/terms.md |
+| Privacy policy URL | https://interjc.github.io/chrome-x-not-brother/privacy.html |
+| 条款（无独立字段就写在隐私政策或详细说明里） | https://interjc.github.io/chrome-x-not-brother/terms.html |
 
 ### 需要截图或设计、放在 `assets/store/` 的
 
@@ -83,7 +83,13 @@ git commit -m "Prepare Chrome Web Store listing, legal pages, and feedback links
 git push origin main
 ```
 
-推送后用无痕窗口打开第 1 节那四条 URL，确认都能看到正文，不需要登录。
+推送后先打开仓库 **Settings → Pages**：
+
+1. Build and deployment → Source 选 **GitHub Actions**；
+2. 到 **Actions** 里确认 `Deploy GitHub Pages` 跑成功；
+3. 用无痕窗口打开第 1 节的隐私政策和条款地址，必须看到完整 HTML 页面，不能是 404。
+
+Chrome Web Store 不接受 `github.com/.../blob/...` 这种仓库文件链接，必须用上面的 `interjc.github.io` 地址。
 
 ## 4. 注册开发者账号
 
@@ -275,7 +281,7 @@ unzip -l artifacts/not-brother-0.4.7.zip | head
 
 **Privacy policy URL**：
 
-`https://github.com/interjc/chrome-x-not-brother/blob/main/terms/privacy.md`
+`https://interjc.github.io/chrome-x-not-brother/privacy.html`
 
 ### 9.4 Distribution
 

@@ -52,6 +52,7 @@ src/storage/       IndexedDB 与扩展设置
 src/ui/            Side Panel 与完整管理页
 assets/branding/   ImageGen 品牌源图
 assets/store/      Chrome Web Store 图标、截图与宣传图
+pages/             GitHub Pages：公开隐私政策与使用条款
 public/            Manifest、HTML、内容样式与图标
 scripts/           构建、校验、打包
 skills/            项目级 Codex skill
@@ -76,7 +77,7 @@ CONTRIBUTING.md    开源贡献入口
 | [X 扩展实时观察调研](docs/x-extension-resilience-research.md) | 其他开源 X 扩展的 DOM 策略、可采用模式与本项目混合复扫设计 |
 | [使用指南](docs/usage.md) | 加载、标注、档案库、导入导出、清空与反馈 |
 | [贡献指南](docs/contributing.md) | 产品边界、Issue、开发环境、检查与 Pull request |
-| [隐私政策](terms/privacy.md) | 收集内容、保存位置、权限、删除方式和联系方式 |
+| [隐私政策](terms/privacy.md) | 收集内容、保存位置、权限、删除方式和联系方式；公开页为 GitHub Pages |
 | [使用条款](terms/terms.md) | 独立软件声明、使用范围、识别限制与免责 |
 | [首次上架准备](docs/deploy.md) | 第一次发布：已完成项、截图做法、Dashboard 逐步操作 |
 | [发布指南](docs/release.md) | 版本、检查、打包、商店准备和回滚 |

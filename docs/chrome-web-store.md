@@ -107,8 +107,8 @@ Dashboard 的 Additional fields 填这些公开 HTTPS 地址：
 | --- | --- |
 | Homepage URL | https://github.com/interjc/chrome-x-not-brother |
 | Support URL | https://github.com/interjc/chrome-x-not-brother/issues |
-| Privacy policy URL | https://github.com/interjc/chrome-x-not-brother/blob/main/terms/privacy.md |
-| Terms of use（无独立字段时写入隐私政策或详细说明） | https://github.com/interjc/chrome-x-not-brother/blob/main/terms/terms.md |
+| Privacy policy URL | https://interjc.github.io/chrome-x-not-brother/privacy.html |
+| Terms of use（无独立字段时写入隐私政策或详细说明） | https://interjc.github.io/chrome-x-not-brother/terms.html |
 
 三种 listing 语言共用这些 URL。扩展内 Side Panel 与档案库页脚的“发送反馈”也打开同一 Issues 页面。
 
@@ -146,13 +146,13 @@ Dashboard 的 Additional fields 填这些公开 HTTPS 地址：
 
 不要为了减少申报项目而漏报。Dashboard 选项和商店说明、扩展首次同意界面、[隐私政策](../terms/privacy.md) 必须相互一致。
 
-公开法律文本放在仓库 `terms/`。仓库本地路径不能填进 Dashboard；使用 GitHub 渲染后的 HTTPS 地址：
+公开法律文本的源稿在仓库 `terms/`，商店要填的是 GitHub Pages 上的独立 HTML，不要填 GitHub `blob` 或 `raw` 链接：
 
-https://github.com/interjc/chrome-x-not-brother/blob/main/terms/privacy.md
+https://interjc.github.io/chrome-x-not-brother/privacy.html
 
-https://github.com/interjc/chrome-x-not-brother/blob/main/terms/terms.md
+https://interjc.github.io/chrome-x-not-brother/terms.html
 
-仓库必须保持公开。`blob/main/` 链接会渲染 Markdown，审核员和用户都能直接阅读；不要用 `raw.githubusercontent.com` 当商店隐私政策 URL。文件必须包含开发者身份、Issues 联系方式和生效日期。以后如果改用独立站点，再同时更新 Dashboard、`src/domain/project.ts` 和本文。
+页面由 `pages/` 经 GitHub Actions 发布。第一次使用前须在仓库 Settings → Pages 把 Source 设为 **GitHub Actions**，推送 `main` 并等 workflow 成功后，再用无痕窗口确认上述地址能打开。文件必须包含开发者身份、Issues 联系方式和生效日期。以后如果改用独立站点，再同时更新 Dashboard、`src/domain/project.ts` 和本文。
 
 ## 8. 上传并提交审核
 
@@ -193,7 +193,7 @@ https://github.com/interjc/chrome-x-not-brother/blob/main/terms/terms.md
 - [ ] clean Chrome profile 与真实 X 页面手工验收通过；
 - [ ] 首次同意发生在任何收集之前；
 - [ ] 单一用途、权限理由、隐私申报彼此一致；
-- [ ] 公开 HTTPS 隐私政策是 `terms/privacy.md` 的 GitHub `blob` 链接，含开发者身份、Issues 联系方式和日期；
+- [ ] 公开 HTTPS 隐私政策是 GitHub Pages 的 `privacy.html`，无痕可打开，含开发者身份、Issues 联系方式和日期；
 - [ ] Homepage 指向 GitHub 仓库，Support 指向 Issues；
 - [ ] 图片素材无真实关系数据、无误导性 X 官方暗示；
 - [ ] ZIP 根目录正确，版本号递增，保留上一版产物；
