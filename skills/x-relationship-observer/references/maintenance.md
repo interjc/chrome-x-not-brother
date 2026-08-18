@@ -6,7 +6,9 @@ When X markup changes, capture the smallest redacted DOM fixture that demonstrat
 
 Treat a missing element as internal unknown. A broken selector must reduce confidence, not generate a false one-way relationship. Unknown must not be shown, persisted, imported, exported, or counted.
 
-Keep both `UserName` and reply-thread `User-Name` fixtures. Remove `tweetText` from platform-notice matching so user-authored words cannot become blocked-by evidence. Generic unavailable posts remain internal unknown.
+Keep `UserName`, reply-thread `User-Name`, and occasional `User-Names` fixtures. Home timeline display names often link to `/handle/status/:id` and may hide or bidi-wrap `@handle`; extract identity from those profile subpaths, author avatars, and cleaned handle text so archive lookup and the page UI store can annotate the card. Do not treat tweet-body mentions as the author, and do not copy an outer tweet avatar onto a quoted card that has no handle. Remove `tweetText` from platform-notice matching so user-authored words cannot become blocked-by evidence. Generic unavailable posts remain internal unknown.
+
+Read already-loaded `following`, `followed_by`, and `blocked_by` from the current page UI store, ancestor tweet fibers, and GraphQL responses the page itself already completed. Always merge those sources; do not stop after the first store user, or reply authors in a thread will be missed. Do not send new GraphQL requests or treat a missing entity as not-following. Painted DOM evidence still wins. Keep the main-world `page-bridge.js` and isolated observer both scoped to `https://x.com/*`.
 
 Keep injected badges in the display-name row. X renders the display name and metadata as separate nested flex regions, so mark only the badge's immediate name row as horizontal; do not move native nodes or apply spacing that changes the outer `User-Name` geometry. Removal must clear the injected row marker as well as the badge.
 
@@ -18,7 +20,7 @@ The interaction-restriction path requires reply, repost, and like controls to be
 
 For ordinary relationship enrichment, map each fully loaded, semantically visible hover card to its exact normalized handle. Reject `hidden`, `inert`, `aria-hidden`, `display:none`, `visibility:hidden`, and zero-opacity stale cards. Prefer stable `*-follow`, `*-unfollow`, and `userFollowIndicator` testids, and preserve cross-handle and hidden-card negative fixtures so one card cannot contaminate another author.
 
-Keep the zero-record dock and side-panel guidance aligned across English, Japanese, and Simplified Chinese. It should explain the user hover needed to make X relationship evidence visible without suggesting automated scanning.
+Keep the zero-record dock and side-panel guidance aligned across English, Japanese, and Simplified Chinese. Hover is a fallback when the page store has no complete facts, not a claim that Home requires opening every hover card.
 
 Known local relationships are returned to content scripts through bounded `users:lookup` batches. Clear both the record cache and requested-key cache on `data:changed` so deletion and import are reflected.
 

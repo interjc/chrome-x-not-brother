@@ -12,7 +12,11 @@ export interface ExtractedCandidate {
 }
 
 const HANDLE_PATTERN = /^@?([A-Za-z0-9_]{1,15})$/;
-const USER_NAME_SELECTOR = '[data-testid="UserName"], [data-testid="User-Name"]';
+const USER_NAME_SELECTOR =
+  '[data-testid="UserName"], [data-testid="User-Name"], [data-testid="User-Names"]';
+const TWEET_SURFACE_SELECTOR = 'article[data-testid="tweet"], [data-testid="UserCell"]';
+const AVATAR_LINK_SELECTOR =
+  '[data-testid="Tweet-User-Avatar"] a[href], [data-testid="UserAvatar-Container"] a[href]';
 const RESERVED_PATHS = new Set([
   "home",
   "explore",
@@ -27,6 +31,22 @@ const RESERVED_PATHS = new Set([
   "tos",
   "privacy",
 ]);
+const PROFILE_SUBPATHS = new Set([
+  "status",
+  "with_replies",
+  "highlights",
+  "articles",
+  "media",
+  "likes",
+  "superfollows",
+  "photo",
+  "header_photo",
+  "followers",
+  "following",
+  "verified_followers",
+  "creator-subscriptions",
+]);
+const FORMAT_CHARS = /[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g;
 
 const BLOCKED_PATTERNS = [
   /you(?:'|’)?re blocked/i,
@@ -158,8 +178,12 @@ function documentHasActionableEngagement(doc: Document): boolean {
     .some(engagementIsAvailable);
 }
 
+function cleanedText(text: string): string {
+  return text.replace(FORMAT_CHARS, "").normalize("NFKC").trim();
+}
+
 function handleFromText(text: string, allowBare = false): string | null {
-  const trimmed = text.trim();
+  const trimmed = cleanedText(text);
   if (!allowBare && !trimmed.startsWith("@")) return null;
   const match = trimmed.match(HANDLE_PATTERN);
   if (!match?.[1]) return null;
@@ -172,11 +196,25 @@ function handleFromHref(href: string | null): string | null {
     const url = new URL(href, "https://x.com");
     if (url.origin !== "https://x.com") return null;
     const segments = url.pathname.split("/").filter(Boolean);
-    if (segments.length !== 1 || !segments[0]) return null;
-    return handleFromText(segments[0], true);
+    const [first, second] = segments;
+    if (!first) return null;
+    if (second && !PROFILE_SUBPATHS.has(second.toLowerCase())) return null;
+    return handleFromText(first, true);
   } catch {
     return null;
   }
+}
+
+function isInsideNestedSurface(element: Element, surface: Element): boolean {
+  const nested = element.closest("article, [data-testid='UserCell']");
+  return Boolean(nested && nested !== surface && surface.contains(nested));
+}
+
+function firstDirect<T extends Element>(surface: Element, selector: string): T | null {
+  for (const element of surface.querySelectorAll<T>(selector)) {
+    if (!isInsideNestedSurface(element, surface)) return element;
+  }
+  return null;
 }
 
 function findHandle(area: Element): string | null {
@@ -188,7 +226,41 @@ function findHandle(area: Element): string | null {
       if (fromHref) return fromHref;
     }
   }
-  return null;
+  return handleFromHref(area.getAttribute("href"));
+}
+
+function authorHandleFromSurface(surface: Element): string | null {
+  const avatar = firstDirect<HTMLAnchorElement>(surface, AVATAR_LINK_SELECTOR);
+  const fromAvatar = handleFromHref(avatar?.getAttribute("href") ?? null);
+  if (fromAvatar) return fromAvatar;
+  const time = firstDirect<HTMLTimeElement>(surface, "time");
+  const timeLink = time?.closest("a[href]") ?? null;
+  return handleFromHref(timeLink?.getAttribute("href") ?? null);
+}
+
+function identityAnchorFromSurface(surface: HTMLElement, handle: string): HTMLElement {
+  const name = firstDirect<HTMLElement>(surface, USER_NAME_SELECTOR);
+  if (name) return name;
+  const avatar = firstDirect<HTMLElement>(surface, AVATAR_LINK_SELECTOR);
+  if (avatar) return avatar;
+  const normalized = handle.toLowerCase();
+  for (const link of surface.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+    if (isInsideNestedSurface(link, surface)) continue;
+    if (handleFromHref(link.getAttribute("href"))?.toLowerCase() === normalized) return link;
+  }
+  return surface;
+}
+
+function relationshipSurfaceFor(
+  area: HTMLElement,
+  sourceType: SourceType,
+): HTMLElement {
+  const cell = area.closest<HTMLElement>('[data-testid="cellInnerDiv"]');
+  return area.closest<HTMLElement>('[data-testid="UserCell"]') ??
+    (sourceType === "thread" ? cell : null) ??
+    area.closest<HTMLElement>("article") ??
+    cell ??
+    area;
 }
 
 export function viewerHandleFromDocument(doc: Document): string | null {
@@ -335,7 +407,7 @@ function profileCandidate(
   );
   if (viewerHandle && handle?.toLowerCase() === viewerHandle.toLowerCase()) return null;
   const area = doc.querySelector<HTMLElement>(
-    '[data-testid="primaryColumn"] [data-testid="UserName"], [data-testid="primaryColumn"] [data-testid="User-Name"]',
+    `[data-testid="primaryColumn"] ${USER_NAME_SELECTOR}`,
   );
   const surface = doc.querySelector<HTMLElement>('[data-testid="primaryColumn"]');
   if (!handle || !area || !surface) return null;
@@ -358,23 +430,22 @@ export function scanXDocument(
   const visibleHoverCards = visibleHoverCardsByHandle(doc);
   const hasActionableEngagement = documentHasActionableEngagement(doc);
 
-  for (const area of doc.querySelectorAll<HTMLElement>(USER_NAME_SELECTOR)) {
-    if (area.closest("[data-xro-badge]")) continue;
-    const cell = area.closest<HTMLElement>('[data-testid="cellInnerDiv"]');
-    const surface =
-      area.closest<HTMLElement>('[data-testid="UserCell"]') ??
-      (sourceType === "thread" ? cell : null) ??
-      area.closest<HTMLElement>("article") ??
-      cell ??
-      area;
-    const handle = findHandle(area);
+  const addCandidate = (
+    handle: string,
+    area: HTMLElement,
+    surface: Element,
+    supplementalSurface: HTMLElement | null = null,
+  ): void => {
     if (
-      !handle ||
+      area.closest("[data-xro-badge]") ||
       seenAnchors.has(area) ||
       (viewerHandle && handle.toLowerCase() === viewerHandle.toLowerCase())
-    ) continue;
+    ) return;
     seenAnchors.add(area);
-    const hoverCard = visibleHoverCards.get(handle.toLowerCase()) ?? null;
+    const hoverCard =
+      supplementalSurface ??
+      visibleHoverCards.get(handle.toLowerCase()) ??
+      null;
     const blockedByInteractionRestriction =
       sourceType === "thread" &&
       engagementIsUnavailable(surface) &&
@@ -397,6 +468,38 @@ export function scanXDocument(
       ),
       anchor: area,
     });
+  };
+
+  const coversHandle = (surface: Element, handle: string): boolean =>
+    candidates.some((item) =>
+      item.observation.userKey === handle.toLowerCase() &&
+      (surface.contains(item.anchor) || item.anchor.contains(surface)),
+    );
+
+  for (const area of doc.querySelectorAll<HTMLElement>(USER_NAME_SELECTOR)) {
+    const surface = relationshipSurfaceFor(area, sourceType);
+    let handle = findHandle(area);
+    if (!handle) {
+      const primaryName = firstDirect<HTMLElement>(surface, USER_NAME_SELECTOR);
+      if (primaryName === area) handle = authorHandleFromSurface(surface);
+    }
+    if (!handle) continue;
+    addCandidate(handle, area, surface);
+  }
+
+  for (const surface of doc.querySelectorAll<HTMLElement>(TWEET_SURFACE_SELECTOR)) {
+    const named = firstDirect<HTMLElement>(surface, USER_NAME_SELECTOR);
+    const handle = authorHandleFromSurface(surface) ??
+      (named ? findHandle(named) : findHandle(surface));
+    if (!handle || coversHandle(surface, handle)) continue;
+    addCandidate(handle, identityAnchorFromSurface(surface, handle), surface);
+  }
+
+  for (const [userKey, card] of visibleHoverCards) {
+    if (candidates.some((item) => item.observation.userKey === userKey)) continue;
+    const handle = findHandle(card) ?? userKey;
+    const area = card.querySelector<HTMLElement>(USER_NAME_SELECTOR) ?? card;
+    addCandidate(handle, area, card, card);
   }
 
   const profile = profileCandidate(doc, url, sourceType, observedAt, viewerHandle);

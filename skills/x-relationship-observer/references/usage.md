@@ -13,9 +13,9 @@ The side panel, fieldbook, and toolbar copy follow the Chrome UI language. Badge
 
 “Blocked you” is opportunistic: it is collected from a directional platform notice, when reply/repost/like are all unavailable with a normal same-page baseline, or from a fully loaded already-visible hover card that has no relationship-count links. Generic unavailable-post text and a single disabled repost are not evidence. Once known locally, the relation can annotate later cards for the same handle. The extension cannot enumerate every account that has blocked the viewer. The signed-in viewer and unknown results are excluded from all observation UI.
 
-A fully loaded visible author hover card may also supplement ordinary relationship facts for that exact handle: `*-unfollow` means the viewer follows the account, `*-follow` means they do not, and `userFollowIndicator` means the account follows the viewer. Hover cards never contribute evidence to a different author.
+Home timeline cards usually omit follow controls, but X already loads `following` / `followed_by` into the current page UI store. The extension reads those already-loaded fields for visible authors and does not make extra X requests. A fully loaded visible author hover card may still supplement ordinary relationship facts for that exact handle: `*-unfollow` means the viewer follows the account, `*-follow` means they do not, and `userFollowIndicator` means the account follows the viewer. Hover cards never contribute evidence to a different author.
 
-When the active observer still has zero records, the X-page dock and side-panel empty state tell the user to hover a reply author. This is an evidence-availability instruction, not a claim that the extension scans or opens every hover card automatically.
+When the active observer still has zero records, empty-state copy may mention hover as a fallback. That is not a claim that Home requires opening every hover card.
 
 DOM mutations normally trigger an immediate debounced pass. While the consented observer page is visible, a 2-second fallback rescan covers reused nodes and missed asynchronous updates; returning focus or visibility triggers an immediate pass. Hidden pages pause periodic work, and signature deduplication prevents unchanged evidence from appending history every interval.
 

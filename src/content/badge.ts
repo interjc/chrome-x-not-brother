@@ -22,7 +22,10 @@ function identityElement(anchor: HTMLElement, handle: string): HTMLElement | nul
   for (const link of anchor.querySelectorAll<HTMLAnchorElement>("a[href]")) {
     try {
       const url = new URL(link.getAttribute("href") ?? "", "https://x.com");
-      if (url.pathname.toLowerCase() === `/${normalizedHandle}`) profileLinks.push(link);
+      const path = url.pathname.toLowerCase();
+      if (path === `/${normalizedHandle}` || path.startsWith(`/${normalizedHandle}/`)) {
+        profileLinks.push(link);
+      }
     } catch {
       // Ignore malformed host links and fall back to exact visible handle text.
     }

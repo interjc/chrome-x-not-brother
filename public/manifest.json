@@ -32,6 +32,12 @@
   "content_scripts": [
     {
       "matches": ["https://x.com/*"],
+      "js": ["page-bridge.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://x.com/*"],
       "js": ["content-script.js"],
       "css": ["content-script.css"],
       "run_at": "document_idle"

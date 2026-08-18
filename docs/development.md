@@ -33,6 +33,7 @@ npm run dev
 ## 变更位置
 
 - X 页面结构或文案：`src/content/x-adapter.ts` 与对应 fixture tests；
+- 当前页已载入的 UI store / tweet fiber 关系字段：`src/content/page-store.ts`、`src/content/page-bridge.ts`；
 - DOM 触发、2 秒兜底复扫、single-flight 调度与成功后签名去重：`src/content/index.ts`、`src/content/periodic-rescan.ts`、`src/content/process-scheduler.ts`、`src/content/observation-signatures.ts`；
 - 关系规则：`src/domain/relationships.ts`；
 - 运行时翻译、关系展示和语言归一化：`src/i18n/index.ts`；

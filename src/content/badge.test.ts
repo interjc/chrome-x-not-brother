@@ -17,6 +17,20 @@ describe("relationship badge", () => {
     expect(anchor.querySelector("a + [data-xro-badge]")).not.toBeNull();
   });
 
+  it("places a home-timeline badge after the display name that links to the status permalink", () => {
+    const anchor = document.createElement("div");
+    anchor.innerHTML = `
+      <a href="/Alice/status/1234567890123456789"><span>Alice Example</span></a>
+      <a href="/Alice/status/1234567890123456789"><time>2h</time></a>
+    `;
+
+    setRelationshipBadge(anchor, "following_only", "Alice", "zh-CN");
+
+    expect(anchor.querySelector("a[href='/Alice/status/1234567890123456789'] + [data-xro-badge]"))
+      .not.toBeNull();
+    expect(anchor.querySelector("time + [data-xro-badge]")).toBeNull();
+  });
+
   it("keeps a reply-thread badge beside the display name instead of creating a second row", () => {
     const anchor = document.createElement("div");
     anchor.innerHTML = `

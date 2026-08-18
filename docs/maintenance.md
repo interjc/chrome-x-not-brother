@@ -11,7 +11,7 @@
 5. 证据消失时返回内部 unknown，不得猜测 negative；unknown 不得进入徽标、数据库、导入导出或计数。
 6. 运行完整检查和手工验收。
 
-优先使用语义化 `data-testid`、标准个人资料 href 和明确可见文本。禁止依赖混淆后的 React 内部属性或 X 私有网络响应。
+优先使用语义化 `data-testid`、标准个人资料 href 和明确可见文本。允许只读当前页已经载入的 UI store、tweet 祖先 fiber，以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`。评论区回复作者的关系字段经常不在 `entities.users` 里，而在 Tweet 组件 props 或 TweetDetail 响应中。禁止主动发起新的 X 请求、读取 Cookie，或把缺失实体猜成未关注。
 
 实时识别采用事件与轮询混合机制。MutationObserver 负责新增/移除节点、关系文案和关键可访问性属性变化；可见且已启用的页面每 2 秒兜底复扫一次，页面恢复可见或重新获得焦点时立即复扫。轮询只查询当前 DOM，不滚动、不打开页面、不触发 X 控件。扫描必须保持 single-flight，MutationObserver、轮询、设置变化和 SPA URL 变化同时触发时只排队一次补扫；签名去重必须阻止相同结果重复写历史，但只能在 service worker 确认对应用户已持久化后提交，瞬时发送失败要留给后续复扫重试。
 
@@ -21,7 +21,7 @@
 
 关系档案的确认、删除、导入和清空必须向 service worker 发送 `data:changed`，service worker 再用 `chrome.tabs.sendMessage` 尝试通知全部标签页；没有 content script 的标签页拒绝消息属于正常情况。content script 收到后无条件清除 record/requested cache，运行中才安排复扫。不要清空 observation signature，否则用户刚删除的当前可见记录可能被同一证据立即重新写回。
 
-帖子作者常使用 `data-testid="User-Name"`，列表/资料常使用 `UserName`，两者都必须保留 fixture。blocked-by 平台提示匹配必须排除 `tweetText`；不得把用户正文或泛化的 “This Post is unavailable” 当作拉黑证据。互动限制路径还必须确认回复、转发、点赞三种控件都已实际渲染，控件缺失不能等同于禁用。
+帖子作者常使用 `data-testid="User-Name"`，列表/资料常使用 `UserName`，偶发 `User-Names`，三者都必须保留 fixture。首页时间线的显示名称经常链到 `/handle/status/:id`，`@handle` 可能被隐藏或带双向隔离符；handle 提取必须接受这类 profile 子路径、头像链接和去掉格式字符后的 `@handle`，才能把作者识别为可回标的可见 handle。不得把推文正文里的 @提及当成作者，也不得把引用帖缺失的 handle 回退成外层头像。blocked-by 平台提示匹配必须排除 `tweetText`；不得把用户正文或泛化的 “This Post is unavailable” 当作拉黑证据。互动限制路径还必须确认回复、转发、点赞三种控件都已实际渲染，控件缺失不能等同于禁用。
 
 评论区互动限制的结构规则必须同时覆盖 reply、retweet/unretweet、like/unlike。只有三组控件均已渲染、全部不可操作且同页存在三组均正常的帖子时才生成 `blocked-interaction-restriction`。X 可能把 `data-testid` 放在按钮本身、把禁用状态放在更外层祖先，因此 actionability 检查必须遍历到评论 surface。
 
@@ -29,7 +29,7 @@
 
 普通关系补全也可使用已完整加载的可见 `HoverCard`，但必须按规范化 handle 精确配对。`hidden`、`inert`、`aria-hidden`、`display:none`、`visibility:hidden` 或透明度为零的残留浮窗不得参与判断。优先使用稳定的 `*-follow`、`*-unfollow` 与 `userFollowIndicator`，不要只依赖本地化文案；保留互关、我单向关注、未支持语言 indicator、隐藏旧浮窗和跨 handle 不污染的 fixture。
 
-评论区卡片通常不直接包含关系字段，只有用户悬停作者后 X 才渲染 `HoverCard`。观察器运行但总数为零时，dock 与 Side Panel 必须用三语文案说明这一证据可见性要求；出现首条可信观察后，dock 恢复通用的可见证据说明。排查“一个用户也没识别”时，先在真实页面悬停一个已知关系作者并观察浮窗、徽标与 summary 是否同步变化，再判断为 adapter 或存储故障。
+首页时间线卡片通常不画出关注控件，但当前页 UI store 往往已经带有该作者的 `following` / `followed_by`。排查“首页不识别”时：先确认卡片抽到了 handle；再在控制台确认 `#react-root` 上能读到 store 或 tweet fiber 用户实体；主世界 `page-bridge.js` 必须已注入。store 没有完整布尔值时才需要悬停浮窗。观察器总数为零时，dock 只把悬停说成补充路径。
 
 ## 错误关系恢复
 

@@ -13,7 +13,7 @@ Do not paste passwords, cookies, export backups, or other people's account data 
 
 ## 中文
 
-不是兄弟（Not Brother）是一个本地优先的 Chrome 扩展。它只在你正常浏览 `x.com` 时，读取页面上已经显示的关系证据，并保存在当前 Chrome 配置中。
+不是兄弟（Not Brother）是一个本地优先的 Chrome 扩展。它只在你正常浏览 `x.com` 时，读取当前页面可见账号以及 X 已经为这些账号载入的关系提示，并保存在当前 Chrome 配置中。它不会为此额外请求 X 接口。
 
 ### 开始收集前
 
@@ -60,7 +60,7 @@ Do not paste passwords, cookies, export backups, or other people's account data 
 
 ## English
 
-Not Brother is a local-first Chrome extension. While you browse `x.com` normally, it reads relationship evidence already visible on the page and stores it in this Chrome profile.
+Not Brother is a local-first Chrome extension. While you browse `x.com` normally, it reads visible accounts and relationship hints X already loaded for those accounts on the current page, and stores them in this Chrome profile. It does not make extra X requests for this.
 
 ### Before collection starts
 
@@ -70,7 +70,7 @@ The accepted consent version is stored in `chrome.storage.local`. A material cha
 
 ### What is collected
 
-The extension stores only the minimum already-visible information needed for relationship annotation:
+The extension stores only the minimum information already loaded for visible accounts and needed for relationship annotation:
 
 - X handle, display name, avatar URL, and standard profile URL;
 - current and previous relationship;

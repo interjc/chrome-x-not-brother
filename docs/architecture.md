@@ -33,7 +33,10 @@ flowchart LR
 - 将 unknown 保留为短暂内部结果，只用于移除过期徽标；不发送、不收集；
 - 在评论线程将三项互动全部不可用与同页正常控制组合，生成 `blocked-interaction-restriction`；将完整加载但缺少 following/follower 链接的已显示浮窗归一化为独立的 `blocked-profile-summary-restriction`；
 - 将完整加载的可见浮窗按 handle 精确配给底层作者卡片，并用 `*-follow`、`*-unfollow` 和 `userFollowIndicator` 补充普通关系事实；
+- 从首页时间线的 status permalink、作者头像和去掉格式字符的 `@handle` 识别作者身份；没有关注控件时仍输出内部 unknown，供本地档案回标，不把它当成未关注；
 - 通过 `users:lookup` 批量读取可见 handle 的本地已知关系，使已确认账号在证据浮层关闭后继续回标；
+- 读取 X 已经为当前页面载入的 UI store、tweet fiber（含祖先组件）以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`，给首页和评论区没有关注控件的卡片补全关系；不发起新的 GraphQL 或 REST 请求；
+- 页面主世界 `page-bridge.js` 只把上述已载入字段回传给隔离世界的观察器；DOM 证据优先，store / 已完成响应只填充内部 unknown；
 - 识别当前登录 handle 并在扫描阶段排除本人；
 - 插入观察状态/概览 dock；其本地 `dockCollapsed` 设置控制完整面板或状态悬浮球，用户手势可恢复面板或通过 service worker 打开当前标签页的 Side Panel；
 - 对已确认持久化的发送签名去重；消息失败或 service worker 未返回对应用户时不提交签名，后续复扫会重试；
@@ -68,7 +71,7 @@ flowchart LR
 
 ## 构建
 
-`scripts/build.mjs` 用 esbuild 分别生成 ESM service worker、IIFE content script、ESM React side panel 和 ESM React dashboard。字体和全部运行时代码打包到 `dist/`，符合 Manifest V3 禁止远程托管代码的要求。
+`scripts/build.mjs` 用 esbuild 分别生成 ESM service worker、IIFE 隔离世界 content script、IIFE 主世界 page-store bridge、ESM React side panel 和 ESM React dashboard。字体和全部运行时代码打包到 `dist/`，符合 Manifest V3 禁止远程托管代码的要求。
 
 ## 权限
 

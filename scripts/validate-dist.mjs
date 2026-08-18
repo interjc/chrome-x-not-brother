@@ -8,6 +8,7 @@ const required = [
   "manifest.json",
   "service-worker.js",
   "content-script.js",
+  "page-bridge.js",
   "content-script.css",
   "sidepanel.html",
   "sidepanel.js",
@@ -94,9 +95,23 @@ for (const heading of [
 if (manifest.host_permissions) {
   throw new Error("Host access must come only from the scoped x.com content script match");
 }
-const matches = manifest.content_scripts?.flatMap((script) => script.matches ?? []) ?? [];
-if (matches.length !== 1 || matches[0] !== "https://x.com/*") {
+const contentScripts = manifest.content_scripts ?? [];
+const matches = contentScripts.flatMap((script) => script.matches ?? []);
+if (
+  matches.length === 0 ||
+  matches.some((match) => match !== "https://x.com/*")
+) {
   throw new Error("Content script access must be scoped exactly to https://x.com/*");
+}
+const isolated = contentScripts.find((script) =>
+  (script.world ?? "ISOLATED") === "ISOLATED" &&
+  script.js?.includes("content-script.js"),
+);
+const pageBridge = contentScripts.find((script) =>
+  script.world === "MAIN" && script.js?.includes("page-bridge.js"),
+);
+if (!isolated || !pageBridge) {
+  throw new Error("Manifest must keep the isolated observer and the main-world page-store bridge");
 }
 const forbidden = ["tabs", "scripting", "webRequest", "cookies"];
 for (const permission of forbidden) {

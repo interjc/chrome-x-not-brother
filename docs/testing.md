@@ -30,7 +30,9 @@ npm run skills:validate
 - service worker 把数据变化广播到有 content script 的标签页并忽略无接收端标签页；档案页变更会使已打开 X 页清除本地关系缓存；
 - Side Panel 真实 React 组件中的分类按钮、`aria-pressed` 切换、同分类再次取消、变化筛选、筛选空状态、本人排除，以及标准 `https://x.com/<handle>` 新标签链接；
 - 已打开扩展页面通过共享 settings hook 接收其他上下文的 viewer handle 与观察器设置变化，并在卸载时移除监听；
-- 观察器总数为零时，dock 与 Side Panel 三语空状态明确提示悬停评论作者；首条观察后 dock 恢复可见证据说明；
+- 观察器总数为零时，dock 与 Side Panel 三语空状态把悬停说成补充路径；首条观察后 dock 恢复可见证据说明；
+- 首页时间线可从 `/handle/status/:id`、头像链接或带双向隔离符的 `@handle` 识别作者，证据不足时保持 unknown 且不把引用帖回退成外层作者；
+- 当前页 UI store、tweet 祖先 fiber，以及页面已完成的 TweetDetail 等 GraphQL 响应中的 `following` / `followed_by` / `blocked_by` 可把首页和评论区 unknown 卡片提升为已知关系；store 里已有查看者时仍要继续读回复作者；缺少完整布尔值不得编造；DOM 已可收集证据时 store 不得覆盖；
 - CSV escaping 与 JSON schema validation；
 - Manifest 文件、最小权限和所需 build artifacts；
 - `en`、`ja`、`zh_CN` Manifest catalog、语言归一化、翻译占位符、关系与来源名称。
@@ -42,7 +44,7 @@ npm run skills:validate
 1. 加载 `dist/`，确认安装时只声明访问 `x.com`，并自动打开扩展自己的安装引导页。
 2. 同意前确认工具栏显示琥珀色 `!`；打开 X 并滚动，确认没有关系徽标且 IndexedDB 没有新增观察，同时页面 dock 提示尚未开启。
 3. 在引导页或 Side Panel 核对显著披露后主动同意；确认工具栏变为酸性黄 `ON`，刷新 X 后观察开始。
-4. 打开 X 首页，确认证据不足的卡片没有“未知”徽标，也没有进入最近观察或数据库。
+4. 打开 X 首页，确认自己关注的作者在无需悬停时出现单向关注或互关徽标；完全没有载入关系字段的卡片不得出现“未知”徽标，也不得进入最近观察。
 5. 打开自己的 following 页面，验证可见 UserCell 的 following 证据。
 6. 打开自己的 followers 页面，验证 follows-you 证据。
 7. 分别把 Chrome UI 设为英语、日语和简体中文，验证 Side Panel、管理页、首次披露、工具栏 title、时间与确认对话框自动切换；未支持语言应完整回退英语。
@@ -64,7 +66,7 @@ npm run skills:validate
 23. 导出备份后测试删除单条和清空全部本地数据。
 24. 保持 X 标签页打开，在 `chrome://extensions` 重新加载扩展；确认旧脚本不再重复产生 `reading 'local'` 或未捕获的 `Extension context invalidated`，随后刷新 X，确认新脚本恢复 dock 与标注。
 25. 在评论区分别悬停互关、我单向关注和未关注的作者，等待浮窗完整加载；验证 `*-unfollow` 加 `userFollowIndicator` 得到互关、只有 `*-unfollow` 得到我单向关注、其他作者当前打开的浮窗不会改变目标评论的关系。
-26. 使用空数据库启动观察器，验证 X 页面 dock 和 Side Panel 空状态提示悬停作者；悬停产生首条可信观察后，dock 改回“只记录当前页面可见证据”。
+26. 使用空数据库启动观察器，验证 X 页面 dock 和 Side Panel 空状态提示在首页或评论区悬停作者；悬停产生首条可信观察后，dock 改回“只记录当前页面可见证据”。刷新首页或滚走再滚回同一帖，确认本地已确认账号无需再次悬停也能回标。
 27. 重载并刷新 X 后，确认 dock 根节点的 `data-xro-version` 等于候选包版本；保持一个关系浮窗打开但不继续操作，确认最迟约 2 秒内出现徽标；切到其他标签页超过 4 秒再返回，确认隐藏期间没有定期扫描，返回后立即补扫。
 28. 在 DevTools 中观察一分钟：快速滚动、悬停、切换 X 内页时不得出现并发异常；同一关系和来源不得每 2 秒增加 observationCount，扩展重新加载失效后不再保留轮询或 focus/visibility 监听。
 29. 同时打开两个 X 标签页：在标签 A 识别新关系后，标签 B 最迟约 2 秒回标；在档案页确认变化或删除记录后，标签 B 的缓存结果及时更新。普通非 X 标签没有接收端时不得产生未捕获错误，也不得要求新增 `tabs` 权限。

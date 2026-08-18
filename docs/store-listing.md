@@ -41,7 +41,7 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 - Improves blocked-by detection from fully loaded author hover cards.
 - Reads matching hover-card follow controls to identify mutual and one-way relationships in reply threads.
 - Keeps known local relationships visible when the current card has no fresh evidence.
-- Explains in zero-record states that reply-thread relationship evidence may require hovering an author.
+- Explains in zero-record states that Home and reply-thread relationship evidence may require hovering an author.
 - Adds Side Panel and Fieldbook feedback links that open the public GitHub Issues page.
 
 ## 中文商店文案
@@ -81,7 +81,7 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 - 改进从完整作者浮窗识别“拉黑了我”的能力。
 - 使用匹配作者浮窗的关注控件识别评论区互关和我单向关注。
 - 当前卡片没有新证据时，仍可显示已经保存在本地的可信关系。
-- 零记录时明确提示：评论区关系证据可能需要悬停作者后才会由 X 显示。
+- 零记录时明确提示：首页时间线和评论区的关系证据可能需要悬停作者后才会由 X 显示。
 - Side Panel 与档案库页脚增加反馈入口，打开公开的 GitHub Issues 页面。
 
 ## 日本語ストア文案
@@ -121,7 +121,7 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 - 完全に読み込まれた作者ホバーカードからのブロック検出を改善しました。
 - 一致する作者ホバーカードのフォロー操作表示から、返信スレッドの相互・片方向フォローを識別します。
 - 現在のカードに新しい証拠がなくても、ローカルで確認済みの関係を表示します。
-- 記録がゼロの場合、返信作者へのホバーが必要なことを明確に案内します。
+- 記録がゼロの場合、ホームや返信スレッドで作者へホバーが必要なことを明確に案内します。
 - サイドパネルとアーカイブのフッターから公開 GitHub Issues へフィードバックできるようにしました。
 
 ## Store listing URLs

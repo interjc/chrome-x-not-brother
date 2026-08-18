@@ -35,6 +35,11 @@ const builds = [
     format: "iife",
   },
   {
+    entryPoints: ["src/content/page-bridge.ts"],
+    outfile: "dist/page-bridge.js",
+    format: "iife",
+  },
+  {
     entryPoints: ["src/ui/sidepanel.tsx"],
     outfile: "dist/sidepanel.js",
     format: "esm",

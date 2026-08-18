@@ -363,4 +363,93 @@ describe("scanXDocument", () => {
     const [candidate] = scanXDocument(doc, "https://x.com/home", 100);
     expect(candidate?.observation.handle).toBe("Real_Handle");
   });
+
+  it("identifies a home timeline author from a status permalink when the handle is hidden", () => {
+    const doc = fixture(`${accountSwitcher()}<article data-testid="tweet">
+      <div data-testid="Tweet-User-Avatar"><a href="/Alice"><img src="https://pbs.twimg.com/profile_images/1.jpg" alt=""></a></div>
+      <div data-testid="User-Name">
+        <a href="/Alice/status/1234567890123456789"><span>Alice Example</span></a>
+        <a href="/Alice/status/1234567890123456789"><time datetime="2026-08-18T00:00:00.000Z">2h</time></a>
+      </div>
+    </article>`);
+    const [candidate] = scanXDocument(doc, "https://x.com/home", 100);
+    expect(candidate?.observation).toMatchObject({
+      handle: "Alice",
+      relationship: "unknown",
+      sourceType: "timeline",
+      evidence: ["insufficient-evidence"],
+    });
+  });
+
+  it("reads a bidi-wrapped handle next to a home timeline display name", () => {
+    const doc = fixture(`${accountSwitcher()}<article data-testid="tweet">
+      <div data-testid="User-Name">
+        <a href="/Alice/status/123"><span>Alice Example</span></a>
+        <span>\u2066@Alice\u2069</span>
+      </div>
+    </article>`);
+    const [candidate] = scanXDocument(doc, "https://x.com/home", 100);
+    expect(candidate?.observation.handle).toBe("Alice");
+  });
+
+  it("identifies a compact timeline card from the author avatar when User-Name is absent", () => {
+    const doc = fixture(`${accountSwitcher()}<article data-testid="tweet">
+      <div data-testid="Tweet-User-Avatar"><a href="/Alice"><img src="https://pbs.twimg.com/profile_images/1.jpg" alt=""></a></div>
+      <a href="/Alice/status/123"><span>Alice Example</span></a>
+    </article>`);
+    const [candidate] = scanXDocument(doc, "https://x.com/home", 100);
+    expect(candidate?.observation.handle).toBe("Alice");
+    expect(candidate?.observation.relationship).toBe("unknown");
+  });
+
+  it("applies a matching home-timeline hover card to the status-link author card", () => {
+    const doc = fixture(`${accountSwitcher()}<article data-testid="tweet">
+      <div data-testid="User-Name">
+        <a href="/Alice/status/123"><span>Alice Example</span></a>
+      </div>
+    </article>
+    <aside data-testid="HoverCard">
+      <a href="/Alice"><span>Alice Example</span><span>@Alice</span></a>
+      <button data-testid="123-unfollow">Following</button>
+      <a href="/Alice/following">10 Following</a>
+      <a href="/Alice/followers">20 Followers</a>
+    </aside>`);
+    const candidate = scanXDocument(doc, "https://x.com/home", 100)
+      .find((item) => item.observation.handle === "Alice");
+    expect(candidate?.observation).toMatchObject({
+      relationship: "following_only",
+      evidence: ["following-control"],
+    });
+  });
+
+  it("collects a visible hover card even when the tweet has no identity testid", () => {
+    const doc = fixture(`${accountSwitcher()}<article data-testid="tweet">
+      <span>Suggested post</span>
+    </article>
+    <aside data-testid="HoverCard">
+      <a href="/Alice"><span>@Alice</span></a>
+      <button data-testid="123-unfollow">Following</button>
+      <span data-testid="userFollowIndicator">Follows you</span>
+      <a href="/Alice/following">10 Following</a>
+      <a href="/Alice/followers">20 Followers</a>
+    </aside>`);
+    const candidate = scanXDocument(doc, "https://x.com/home", 100)
+      .find((item) => item.observation.handle === "Alice");
+    expect(candidate?.observation).toMatchObject({
+      relationship: "mutual",
+      evidence: ["following-control", "follows-you-label"],
+    });
+  });
+
+  it("does not take a quoted author's missing handle from the outer tweet avatar", () => {
+    const doc = fixture(`${accountSwitcher()}<article data-testid="tweet">
+      <div data-testid="Tweet-User-Avatar"><a href="/Alice"><img src="https://pbs.twimg.com/profile_images/1.jpg" alt=""></a></div>
+      <div data-testid="User-Name"><a href="/Alice/status/1"><span>Alice Example</span></a></div>
+      <article data-testid="tweet">
+        <div data-testid="User-Name"><span>Quoted Person</span></div>
+      </article>
+    </article>`);
+    const candidates = scanXDocument(doc, "https://x.com/home", 100);
+    expect(candidates.map((item) => item.observation.handle)).toEqual(["Alice"]);
+  });
 });

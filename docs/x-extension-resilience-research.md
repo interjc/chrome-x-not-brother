@@ -28,7 +28,7 @@ Not Brother 采用以下混合方案：
 
 可采用：语义选择器、首次处理、Observer 生命周期分组、SPA 换页重建、等待器超时和停止条件。
 
-不采用：该项目部分功能读取 React 私有属性、Cookie 和 X 私有 GraphQL 接口；这与 Not Brother 的隐私和被动 DOM 边界冲突。
+采用其读取当前页 UI store 中已载入 `following` / `followed_by` 的做法，让首页时间线不必等悬停。不采用：Cookie、主动 GraphQL（例如 AboutAccountQuery）和网络拦截。
 
 ### Tweet Recall
 
@@ -44,7 +44,7 @@ Not Brother 不用 IntersectionObserver 作为硬门槛，因为 X 的 hover car
 
 可采用：关键属性变化、候选节点集合、处理去重和异步挂载等待思想。
 
-不采用：向页面主世界注入执行脚本、用 `innerHTML` 改写原生结构或把 X 的私有页面状态作为事实来源。
+不采用：用 `innerHTML` 改写原生结构，或主动拉取尚未载入当前页的账号。主世界 bridge 只暴露已经在页面 UI store / tweet fiber 里的关系字段。
 
 ## 本项目参数选择
 
@@ -65,4 +65,4 @@ Not Brother 不用 IntersectionObserver 作为硬门槛，因为 X 的 hover car
 - 每次 X DOM 漂移先保存最小脱敏 fixture，再改 adapter；
 - 轮询是漏报兜底，不是扩大观察范围的扫描器；
 - 调低间隔前先测量单次扫描时间、可见候选数和 observation 写入次数；
-- 不使用混淆 React 属性、Cookie、私有 GraphQL、网络拦截或自动操作。
+- 可以只读当前页已载入的 UI store 关系字段；不使用 Cookie、私有 GraphQL 请求、网络拦截或自动操作。

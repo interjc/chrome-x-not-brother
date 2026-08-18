@@ -48,6 +48,10 @@ import {
   type ProcessScheduler,
 } from "./process-scheduler";
 import {
+  applyPageStoreRelationships,
+  loadPageUserRelationships,
+} from "./page-store";
+import {
   scanXDocument,
   type ExtractedCandidate,
   viewerHandleFromDocument,
@@ -275,6 +279,11 @@ async function processPage(): Promise<void> {
   const candidates = scanXDocument(document, location.href).filter(
     (candidate) => candidate.observation.userKey !== viewerKey,
   );
+  applyPageStoreRelationships(
+    candidates,
+    await loadPageUserRelationships(document, window),
+  );
+  if (stopped) return;
   const collectableCandidates = candidates.filter((item) =>
     isCollectableRelationship(item.observation.relationship),
   );

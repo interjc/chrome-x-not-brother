@@ -38,6 +38,7 @@ export const EVIDENCE_TYPES = [
   "follows-you-label",
   "viewer-following-list",
   "viewer-followers-list",
+  "page-user-entity",
   "insufficient-evidence",
 ] as const;
 

@@ -54,6 +54,7 @@ Use `npm run package` only when preparing a loadable release archive.
 ## Architecture rules
 
 - Keep X DOM selectors and localized text matching inside `src/content/x-adapter.ts`.
+- Read already-loaded `following` / `followed_by` / `blocked_by` for visible authors from the current page UI store, tweet fibers, and GraphQL responses the page itself already completed via `src/content/page-store.ts`. Do not send new GraphQL requests or treat a missing store entity as not-following.
 - Treat missing relationship evidence as the internal `unknown` result; never badge, persist, import, export, or count it, and never infer a negative relationship from an unrelated timeline card.
 - Store extension data through the background service worker. Content scripts must not use the page origin's IndexedDB.
 - Preserve observation history. A known state may replace another known state; an internal `unknown` result must be discarded before persistence and must not erase a known state.
