@@ -1,0 +1,18 @@
+{
+  "extensionName": {
+    "message": "Not Brother — X Relationship Observer",
+    "description": "Extension name shown by Chrome and in the Web Store."
+  },
+  "extensionShortName": {
+    "message": "Not Brother",
+    "description": "Short extension name."
+  },
+  "extensionDescription": {
+    "message": "Annotate relationship evidence visible on X and keep a private observation history in this Chrome profile.",
+    "description": "Concise extension description shown by Chrome."
+  },
+  "actionDefaultTitle": {
+    "message": "Open Not Brother",
+    "description": "Toolbar action title before runtime status is applied."
+  }
+}

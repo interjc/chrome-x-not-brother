@@ -1,0 +1,18 @@
+{
+  "extensionName": {
+    "message": "不是兄弟 — X 关系观察器",
+    "description": "Chrome 和商店中显示的扩展名称。"
+  },
+  "extensionShortName": {
+    "message": "不是兄弟",
+    "description": "扩展的短名称。"
+  },
+  "extensionDescription": {
+    "message": "标注 X 页面已经显示的关系证据，并在当前 Chrome 配置中保存私密的本地观察历史。",
+    "description": "Chrome 中显示的简短扩展说明。"
+  },
+  "actionDefaultTitle": {
+    "message": "打开不是兄弟",
+    "description": "运行时状态生效前的工具栏标题。"
+  }
+}

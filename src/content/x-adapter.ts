@@ -1,0 +1,384 @@
+import { resolveRelationship } from "../domain/relationships";
+import type {
+  EvidenceType,
+  ObservationDraft,
+  RelationshipFacts,
+  SourceType,
+} from "../domain/types";
+
+export interface ExtractedCandidate {
+  observation: ObservationDraft;
+  anchor: HTMLElement;
+}
+
+const HANDLE_PATTERN = /^@?([A-Za-z0-9_]{1,15})$/;
+const USER_NAME_SELECTOR = '[data-testid="UserName"], [data-testid="User-Name"]';
+const RESERVED_PATHS = new Set([
+  "home",
+  "explore",
+  "notifications",
+  "messages",
+  "i",
+  "settings",
+  "compose",
+  "search",
+  "jobs",
+  "communities",
+  "tos",
+  "privacy",
+]);
+
+const BLOCKED_PATTERNS = [
+  /you(?:'|’)?re blocked/i,
+  /has blocked you/i,
+  /(?:this|the) (?:post|tweet) is (?:from|by) an account (?:that|who) (?:has )?blocked you/i,
+  /account (?:that|who) (?:has )?blocked you[^.]* (?:post|tweet)/i,
+  /ブロックされています/u,
+  /あなたをブロック/u,
+  /このポストは[^。]*(?:あなたをブロック|ブロックされています)/u,
+  /你已被(?:屏蔽|拉黑)/u,
+  /已将你拉黑/u,
+  /已封鎖你/u,
+  /(?:此|这)(?:帖子|貼文|贴文|則貼文|则贴文)[^。]*(?:屏蔽|拉黑|封鎖)了?你/u,
+  /来自已(?:屏蔽|拉黑|封鎖)你的(?:账号|帳號)/u,
+  /(?:此|这)(?:帖子|貼文|贴文|則貼文|则贴文)[^。]*(?:来自|來自)[^。]*(?:屏蔽|拉黑|封鎖)你/u,
+];
+
+const FOLLOWS_YOU_PATTERNS = [
+  /follows you/i,
+  /フォローされています/u,
+  /关注了你/u,
+  /正在关注你/u,
+  /已關注你/u,
+];
+
+function normalizedText(element: Element): string {
+  return (element.textContent ?? "").normalize("NFKC");
+}
+
+function platformText(element: Element): string {
+  const clone = element.cloneNode(true) as Element;
+  for (const userContent of clone.querySelectorAll(
+    '[data-testid="tweetText"], [data-testid="card.layoutLarge.media"]',
+  )) {
+    userContent.remove();
+  }
+  return normalizedText(clone);
+}
+
+function matchesAny(text: string, patterns: RegExp[]): boolean {
+  return patterns.some((pattern) => pattern.test(text));
+}
+
+function visibleHoverCardsByHandle(doc: Document): Map<string, HTMLElement> {
+  const cards = new Map<string, HTMLElement>();
+  for (const card of doc.querySelectorAll<HTMLElement>('[data-testid="HoverCard"]')) {
+    if (card.querySelector('[role="progressbar"], [data-testid="loadingSpinner"]')) continue;
+    const handle = findHandle(card);
+    if (!handle) continue;
+    cards.set(handle.toLowerCase(), card);
+  }
+  return cards;
+}
+
+function hoverCardOmitsRelationshipCounts(card: Element, handle: string): boolean {
+  const hasFollowingCount = card.querySelector(`a[href$="/${handle}/following" i]`);
+  const hasFollowerCount = card.querySelector(
+    `a[href$="/${handle}/followers" i], a[href$="/${handle}/verified_followers" i]`,
+  );
+  return !hasFollowingCount && !hasFollowerCount;
+}
+
+const ENGAGEMENT_SELECTORS = [
+  '[data-testid="reply"]',
+  '[data-testid="retweet"], [data-testid="unretweet"]',
+  '[data-testid="like"], [data-testid="unlike"]',
+] as const;
+
+function engagementControlIsActionable(surface: Element, selector: string): boolean {
+  const control = surface.querySelector<HTMLElement>(selector);
+  if (!control) return false;
+  const interactive = control.matches('button, [role="button"], a[href]')
+    ? control
+    : control.querySelector<HTMLElement>('button, [role="button"], a[href]');
+  if (!interactive) return false;
+  const blockedSelector = ':disabled, [aria-disabled="true"], [aria-hidden="true"], [inert]';
+  let element: HTMLElement | null = interactive;
+  while (element) {
+    if (element.matches(blockedSelector)) return false;
+    const style = element.ownerDocument.defaultView?.getComputedStyle(element);
+    if (
+      style?.pointerEvents === "none" ||
+      style?.visibility === "hidden" ||
+      style?.display === "none"
+    ) return false;
+    if (element === surface) break;
+    const parentElement: HTMLElement | null = element.parentElement;
+    if (!parentElement || !surface.contains(parentElement)) break;
+    element = parentElement;
+  }
+  return true;
+}
+
+function engagementIsUnavailable(surface: Element): boolean {
+  return ENGAGEMENT_SELECTORS.every(
+    (selector) => !engagementControlIsActionable(surface, selector),
+  );
+}
+
+function engagementIsAvailable(surface: Element): boolean {
+  return ENGAGEMENT_SELECTORS.every((selector) =>
+    engagementControlIsActionable(surface, selector),
+  );
+}
+
+function documentHasActionableEngagement(doc: Document): boolean {
+  return [...doc.querySelectorAll<HTMLElement>('[data-testid="cellInnerDiv"], article')]
+    .some(engagementIsAvailable);
+}
+
+function handleFromText(text: string, allowBare = false): string | null {
+  const trimmed = text.trim();
+  if (!allowBare && !trimmed.startsWith("@")) return null;
+  const match = trimmed.match(HANDLE_PATTERN);
+  if (!match?.[1]) return null;
+  return RESERVED_PATHS.has(match[1].toLowerCase()) ? null : match[1];
+}
+
+function handleFromHref(href: string | null): string | null {
+  if (!href) return null;
+  try {
+    const url = new URL(href, "https://x.com");
+    if (url.origin !== "https://x.com") return null;
+    const segments = url.pathname.split("/").filter(Boolean);
+    if (segments.length !== 1 || !segments[0]) return null;
+    return handleFromText(segments[0], true);
+  } catch {
+    return null;
+  }
+}
+
+function findHandle(area: Element): string | null {
+  for (const element of area.querySelectorAll<HTMLElement>("a[href], span")) {
+    const fromText = handleFromText(element.textContent ?? "");
+    if (fromText) return fromText;
+    if (element instanceof HTMLAnchorElement) {
+      const fromHref = handleFromHref(element.getAttribute("href"));
+      if (fromHref) return fromHref;
+    }
+  }
+  return null;
+}
+
+export function viewerHandleFromDocument(doc: Document): string | null {
+  const accountSwitcher = doc.querySelector('[data-testid="SideNav_AccountSwitcher_Button"]');
+  const fromSwitcher = accountSwitcher ? findHandle(accountSwitcher) : null;
+  if (fromSwitcher) return fromSwitcher;
+  const profileLink = doc.querySelector<HTMLAnchorElement>('[data-testid="AppTabBar_Profile_Link"]');
+  return handleFromHref(profileLink?.getAttribute("href") ?? null);
+}
+
+export function sourceTypeFromUrl(url: URL, viewerHandle: string | null): SourceType {
+  const segments = url.pathname.split("/").filter(Boolean);
+  if (segments[0] === "search") return "search";
+  if (segments[0] === "notifications") return "notifications";
+  if (segments.length >= 3 && segments[1] === "status") return "thread";
+  if (segments.length >= 2 && viewerHandle && segments[0]?.toLowerCase() === viewerHandle.toLowerCase()) {
+    if (segments[1] === "following") return "following";
+    if (segments[1] === "followers" || segments[1] === "verified_followers") return "followers";
+  }
+  if (segments.length === 1 && handleFromText(segments[0] ?? "", true)) return "profile";
+  if (segments.length === 0 || segments[0] === "home") return "timeline";
+  return "unknown";
+}
+
+function relationshipFacts(
+  surface: Element,
+  sourceType: SourceType,
+  blockedByInteractionRestriction = false,
+  blockedByProfileSummaryRestriction = false,
+  supplementalSurface: Element | null = null,
+): { facts: RelationshipFacts; evidence: EvidenceType[] } {
+  const relationshipSurfaces = supplementalSurface
+    ? [surface, supplementalSurface]
+    : [surface];
+  const text = relationshipSurfaces.map(platformText).join(" ");
+  const evidence: EvidenceType[] = [];
+  const blockedByNotice = matchesAny(text, BLOCKED_PATTERNS);
+  const blockedBy = blockedByNotice ||
+    blockedByInteractionRestriction ||
+    blockedByProfileSummaryRestriction;
+  if (blockedByNotice) evidence.push("blocked-notice");
+  if (blockedByInteractionRestriction) evidence.push("blocked-interaction-restriction");
+  if (blockedByProfileSummaryRestriction) {
+    evidence.push("blocked-profile-summary-restriction");
+  }
+
+  const unfollowControl = relationshipSurfaces.some((area) =>
+    area.querySelector('[data-testid$="-unfollow"]'));
+  const followControl = relationshipSurfaces.some((area) =>
+    area.querySelector('[data-testid$="-follow"]'));
+  let following: boolean | null = null;
+  if (unfollowControl) {
+    following = true;
+    evidence.push("following-control");
+  } else if (followControl) {
+    following = false;
+    evidence.push("follow-control");
+  } else if (sourceType === "following") {
+    following = true;
+    evidence.push("viewer-following-list");
+  }
+
+  const followsYouLabel = relationshipSurfaces.some((area) =>
+    area.querySelector('[data-testid="userFollowIndicator"]')) ||
+    matchesAny(text, FOLLOWS_YOU_PATTERNS);
+  let followsYou: boolean | null = null;
+  if (followsYouLabel) {
+    followsYou = true;
+    evidence.push("follows-you-label");
+  } else if (sourceType === "followers") {
+    followsYou = true;
+    evidence.push("viewer-followers-list");
+  } else if (
+    sourceType === "following" ||
+    sourceType === "profile" ||
+    surface.matches('[data-testid="UserCell"]') ||
+    supplementalSurface !== null
+  ) {
+    followsYou = false;
+  }
+
+  if (evidence.length === 0) evidence.push("insufficient-evidence");
+  return { facts: { following, followsYou, blockedBy }, evidence };
+}
+
+function displayNameFromArea(area: Element, handle: string): string | null {
+  const candidates = area.querySelectorAll<HTMLElement>("span");
+  for (const element of candidates) {
+    const text = (element.textContent ?? "").trim();
+    if (!text || text.startsWith("@") || text.toLowerCase() === handle.toLowerCase()) continue;
+    if (text.length <= 80) return text;
+  }
+  return null;
+}
+
+function avatarFromSurface(surface: Element): string | null {
+  const image = surface.querySelector<HTMLImageElement>('img[src*="profile_images"]');
+  return image?.src ?? null;
+}
+
+function observationFor(
+  handle: string,
+  area: HTMLElement,
+  surface: Element,
+  sourceUrl: URL,
+  sourceType: SourceType,
+  observedAt: number,
+  blockedByInteractionRestriction = false,
+  blockedByProfileSummaryRestriction = false,
+  supplementalSurface: Element | null = null,
+): ObservationDraft {
+  const { facts, evidence } = relationshipFacts(
+    surface,
+    sourceType,
+    blockedByInteractionRestriction,
+    blockedByProfileSummaryRestriction,
+    supplementalSurface,
+  );
+  return {
+    userKey: handle.toLowerCase(),
+    handle,
+    displayName: displayNameFromArea(area, handle),
+    avatarUrl: avatarFromSurface(surface),
+    profileUrl: `https://x.com/${handle}`,
+    observedAt,
+    sourceUrl: sourceUrl.href,
+    sourceType,
+    relationship: resolveRelationship(facts),
+    evidence,
+  };
+}
+
+function profileCandidate(
+  doc: Document,
+  url: URL,
+  sourceType: SourceType,
+  observedAt: number,
+  viewerHandle: string | null,
+): ExtractedCandidate | null {
+  if (sourceType !== "profile") return null;
+  const handle = handleFromText(
+    url.pathname.split("/").filter(Boolean)[0] ?? "",
+    true,
+  );
+  if (viewerHandle && handle?.toLowerCase() === viewerHandle.toLowerCase()) return null;
+  const area = doc.querySelector<HTMLElement>(
+    '[data-testid="primaryColumn"] [data-testid="UserName"], [data-testid="primaryColumn"] [data-testid="User-Name"]',
+  );
+  const surface = doc.querySelector<HTMLElement>('[data-testid="primaryColumn"]');
+  if (!handle || !area || !surface) return null;
+  return {
+    observation: observationFor(handle, area, surface, url, sourceType, observedAt),
+    anchor: area,
+  };
+}
+
+export function scanXDocument(
+  doc: Document,
+  sourceHref: string,
+  observedAt = Date.now(),
+): ExtractedCandidate[] {
+  const url = new URL(sourceHref);
+  const viewerHandle = viewerHandleFromDocument(doc);
+  const sourceType = sourceTypeFromUrl(url, viewerHandle);
+  const candidates: ExtractedCandidate[] = [];
+  const seenAnchors = new Set<HTMLElement>();
+  const visibleHoverCards = visibleHoverCardsByHandle(doc);
+  const hasActionableEngagement = documentHasActionableEngagement(doc);
+
+  for (const area of doc.querySelectorAll<HTMLElement>(USER_NAME_SELECTOR)) {
+    if (area.closest("[data-xro-badge]")) continue;
+    const cell = area.closest<HTMLElement>('[data-testid="cellInnerDiv"]');
+    const surface =
+      area.closest<HTMLElement>('[data-testid="UserCell"]') ??
+      (sourceType === "thread" ? cell : null) ??
+      area.closest<HTMLElement>("article") ??
+      cell ??
+      area;
+    const handle = findHandle(area);
+    if (
+      !handle ||
+      seenAnchors.has(area) ||
+      (viewerHandle && handle.toLowerCase() === viewerHandle.toLowerCase())
+    ) continue;
+    seenAnchors.add(area);
+    const hoverCard = visibleHoverCards.get(handle.toLowerCase()) ?? null;
+    const blockedByInteractionRestriction =
+      sourceType === "thread" &&
+      engagementIsUnavailable(surface) &&
+      hasActionableEngagement;
+    const blockedByProfileSummaryRestriction =
+      sourceType === "thread" &&
+      hoverCard !== null &&
+      hoverCardOmitsRelationshipCounts(hoverCard, handle);
+    candidates.push({
+      observation: observationFor(
+        handle,
+        area,
+        surface,
+        url,
+        sourceType,
+        observedAt,
+        blockedByInteractionRestriction,
+        blockedByProfileSummaryRestriction,
+        hoverCard,
+      ),
+      anchor: area,
+    });
+  }
+
+  const profile = profileCandidate(doc, url, sourceType, observedAt, viewerHandle);
+  if (profile) candidates.push(profile);
+  return candidates;
+}

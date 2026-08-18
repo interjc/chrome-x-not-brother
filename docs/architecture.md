@@ -1,0 +1,71 @@
+# 技术架构
+
+## 运行时数据流
+
+```mermaid
+flowchart LR
+    X["x.com 已渲染 DOM"] --> A["X adapter<br/>证据归一化"]
+    A --> L["批量查询本地已知 handle"]
+    L --> K{"当前或本地关系已知？"}
+    K -->|是| B["Content script<br/>徽标 + 观察 Dock + 批量消息"]
+    K -->|否| J["移除旧徽标并丢弃"]
+    B --> C["MV3 service worker"]
+    C --> D["IndexedDB<br/>users + observations"]
+    D --> E["Side Panel"]
+    D --> F["Relationship Fieldbook"]
+    D --> H["本地关系概览"]
+    H --> B
+    G["chrome.storage.local<br/>同意版本、观察器与 dock 设置"] --> B
+    G --> E
+    G --> F
+```
+
+## 上下文边界
+
+### Content script
+
+- 只运行在 `https://x.com/*`；
+- 用 MutationObserver 观察用户正常浏览产生的 DOM；
+- 所有选择器、保留路径和本地化文案位于 `src/content/x-adapter.ts`；
+- 把同一 handle 的候选按证据强度合并；
+- 将 unknown 保留为短暂内部结果，只用于移除过期徽标；不发送、不收集；
+- 在评论线程将三项互动全部不可用与同页正常控制组合，生成 `blocked-interaction-restriction`；将完整加载但缺少 following/follower 链接的已显示浮窗归一化为独立的 `blocked-profile-summary-restriction`；
+- 将完整加载的可见浮窗按 handle 精确配给底层作者卡片，并用 `*-follow`、`*-unfollow` 和 `userFollowIndicator` 补充普通关系事实；
+- 通过 `users:lookup` 批量读取可见 handle 的本地已知关系，使已确认账号在证据浮层关闭后继续回标；
+- 识别当前登录 handle 并在扫描阶段排除本人；
+- 插入观察状态/概览 dock；其本地 `dockCollapsed` 设置控制完整面板或状态悬浮球，用户手势可恢复面板或通过 service worker 打开当前标签页的 Side Panel；
+- 对发送签名去重，减少重复数据库消息；
+- 不调用 `fetch`，不打开 URL，不点击页面控制。
+
+### Service worker
+
+- 接收 observation drafts；
+- 防御性拒绝 unknown，并在启动/安装时清理旧版本 unknown 数据；
+- 调用统一 repository 写 IndexedDB；
+- 设置工具栏按钮打开 Side Panel；
+- 用 action badge 同步显示 `ON` 或需要注意的 `!` 状态；
+- 首次安装打开本地 dashboard 引导页；
+- 清理 viewer 本人记录并向 content script 返回本地概览；
+- 仅向 `x.com` content script 返回其请求 handle 的已知本地用户记录；
+- 处理用户主动打开完整管理页的请求。
+
+### Extension pages
+
+- 与 service worker 同属扩展 origin，可以安全访问扩展 IndexedDB；
+- Dexie `liveQuery` 驱动 UI 数据更新；
+- Side Panel 提供概览，dashboard 提供完整本地数据管理。
+
+### Internationalization
+
+- `public/_locales/{en,ja,zh_CN}/messages.json` 提供 Chrome 解析的扩展名称、说明和工具栏默认标题；Manifest 使用 `__MSG_*__` 并以 `en` 为 `default_locale`。
+- `src/i18n/index.ts` 是运行时 UI 的类型化三语词库，集中提供语言归一化、占位符替换、关系展示和来源名称。
+- Side Panel、dashboard 与 service worker 通过 `chrome.i18n.getUILanguage()` 选择语言；content script 优先读取 X 文档的 `lang`。
+- `zh-*` 归一化为 `zh-CN`，`ja-*` 归一化为 `ja`，其余未支持语言归一化为 `en`。语言不存进用户数据库，也不改变关系事实。
+
+## 构建
+
+`scripts/build.mjs` 用 esbuild 分别生成 ESM service worker、IIFE content script、ESM React side panel 和 ESM React dashboard。字体和全部运行时代码打包到 `dist/`，符合 Manifest V3 禁止远程托管代码的要求。
+
+## 权限
+
+Manifest 只申请 `storage` 和 `sidePanel`。站点访问只来自 content script 的单一 `https://x.com/*` match。生产校验会拒绝多余的 `tabs`、`scripting`、`cookies` 与 `webRequest` 权限。

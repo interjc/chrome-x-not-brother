@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maintain X Relationship Observer"
+  short_description: "Build, maintain, use, and release this extension"
+  default_prompt: "Use $x-relationship-observer to develop or maintain the X relationship observation extension."
