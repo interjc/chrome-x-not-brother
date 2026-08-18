@@ -1,6 +1,7 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { STORE_PUBLIC_URLS } from "./project-urls.mjs";
 
 const dist = path.join(process.cwd(), "dist");
 const required = [
@@ -122,13 +123,7 @@ const legalFiles = [
   "pages/terms.html",
 ];
 await Promise.all(legalFiles.map((file) => access(path.join(process.cwd(), file))));
-const requiredStoreUrls = [
-  "https://github.com/interjc/chrome-x-not-brother",
-  "https://github.com/interjc/chrome-x-not-brother/issues",
-  "https://interjc.github.io/chrome-x-not-brother/privacy.html",
-  "https://interjc.github.io/chrome-x-not-brother/terms.html",
-];
-for (const url of requiredStoreUrls) {
+for (const url of STORE_PUBLIC_URLS) {
   if (!storeListing.includes(url)) {
     throw new Error(`Store listing is missing the public URL: ${url}`);
   }

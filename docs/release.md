@@ -1,46 +1,83 @@
 # 发布指南
 
-## 版本准备
+第一次上架已经提交审核。这份文档管**以后每一次更新**。第一次账号、Pages、商店字段怎么点，见 [首次上架准备](deploy.md)。
 
-1. 确认功能仍严格限定为标注与本地收集。
-2. 同步修改 `package.json` 与 `public/manifest.json` 的 SemVer 版本。
-3. 更新 README、用户文档、隐私说明、维护说明和 skill references。
-4. 重新核验当前 Chrome Web Store 政策与 X 条款；不要沿用旧研究结论。
-5. 确认商店 listing 标明最低 Chrome 116，并更新包含 X 页面观察 dock、工具栏状态和暗黑模式的截图。
-6. 确认 `en`、`ja`、`zh_CN` Manifest catalog 完整，三种语言的 listing 说明表达相同功能与隐私边界，并准备对应截图。
+## 当前已落实
 
-`npm run validate:dist` 会同时检查三语 Manifest Summary 不超过 132 个字符、与 `docs/store-listing.md` 完全一致，并确认三种语言都含当前版本的更新说明标题。版本升级时必须同步更新这些文案后才能打包。
+- 开发者账号按非交易者申报；以后做付费或产品站引流再改交易者。
+- 公开隐私政策是 GitHub Pages，不是仓库 `blob` 链接。商店不接受 `github.com/.../blob/...`。
+- 隐私政策：https://interjc.github.io/chrome-x-not-brother/privacy.html
+- 使用条款：https://interjc.github.io/chrome-x-not-brother/terms.html
+- 商店 Homepage 是 GitHub 仓库，Support 是 Issues。
+- 类别是 **Productivity**。
+- 上传用的 ZIP 在 gitignore 的 `output/`；`artifacts/` 保留历史包。
 
-## 可重复构建
+源稿在 `terms/`，对外 HTML 在 `pages/`。改了条款或隐私后必须同步这两处，推到 `main`，等 Actions 里 `Deploy GitHub Pages` 变绿，再用无痕窗口确认公开页。
+
+## 以后再发一版
+
+1. 功能仍只做标注和本地收集。
+2. 升版本：
+
+```bash
+source "$HOME/.nvm/nvm.sh"
+nvm use
+npm run version:bump -- patch
+```
+
+`patch` 可换成 `minor`、`major` 或具体号，例如 `0.5.0`。脚本会同时改 `package.json` 和 `public/manifest.json`，并在 [store-listing.md](store-listing.md) 插入三语更新说明空标题。把新版本的要点写进去，三种语言说同一件事。
+
+3. 若改了权限、收集范围或同意流程：先改 `terms/` 与 `pages/`、提高同意版本，再打包。
+4. 本地构建并打上传包：
 
 ```bash
 source "$HOME/.nvm/nvm.sh"
 nvm use
 npm ci
-npm run check
-npm run test:coverage
-npm run build
-npm run validate:dist
-npm run skills:validate
-npm run package
+npm run release
 ```
 
-产物：`dist/` 可直接 Load unpacked；`artifacts/not-brother-<version>.zip` 是 manifest 位于压缩包根目录的发布包。
+这会依次跑 `check`、覆盖率测试、`skills:validate`、`build`、`validate:dist`、打包，并检查 GitHub Pages 上的隐私政策和条款还能打开。没有网时用 `npm run release -- --skip-pages`。
 
-## 发布前手工测试
+5. 上传文件是：
 
-在干净 Chrome 配置执行 [测试指南](testing.md) 的全部步骤。至少覆盖英语、日语、简体中文的 Chrome UI 自动切换，并把 X 设为与 Chrome 不同的语言验证注入 UI；同时验证无网络 API、无自动滚动、无账户操作。
+`output/not-brother-<version>.zip`
 
-## Chrome Web Store
+不要手压 `dist/`。解压后根目录必须直接是 `manifest.json`。
 
-商店说明必须准确披露：扩展只在 x.com 运行；读取页面中已经显示的用户关系证据；数据只保存在本地；不执行关注、取关、拉黑或静音；“拉黑了我”是机会式发现，不是完整列表。
+6. 在干净 Chrome 配置里 Load unpacked `dist/`，按 [测试指南](testing.md) 做相关验收。
+7. Dashboard → 该条目 → Package → 上传新 ZIP。更新三种语言的 listing 更新说明。隐私字段若没变就不用改。取消自动发布后提交审核。
+8. 审核通过后 30 天内点 Publish。新增权限会让已装用户再授权。
 
-准备截图、权限说明、单一用途说明和与 [terms/privacy.md](../terms/privacy.md) 一致的隐私政策。Homepage URL 填 GitHub 仓库，Support URL 填 [Issues](https://github.com/interjc/chrome-x-not-brother/issues)，隐私政策 URL 填 GitHub Pages 的 `https://interjc.github.io/chrome-x-not-brother/privacy.html`。商店审核通过不代表 X 条款许可，需单独评估。
+`npm run validate:dist` 仍会检查：三语 Summary 不超过 132 字且与 store-listing 一致；当前版本的三语更新说明标题都在。
 
-使用 [Chrome Web Store 三语文案](store-listing.md) 准备 English、Japanese 与 Chinese (China) listing、版本更新说明、权限理由和 reviewer notes。发布前必须逐句核对当前功能边界，不能把旧版“不执行账户操作”的文案带入包含账户操作的新版本。
+## 单个脚本
 
-第一次上架按 [首次上架准备](deploy.md) 做：里面写清仓库已完成的部分、怎么拍 1280×800 截图、以及 Dashboard 逐步点击。政策和字段原则见 [Chrome Web Store 标准上架指南](chrome-web-store.md)。
+先加载 nvm，再在仓库根目录执行。
+
+| 命令 | 做什么 |
+| --- | --- |
+| `npm run check` | TypeScript + 单元测试 |
+| `npm run test:coverage` | 覆盖率 |
+| `npm run build` | 产出 `dist/` |
+| `npm run validate:dist` | 检查 dist、权限、商店 URL、版本文案 |
+| `npm run skills:validate` | 检查项目 skill |
+| `npm run package` | 构建、校验，并把 ZIP 写到 `artifacts/` 和 `output/` |
+| `npm run verify:pages` | 请求公开隐私政策和条款页 |
+| `npm run version:bump -- patch` | 同步升版本并插入商店更新说明标题 |
+| `npm run release` | 完整本地发布构建；上传 `output/not-brother-<version>.zip` |
+
+对应文件在 `scripts/`：`build.mjs`、`validate-dist.mjs`、`package.mjs`、`verify-pages.mjs`、`bump-version.mjs`、`release.mjs`。
+
+## 商店更新时记得
+
+- 隐私政策 URL 必须是 `https://interjc.github.io/chrome-x-not-brother/privacy.html`。
+- 主机权限理由仍只解释 `https://x.com/*`，文案在 [store-listing.md](store-listing.md)。
+- 不要把 GitHub README 上的作者 X / Profile 写进商店简介当推销。
+- 商店审核通过不代表 X 允许额外行为。
+
+政策和字段细节见 [Chrome Web Store 标准上架指南](chrome-web-store.md)。
 
 ## 回滚
 
-保留前一版本 ZIP。回滚前导出 JSON，安装旧版本后确认数据库 schema 兼容。除非用户明确接受数据丢失，不得用清空 IndexedDB 作为常规回滚步骤。
+保留 `artifacts/` 里的上一版 ZIP。回滚前让用户导出 JSON。装回旧包后确认 schema 还能读。不要靠静默清空 IndexedDB 当常规回滚。

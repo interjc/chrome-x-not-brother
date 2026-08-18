@@ -79,6 +79,8 @@ npm run validate:dist
 npm run skills:validate
 ```
 
+维护者打商店更新包时用 `npm run release`，见 [发布指南](release.md)。不要把手压的 `dist/` 文件夹上传到 Chrome Web Store。
+
 选择器、关系规则或 Side Panel 交互变化时，还要补测试并按 [测试指南](testing.md) 做相关手工步骤。行为或工作流变化时，同步更新 `docs/` 和 `skills/x-relationship-observer/references/` 中对应的说明，并保持 [README](../README.md) 文档索引准确。
 
 不要为了方便新增 `tabs`、`scripting`、`cookies`、`webRequest` 或全站访问。内容脚本不得使用页面 origin 的 IndexedDB。

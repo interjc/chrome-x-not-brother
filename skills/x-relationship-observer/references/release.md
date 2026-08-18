@@ -1,26 +1,24 @@
 # Release workflow
 
 1. Confirm the scope still performs only annotation and local collection.
-2. Update `package.json` and `public/manifest.json` to the same semantic version.
-3. Update user, maintenance, privacy, terms, and release documentation where necessary. Public legal copy lives in `terms/`.
+2. Load nvm and bump the version with `npm run version:bump -- patch` (or `minor` / `major` / `x.y.z`) so `package.json` and `public/manifest.json` stay aligned.
+3. Fill the new three-language release-note stubs in `docs/store-listing.md`. Update user, maintenance, privacy, terms, `pages/` HTML, and release documentation where necessary.
 4. Load nvm and run:
 
 ```bash
 npm ci
-npm run check
-npm run build
-npm run validate:dist
-npm run skills:validate
-npm run package
+npm run release
 ```
 
-5. Load `dist/` unpacked in a clean Chrome profile and execute `docs/testing.md`.
-6. Inspect the generated `artifacts/not-brother-<version>.zip`; it must contain manifest files at the archive root.
-7. For Chrome Web Store submission, disclose the single-site host access and local relationship data accurately. Re-check current X terms and Chrome Web Store policies before every public release.
-8. Require Chrome 116+, verify toolbar `ON`/`!`, install onboarding, X-page dock opening, and light/dark screenshots.
-9. Verify automatic UI switching for Chrome English, Japanese, and Simplified Chinese, then test X in a different supported language. Inspect all three `_locales` catalogs and prepare consistent localized Store listings/screenshots.
+Use `npm run release -- --skip-pages` only when GitHub Pages cannot be reached. The uploadable archive is `output/not-brother-<version>.zip`; `artifacts/` keeps historical copies.
 
-Use `docs/deploy.md` for the first Chrome Web Store launch: remaining screenshots, Dashboard clicks, and the operator checklist.
+6. Load `dist/` unpacked in a clean Chrome profile and execute `docs/testing.md`.
+7. Inspect the ZIP; it must contain `manifest.json` at the archive root.
+8. For Chrome Web Store submission, disclose the single-site host access and local relationship data accurately. The privacy-policy URL must be the GitHub Pages HTML page, not a GitHub blob link. Re-check current X terms and Chrome Web Store policies before every public release.
+9. Require Chrome 116+, verify toolbar `ON`/`!`, install onboarding, X-page dock opening, and light/dark screenshots.
+10. Verify automatic UI switching for Chrome English, Japanese, and Simplified Chinese, then test X in a different supported language. Inspect all three `_locales` catalogs and prepare consistent localized Store listings/screenshots.
+
+Use `docs/release.md` for later updates. Use `docs/deploy.md` only for first-launch account, Pages, and Dashboard history.
 
 Use `docs/chrome-web-store.md` for the current account, listing, visual asset, privacy disclosure, submission, update, and rollback checklist.
 

@@ -93,7 +93,9 @@ npm run test:coverage     # coverage report
 npm run build             # production extension in dist/
 npm run validate:dist     # manifest, permissions, files
 npm run skills:validate   # project skill structure
-npm run package           # verified ZIP in artifacts/
+npm run package           # ZIP in artifacts/ and output/
+npm run version:bump -- patch   # 同步升版本并插入商店更新说明标题
+npm run release           # 完整本地发布构建；上传 output/not-brother-<version>.zip
 ```
 
 ## License

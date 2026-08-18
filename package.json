@@ -25,6 +25,9 @@
     "check": "npm run typecheck && npm run test",
     "validate:dist": "node scripts/validate-dist.mjs",
     "package": "node scripts/package.mjs",
+    "verify:pages": "node scripts/verify-pages.mjs",
+    "version:bump": "node scripts/bump-version.mjs",
+    "release": "node scripts/release.mjs",
     "skills:validate": "node scripts/validate-skill.mjs"
   },
   "dependencies": {

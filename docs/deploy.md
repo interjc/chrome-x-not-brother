@@ -2,6 +2,14 @@
 
 第一次把 Not Brother 放到 Chrome Web Store 时，用这份文档当操作手册。政策和后台会变；提交当天以 [Developer Dashboard](https://chrome.google.com/webstore/devconsole) 为准。
 
+**2026-08-18 状态：** 开发者账号已按非交易者注册；GitHub Pages 已发布；首个条目已提交审核。审核通过后按第 11 节点 Publish。以后升版本走 [发布指南](release.md) 和 `npm run release`，不要再走完整首次注册。
+
+第一次踩过的坑：
+
+- 商店隐私政策不能填 `github.com/.../blob/...`，必须用 `https://interjc.github.io/chrome-x-not-brother/privacy.html`。
+- 第一次跑 Pages workflow 前，要在仓库 Settings → Pages 把 Source 设成 **GitHub Actions**，否则会报 `Get Pages site failed`。
+- 上传包用 `output/not-brother-<version>.zip`，不要手压 `dist/`。
+
 | 文档 | 什么时候看 |
 | --- | --- |
 | 本文 | 第一次发布：哪些已经做好、哪些要你拍图、哪些要点击后台 |
@@ -14,7 +22,7 @@
 
 ### 仓库里已经做好、不用再写的
 
-- 扩展包构建与校验：`npm run package` 生成 `artifacts/not-brother-<version>.zip`
+- 扩展包构建与校验：`npm run release` 或 `npm run package`，上传副本在 `output/not-brother-<version>.zip`
 - 中英日商店名称、简介、详细说明、0.4.7 更新说明、权限理由、审核备注：[store-listing.md](store-listing.md)
 - 公开隐私政策和使用条款：[terms/privacy.md](../terms/privacy.md)、[terms/terms.md](../terms/terms.md)
 - 主页、反馈、隐私、条款的固定地址写在 `src/domain/project.ts` 和 [store-listing.md](store-listing.md) 的 Store listing URLs
@@ -116,20 +124,17 @@ Chrome Web Store 不接受 `github.com/.../blob/...` 这种仓库文件链接，
 source "$HOME/.nvm/nvm.sh"
 nvm use
 npm ci
-npm run check
-npm run test:coverage
-npm run skills:validate
-npm run package
+npm run release
 ```
 
 上传这个文件，不要手压 `dist/`：
 
-`artifacts/not-brother-0.4.7.zip`
+`output/not-brother-0.4.7.zip`
 
 自己再确认一次：
 
 ```bash
-unzip -l artifacts/not-brother-0.4.7.zip | head
+unzip -l output/not-brother-0.4.7.zip | head
 ```
 
 列表里第一层就应有 `manifest.json`，不要出现 `dist/manifest.json`。
@@ -236,7 +241,7 @@ unzip -l artifacts/not-brother-0.4.7.zip | head
 
 1. 打开 [Developer Dashboard](https://chrome.google.com/webstore/devconsole)。
 2. **Add new item** / **New item**。
-3. 选 `artifacts/not-brother-0.4.7.zip` → **Upload**。
+3. 选 `output/not-brother-0.4.7.zip` → **Upload**。
 4. Manifest 合法后，左侧会出现 Package、Store listing、Privacy、Distribution、Test instructions。
 
 ### 9.2 Store listing
@@ -324,4 +329,4 @@ unzip -l artifacts/not-brother-0.4.7.zip | head
 
 ## 12. 以后更新
 
-按 [发布指南](release.md) 提高版本、更新三语 release notes、重新 `npm run package`。上传完整新 ZIP，不是增量。权限或收集范围变了，先改 `terms/privacy.md` 和同意版本。出问题用 Dashboard 回滚，不要静默清空用户 IndexedDB。
+按 [发布指南](release.md) 用 `npm run version:bump` 和 `npm run release` 升版本、打包。Dashboard 上传 `output/` 里的新 ZIP，不是增量。权限或收集范围变了，先改 `terms/`、`pages/` 和同意版本。出问题用 Dashboard 回滚，不要静默清空用户 IndexedDB。

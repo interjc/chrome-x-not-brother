@@ -157,7 +157,7 @@ https://interjc.github.io/chrome-x-not-brother/terms.html
 ## 8. 上传并提交审核
 
 1. 在 Developer Dashboard 选择 **New item**；
-2. 上传 `artifacts/not-brother-<version>.zip`；
+2. 上传 `output/not-brother-<version>.zip`（由 `npm run release` 或 `npm run package` 生成）；
 3. 完成 Store listing、Privacy practices、Distribution 和测试说明；
 4. 若审核员需要登录 X 才能复现，提供不含密码的清晰操作路径和使用虚构数据的演示视频；绝不在备注中提交个人账号凭据；
 5. 选择 **Submit for Review**；正式发布建议取消自动发布，使用 deferred publishing，在审核通过后人工检查再发布。
@@ -189,7 +189,7 @@ https://interjc.github.io/chrome-x-not-brother/terms.html
 
 ## 最终提交清单
 
-- [ ] `npm run package` 全部通过；
+- [ ] `npm run release` 全部通过，上传 `output/` 中的 ZIP；
 - [ ] clean Chrome profile 与真实 X 页面手工验收通过；
 - [ ] 首次同意发生在任何收集之前；
 - [ ] 单一用途、权限理由、隐私申报彼此一致；

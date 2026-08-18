@@ -1,6 +1,6 @@
 # 隐私说明
 
-面向用户和 Chrome Web Store 的公开文本在 [terms/](../terms/)：
+面向用户和 Chrome Web Store 的公开 HTML 在 [pages/](../pages/)，由 GitHub Pages 发布。源稿在 [terms/](../terms/)：
 
 - [隐私政策](../terms/privacy.md)
 - [使用条款](../terms/terms.md)
