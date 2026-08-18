@@ -46,6 +46,6 @@ X 的关系证据文本不属于 UI 翻译词库；它们仍集中在 `src/conte
 
 ## Chrome Web Store
 
-三个 `_locales` 目录会让 Developer Dashboard 提供对应 listing 语言。上架时分别选择 English、Japanese 和 Chinese (China)，为每种语言填写含义一致的详细说明；可以为各语言上传本地化截图和视频，但功能声明、隐私边界与权限说明不得因语言而变化。英语是默认和兜底 listing。
+三个 `_locales` 目录会让 Developer Dashboard 提供对应 listing 语言。上架时分别选择 English、Japanese 和 Chinese (China)，为每种语言填写含义一致的详细说明；可以为各语言上传本地化截图和视频，但功能声明、隐私边界与权限说明不得因语言而变化。英语是默认和兜底 listing。Homepage URL 与 Support URL 三种语言共用，分别指向 GitHub 仓库和 Issues。
 
 官方参考：[Chrome extension i18n](https://developer.chrome.com/docs/extensions/reference/api/i18n)、[Internationalize the interface](https://developer.chrome.com/docs/extensions/develop/ui/i18n)、[Localize your Web Store listing](https://developer.chrome.com/docs/webstore/cws-dashboard-listing/#localize-your-listing)。

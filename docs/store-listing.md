@@ -26,6 +26,8 @@ Not Brother only processes account identity and relationship hints rendered on t
 
 Not Brother is an independent extension and is not affiliated with, endorsed by, or sponsored by X Corp.
 
+Source code is available at https://github.com/interjc/chrome-x-not-brother. Report problems and ask for support on the repository Issues page.
+
 ### Version 0.4.7 release notes
 
 - Adds a visible-page 2-second fallback rescan, immediate focus/visibility recovery, and serialized scan scheduling for more reliable live annotations.
@@ -40,6 +42,7 @@ Not Brother is an independent extension and is not affiliated with, endorsed by,
 - Reads matching hover-card follow controls to identify mutual and one-way relationships in reply threads.
 - Keeps known local relationships visible when the current card has no fresh evidence.
 - Explains in zero-record states that reply-thread relationship evidence may require hovering an author.
+- Adds Side Panel and Fieldbook feedback links that open the public GitHub Issues page.
 
 ## 中文商店文案
 
@@ -63,6 +66,8 @@ Not Brother is an independent extension and is not affiliated with, endorsed by,
 
 不是兄弟是独立开发的扩展，与 X Corp. 不存在隶属、认可或赞助关系。
 
+源码位于 https://github.com/interjc/chrome-x-not-brother。问题反馈与支持请使用仓库的 Issues 页面。
+
 ### 0.4.7 更新说明
 
 - 新增可见页面 2 秒兜底复扫、焦点/可见性恢复时立即检查和串行扫描调度，提高实时标注健壮性。
@@ -77,6 +82,7 @@ Not Brother is an independent extension and is not affiliated with, endorsed by,
 - 使用匹配作者浮窗的关注控件识别评论区互关和我单向关注。
 - 当前卡片没有新证据时，仍可显示已经保存在本地的可信关系。
 - 零记录时明确提示：评论区关系证据可能需要悬停作者后才会由 X 显示。
+- Side Panel 与档案库页脚增加反馈入口，打开公开的 GitHub Issues 页面。
 
 ## 日本語ストア文案
 
@@ -100,6 +106,8 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 
 兄貴じゃないは独立した拡張機能であり、X Corp. との提携、承認、スポンサー関係はありません。
 
+ソースコードは https://github.com/interjc/chrome-x-not-brother で公開しています。不具合報告とサポートはリポジトリの Issues ページをご利用ください。
+
 ### 0.4.7 更新内容
 
 - 表示中ページの 2 秒フォールバックスキャン、フォーカス・可視性復帰時の即時確認、直列スキャン制御を追加し、リアルタイム注釈の安定性を高めました。
@@ -114,6 +122,29 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 - 一致する作者ホバーカードのフォロー操作表示から、返信スレッドの相互・片方向フォローを識別します。
 - 現在のカードに新しい証拠がなくても、ローカルで確認済みの関係を表示します。
 - 記録がゼロの場合、返信作者へのホバーが必要なことを明確に案内します。
+- サイドパネルとアーカイブのフッターから公開 GitHub Issues へフィードバックできるようにしました。
+
+## Store listing URLs
+
+这些字段三种语言共用。
+
+### Homepage URL
+
+https://github.com/interjc/chrome-x-not-brother
+
+### Support URL
+
+https://github.com/interjc/chrome-x-not-brother/issues
+
+### Privacy policy URL
+
+https://github.com/interjc/chrome-x-not-brother/blob/main/terms/privacy.md
+
+### Terms of use URL
+
+Chrome Web Store 没有单独的条款字段时，把该地址写在隐私政策或详细说明中即可。
+
+https://github.com/interjc/chrome-x-not-brother/blob/main/terms/terms.md
 
 ## Permission justifications
 
@@ -160,10 +191,14 @@ Dashboard 字段可能调整，提交时以实际界面为准。当前代码应�
 
 The extension requires no reviewer credentials and contains no hidden test account. Results depend on relationship evidence available to the reviewer's own X account. No extension control performs an X account action.
 
+Source and support: https://github.com/interjc/chrome-x-not-brother
+Issues: https://github.com/interjc/chrome-x-not-brother/issues
+
 ## Submission-time consistency check
 
 - Confirm all three descriptions advertise the same features and limitations.
 - Confirm the current version and release notes match `public/manifest.json`.
 - Confirm the permission justifications include every field stored in `chrome.storage.local`.
-- Confirm the public privacy policy URL identifies the developer, contact method, and effective date.
+- Confirm the public privacy policy URL is the GitHub `blob` page for `terms/privacy.md` and identifies the developer, contact method, and effective date.
+- Confirm Homepage URL is the GitHub repository and Support URL is the Issues page.
 - Remove every statement about “no account actions” before submission if the product later gains any X action shortcut, then update consent and privacy review first.

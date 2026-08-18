@@ -114,4 +114,24 @@ if (
 ) {
   throw new Error("Manifest must use the bundled module service worker");
 }
+
+const legalFiles = ["terms/privacy.md", "terms/terms.md"];
+await Promise.all(legalFiles.map((file) => access(path.join(process.cwd(), file))));
+const requiredStoreUrls = [
+  "https://github.com/interjc/chrome-x-not-brother",
+  "https://github.com/interjc/chrome-x-not-brother/issues",
+  "https://github.com/interjc/chrome-x-not-brother/blob/main/terms/privacy.md",
+  "https://github.com/interjc/chrome-x-not-brother/blob/main/terms/terms.md",
+];
+for (const url of requiredStoreUrls) {
+  if (!storeListing.includes(url)) {
+    throw new Error(`Store listing is missing the public URL: ${url}`);
+  }
+}
+if (packageJson.homepage !== "https://github.com/interjc/chrome-x-not-brother#readme") {
+  throw new Error("package.json homepage must point at the GitHub repository");
+}
+if (packageJson.bugs?.url !== "https://github.com/interjc/chrome-x-not-brother/issues") {
+  throw new Error("package.json bugs.url must point at GitHub Issues");
+}
 console.log("Validated the loadable Manifest V3 extension in dist/.");

@@ -7,6 +7,7 @@
 5. Read the toolbar badge: lime `ON` is active; gray `!` is paused; amber `!` needs first-run setup.
 6. Use the X-page observer dock for local counts and click it to open the side panel. Its `×` minimizes it to a status-bearing NB floating button; activate the button to restore the overview. The presentation preference persists locally.
 7. Open the fieldbook for full search, filtering, sorting, change review, export, import, local deletion, or full local reset.
+8. Use the Side Panel or Fieldbook footer feedback link to open `https://github.com/interjc/chrome-x-not-brother/issues`. Do not attach passwords, cookies, or real relationship exports.
 
 The side panel, fieldbook, and toolbar copy follow the Chrome UI language. Badges and the observer dock injected into X follow the X page language. English, Japanese, and Simplified Chinese switch automatically; unsupported locales fall back to English.
 

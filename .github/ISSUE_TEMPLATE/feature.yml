@@ -1,0 +1,28 @@
+name: Feature / 建议
+description: Propose a change that stays inside annotation and local collection.
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Not Brother only annotates visible X relationship evidence and stores it locally. Requests that require auto-scroll, profile crawling, private X APIs, or account actions will be declined.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / 要解决的问题
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal / 建议做法
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundary
+    attributes:
+      label: Product boundary / 产品边界
+      options:
+        - label: This stays inside annotation and local collection. It does not auto-scroll, open profiles in bulk, call private X APIs, or click Follow / Unfollow / Block / Mute.
+          required: true

@@ -55,6 +55,9 @@
 - 对勾按钮确认已经看过关系变化，确认后恢复显示当前基础关系；
 - 删除按钮只删除对应本地记录；
 - 设置开关控制观察器和页面徽标。
+- 页脚的“发送反馈”会在新标签页打开 [GitHub Issues](https://github.com/interjc/chrome-x-not-brother/issues)。
+
+Side Panel 页脚也有同一反馈入口。请不要在议题里粘贴账号密码、Cookie 或含真实关系数据的导出备份。
 
 ## 备份与恢复
 

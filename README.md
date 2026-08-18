@@ -1,6 +1,6 @@
 # Not Brother / 不是兄弟
 
-Not Brother（中文名：不是兄弟；日文名：兄貴じゃない）是一个本地优先的 Chrome Manifest V3 扩展。它在你正常浏览 `x.com` 时完成两件事：
+Not Brother（中文名：不是兄弟；日文名：兄貴じゃない）是一个本地优先的开源 Chrome Manifest V3 扩展。源码在 [interjc/chrome-x-not-brother](https://github.com/interjc/chrome-x-not-brother)；问题、建议和支持请到 [GitHub Issues](https://github.com/interjc/chrome-x-not-brother/issues)。它在你正常浏览 `x.com` 时完成两件事：
 
 1. 给页面中已经出现的用户标注可确认的关系状态；
 2. 把观察结果和关系变化历史收集到扩展自己的本地数据库。
@@ -51,10 +51,13 @@ src/i18n/          中英日运行时词库、语言归一化与本地化展示
 src/storage/       IndexedDB 与扩展设置
 src/ui/            Side Panel 与完整管理页
 assets/branding/   ImageGen 品牌源图
+assets/store/      Chrome Web Store 图标、截图与宣传图
 public/            Manifest、HTML、内容样式与图标
 scripts/           构建、校验、打包
 skills/            项目级 Codex skill
 docs/              面向开发者和用户的文档
+terms/             公开隐私政策与使用条款
+CONTRIBUTING.md    开源贡献入口
 ```
 
 ## 文档索引
@@ -71,8 +74,11 @@ docs/              面向开发者和用户的文档
 | [测试指南](docs/testing.md) | 自动检查和 Chrome 手工验收清单 |
 | [维护指南](docs/maintenance.md) | X DOM 漂移、数据迁移与故障处置 |
 | [X 扩展实时观察调研](docs/x-extension-resilience-research.md) | 其他开源 X 扩展的 DOM 策略、可采用模式与本项目混合复扫设计 |
-| [使用指南](docs/usage.md) | 加载、标注、档案库、导入导出与清空 |
-| [隐私说明](docs/privacy.md) | 收集内容、保存位置、权限和删除方式 |
+| [使用指南](docs/usage.md) | 加载、标注、档案库、导入导出、清空与反馈 |
+| [贡献指南](docs/contributing.md) | 产品边界、Issue、开发环境、检查与 Pull request |
+| [隐私政策](terms/privacy.md) | 收集内容、保存位置、权限、删除方式和联系方式 |
+| [使用条款](terms/terms.md) | 独立软件声明、使用范围、识别限制与免责 |
+| [首次上架准备](docs/deploy.md) | 第一次发布：已完成项、截图做法、Dashboard 逐步操作 |
 | [发布指南](docs/release.md) | 版本、检查、打包、商店准备和回滚 |
 | [Chrome Web Store 上架](docs/chrome-web-store.md) | 开发者账号、文案、素材、隐私披露、审核、更新与回滚 |
 | [Chrome Web Store 三语文案](docs/store-listing.md) | 可粘贴的中英日名称、简介、详细说明、更新说明、权限理由与审核备注 |
@@ -92,3 +98,9 @@ npm run package           # verified ZIP in artifacts/
 ## License
 
 [MIT](LICENSE)
+
+欢迎通过 [GitHub Issues](https://github.com/interjc/chrome-x-not-brother/issues) 反馈问题。代码贡献见 [贡献指南](docs/contributing.md)。
+
+## Author
+
+Justin Chen · [X](https://x.com/interjc) · [Profile](https://interjc.net)

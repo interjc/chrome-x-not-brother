@@ -62,3 +62,5 @@ npm run skills:validate
 创建或大改项目 skill 时，还应按 `skill-creator` 的要求使用其官方 `quick_validate.py` 做一次校验。该上游脚本需要 Python 与 PyYAML；常规仓库检查使用无额外 Python 依赖的 `npm run skills:validate`。
 
 不要为了方便添加网页自动化、私有 API 或广泛 Chrome 权限。功能建议若越过“标注、收集”边界，必须重新与用户确认。
+
+对外贡献、Issue 和 Pull request 流程见 [贡献指南](contributing.md)。用户反馈入口是 [GitHub Issues](https://github.com/interjc/chrome-x-not-brother/issues)。

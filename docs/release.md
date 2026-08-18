@@ -35,11 +35,11 @@ npm run package
 
 商店说明必须准确披露：扩展只在 x.com 运行；读取页面中已经显示的用户关系证据；数据只保存在本地；不执行关注、取关、拉黑或静音；“拉黑了我”是机会式发现，不是完整列表。
 
-准备截图、权限说明、单一用途说明和与 `docs/privacy.md` 一致的隐私政策页面。商店审核通过不代表 X 条款许可，需单独评估。
+准备截图、权限说明、单一用途说明和与 [terms/privacy.md](../terms/privacy.md) 一致的隐私政策。Homepage URL 填 GitHub 仓库，Support URL 填 [Issues](https://github.com/interjc/chrome-x-not-brother/issues)，隐私政策 URL 填 `terms/privacy.md` 的 GitHub `blob` 地址。商店审核通过不代表 X 条款许可，需单独评估。
 
 使用 [Chrome Web Store 三语文案](store-listing.md) 准备 English、Japanese 与 Chinese (China) listing、版本更新说明、权限理由和 reviewer notes。发布前必须逐句核对当前功能边界，不能把旧版“不执行账户操作”的文案带入包含账户操作的新版本。
 
-首次注册、隐私字段、素材规格、上传、审核、更新和回滚的逐项操作见 [Chrome Web Store 标准上架指南](chrome-web-store.md)。
+第一次上架按 [首次上架准备](deploy.md) 做：里面写清仓库已完成的部分、怎么拍 1280×800 截图、以及 Dashboard 逐步点击。政策和字段原则见 [Chrome Web Store 标准上架指南](chrome-web-store.md)。
 
 ## 回滚
 

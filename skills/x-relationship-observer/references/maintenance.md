@@ -26,7 +26,7 @@ Known local relationships are returned to content scripts through bounded `users
 
 Increment the Dexie schema version for structural changes. Add a migration that preserves user keys, current relationships, and observation history. Update `docs/data-model.md` and import validation for every schema change.
 
-Increment `CURRENT_CONSENT_VERSION` only when data types, purposes, recipients, or storage behavior change materially. Update the prominent disclosure and privacy documentation before collection resumes under the new consent version.
+Increment `CURRENT_CONSENT_VERSION` only when data types, purposes, recipients, or storage behavior change materially. Update the prominent disclosure and `terms/privacy.md` before collection resumes under the new consent version.
 
 Treat `viewerHandle` as exclusion-only data. Verify scan, database cleanup, summaries, and UI filtering together whenever viewer detection changes.
 

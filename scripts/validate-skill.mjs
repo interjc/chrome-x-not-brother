@@ -23,7 +23,7 @@ if (!fields.description || fields.description.length < 80) {
 }
 if (/\bTODO\b/.test(source)) throw new Error("Skill still contains TODO placeholders");
 
-const references = ["development.md", "maintenance.md", "usage.md", "release.md"];
+const references = ["development.md", "maintenance.md", "usage.md", "release.md", "contributing.md"];
 await Promise.all(
   references.map((name) => access(path.join(skill, "references", name))),
 );

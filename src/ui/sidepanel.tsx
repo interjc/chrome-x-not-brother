@@ -4,6 +4,7 @@ import "./styles.css";
 
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
+import { PROJECT_FEEDBACK_URL } from "../domain/project";
 import { displayRelationship } from "../domain/relationships";
 import {
   getExtensionLocale,
@@ -202,6 +203,15 @@ export function SidePanel() {
           <Icon name="external" />
         </button>
         <p><span className="status-dot" />{t("localChromeOnly")}</p>
+        <a
+          aria-label={t("sendFeedbackAria")}
+          className="side-footer__feedback"
+          href={PROJECT_FEEDBACK_URL}
+          rel="noreferrer"
+          target="_blank"
+        >
+          {t("sendFeedback")}
+        </a>
       </footer>
     </main>
   );

@@ -83,3 +83,4 @@ Side Panel、Relationship Fieldbook、工具栏提示和 Manifest 元数据跟�
 - 导出：JSON 保留全部数据，CSV 只保留当前摘要；
 - 导入：只接受格式正确的 Not Brother JSON 并合并；
 - 清空：二次确认后清除全部本地 users 和 observations。
+- 反馈：Side Panel 与档案库页脚的“发送反馈”只打开公开 GitHub Issues，不上传本地观察数据。

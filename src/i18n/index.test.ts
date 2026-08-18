@@ -41,6 +41,12 @@ describe("runtime internationalization", () => {
     expect(translate("ja", "dockCollapseAria")).toContain("フローティング");
   });
 
+  it("localizes the GitHub Issues feedback link", () => {
+    expect(translate("zh-CN", "sendFeedback")).toBe("发送反馈");
+    expect(translate("en", "sendFeedbackAria")).toContain("GitHub Issues");
+    expect(translate("ja", "sendFeedback")).toContain("フィードバック");
+  });
+
   it("localizes the reply-thread hover guidance", () => {
     expect(translate("zh-CN", "dockHoverHint")).toContain("悬停");
     expect(translate("en", "dockHoverHint")).toContain("Hover");

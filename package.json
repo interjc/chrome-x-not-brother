@@ -3,6 +3,14 @@
   "version": "0.4.7",
   "private": true,
   "description": "A local-first Chrome extension that annotates and collects X relationship observations.",
+  "homepage": "https://github.com/interjc/chrome-x-not-brother#readme",
+  "bugs": {
+    "url": "https://github.com/interjc/chrome-x-not-brother/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/interjc/chrome-x-not-brother.git"
+  },
   "type": "module",
   "engines": {
     "node": "24.19.0"

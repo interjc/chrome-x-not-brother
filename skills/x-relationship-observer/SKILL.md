@@ -12,7 +12,8 @@ Preserve the extension's narrow contract: annotate relationship evidence already
 - For code changes or local setup, read [references/development.md](references/development.md).
 - For selector drift, database migration, troubleshooting, or dependency work, read [references/maintenance.md](references/maintenance.md).
 - For loading, browsing, reviewing, filtering, importing, exporting, or clearing data, read [references/usage.md](references/usage.md).
-- For versioning, checks, packaging, Chrome Web Store preparation, or rollback, read [references/release.md](references/release.md).
+- For versioning, checks, packaging, Chrome Web Store preparation, or rollback, read [references/release.md](references/release.md). First-time store launch steps for a human operator are in `docs/deploy.md`.
+- For issue reports, pull requests, or open-source contribution constraints, read [references/contributing.md](references/contributing.md).
 
 ## Apply invariant checks
 

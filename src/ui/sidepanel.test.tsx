@@ -112,4 +112,12 @@ describe("SidePanel interactions", () => {
     expect(document.querySelector(".empty-state--filtered")?.textContent)
       .toContain("No records in this category");
   });
+
+  it("opens GitHub Issues from the footer feedback link", () => {
+    const feedback = document.querySelector<HTMLAnchorElement>(".side-footer__feedback");
+    expect(feedback?.href).toBe("https://github.com/interjc/chrome-x-not-brother/issues");
+    expect(feedback?.target).toBe("_blank");
+    expect(feedback?.rel).toContain("noreferrer");
+    expect(feedback?.textContent).toBe("Send feedback");
+  });
 });

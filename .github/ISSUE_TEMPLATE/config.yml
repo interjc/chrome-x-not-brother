@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Usage guide / 使用指南
+    url: https://github.com/interjc/chrome-x-not-brother/blob/main/docs/usage.md
+    about: How to install, consent, annotate, export, and clear local data.
+  - name: Contribution guide / 贡献指南
+    url: https://github.com/interjc/chrome-x-not-brother/blob/main/docs/contributing.md
+    about: Product boundary, setup, checks, and pull-request expectations.

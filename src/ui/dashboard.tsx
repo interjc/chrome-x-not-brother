@@ -5,6 +5,7 @@ import "./styles.css";
 import type { CSSProperties, ChangeEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { PROJECT_FEEDBACK_URL } from "../domain/project";
 import { displayRelationship } from "../domain/relationships";
 import { parseDatabaseExport, usersToCsv } from "../domain/export";
 import type { ObservationRecord, RelationshipKind, UserRecord } from "../domain/types";
@@ -338,7 +339,20 @@ function Dashboard() {
       </div>
 
       {notice ? <button className="toast" onClick={() => setNotice(null)}>{notice}<span>×</span></button> : null}
-      <footer className="dashboard-footer"><Brand compact locale={locale} /><p>{t("localOnlyFooter")}</p><p>{t("brandName")} {extensionVersion}</p></footer>
+      <footer className="dashboard-footer">
+        <Brand compact locale={locale} />
+        <p>{t("localOnlyFooter")}</p>
+        <a
+          aria-label={t("sendFeedbackAria")}
+          className="dashboard-footer__feedback"
+          href={PROJECT_FEEDBACK_URL}
+          rel="noreferrer"
+          target="_blank"
+        >
+          {t("sendFeedback")}
+        </a>
+        <p>{t("brandName")} {extensionVersion}</p>
+      </footer>
     </main>
   );
 }

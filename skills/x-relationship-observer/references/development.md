@@ -41,3 +41,5 @@ Side Panel interaction changes require both pure filter-model tests and a render
 For thread blocked-by changes, keep fixtures for explicit notices, all-three-disabled controls plus normal-page baseline, already-visible count-less hover cards as independent evidence, normal-count hover cards, partial restrictions, and missing baselines. Keep the prominent badge in the same row as the display name without moving X's native `@handle` or date, and verify stored known records can re-annotate it.
 
 Never place credentials in the extension. The current release has no X API or AI integration.
+
+For issue reports and pull requests, follow `docs/contributing.md` and keep user feedback on `https://github.com/interjc/chrome-x-not-brother/issues`.

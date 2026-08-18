@@ -1,6 +1,6 @@
 # Chrome Web Store 标准上架指南
 
-本文是 Not Brother 从本地开发版走向 Chrome Web Store 的操作手册。政策和后台界面会变化；每次提交都应重新打开文末的官方链接核对。本文最后核验于 2026-08-17。
+本文是 Not Brother 从本地开发版走向 Chrome Web Store 的政策与字段手册。第一次上手请先读 [首次上架准备](deploy.md)，再回到这里核对隐私申报和审核口径。政策和后台界面会变化；每次提交都应重新打开文末的官方链接核对。本文最后核验于 2026-08-18。
 
 [Chrome Web Store 2026 政策更新](https://developer.chrome.com/blog/cws-policy-updates-2026) 自 2026-08-01 起执行更严格的披露要求：扩展收集的所有用户数据都必须显著告知用户，不再因为数据与单一用途密切相关而豁免；安装后的数据处理方式变化也必须主动披露。本项目因此同时保留商店详细说明、扩展内首次显著披露和主动同意，三者不可互相替代。
 
@@ -99,11 +99,26 @@ npm run package
 | `storage` | 在 `chrome.storage.local` 保存同意状态、观察器开关、徽标开关、dock 收起偏好和用于排除本人的当前 handle。 |
 | `sidePanel` | 在 Chrome 原生侧栏中显示本地关系概览和首次使用披露。 |
 
+### 商店链接
+
+Dashboard 的 Additional fields 填这些公开 HTTPS 地址：
+
+| 字段 | URL |
+| --- | --- |
+| Homepage URL | https://github.com/interjc/chrome-x-not-brother |
+| Support URL | https://github.com/interjc/chrome-x-not-brother/issues |
+| Privacy policy URL | https://github.com/interjc/chrome-x-not-brother/blob/main/terms/privacy.md |
+| Terms of use（无独立字段时写入隐私政策或详细说明） | https://github.com/interjc/chrome-x-not-brother/blob/main/terms/terms.md |
+
+三种 listing 语言共用这些 URL。扩展内 Side Panel 与档案库页脚的“发送反馈”也打开同一 Issues 页面。
+
 ### 本地化 listing
 
 上传包含 `_locales/en`、`ja`、`zh_CN` 的候选包后，在 Store listing 顶部语言下拉框依次选择 English、Japanese、Chinese (China)，分别填写详细说明并上传对应语言截图。英语作为默认 listing。三种说明必须保持同一单一用途、功能范围、权限理由和隐私承诺；small promo tile 与 marquee tile 不能按语言分别上传，因此其画面尽量减少文字。
 
 ## 6. 准备图片素材
+
+怎么把窗口裁成 1280×800、5 张图拍什么、宣传图怎么做，见 [首次上架准备](deploy.md) 第 7–8 节。成品放到 `assets/store/`。
 
 按照 [商店素材说明](https://developer.chrome.com/docs/webstore/cws-dashboard-listing) 与 [Supplying Images](https://developer.chrome.com/webstore/images) 准备：
 
@@ -129,9 +144,15 @@ npm run package
 - 不传输给开发者或第三方；头像显示可能由浏览器直接请求现有 X CDN URL；
 - 遵守 Limited Use 要求。
 
-不要为了减少申报项目而漏报。Dashboard 选项和商店说明、扩展首次同意界面、[隐私说明](privacy.md) 必须相互一致。
+不要为了减少申报项目而漏报。Dashboard 选项和商店说明、扩展首次同意界面、[隐私政策](../terms/privacy.md) 必须相互一致。
 
-将 `docs/privacy.md` 补充开发者身份、联系邮箱、生效日期后，发布成任何人可访问的 HTTPS 页面，并把 URL 填入 Dashboard。仓库内 Markdown 路径本身不能充当公开隐私政策 URL。
+公开法律文本放在仓库 `terms/`。仓库本地路径不能填进 Dashboard；使用 GitHub 渲染后的 HTTPS 地址：
+
+https://github.com/interjc/chrome-x-not-brother/blob/main/terms/privacy.md
+
+https://github.com/interjc/chrome-x-not-brother/blob/main/terms/terms.md
+
+仓库必须保持公开。`blob/main/` 链接会渲染 Markdown，审核员和用户都能直接阅读；不要用 `raw.githubusercontent.com` 当商店隐私政策 URL。文件必须包含开发者身份、Issues 联系方式和生效日期。以后如果改用独立站点，再同时更新 Dashboard、`src/domain/project.ts` 和本文。
 
 ## 8. 上传并提交审核
 
@@ -172,7 +193,8 @@ npm run package
 - [ ] clean Chrome profile 与真实 X 页面手工验收通过；
 - [ ] 首次同意发生在任何收集之前；
 - [ ] 单一用途、权限理由、隐私申报彼此一致；
-- [ ] 公开 HTTPS 隐私政策含开发者身份、联系方式和日期；
+- [ ] 公开 HTTPS 隐私政策是 `terms/privacy.md` 的 GitHub `blob` 链接，含开发者身份、Issues 联系方式和日期；
+- [ ] Homepage 指向 GitHub 仓库，Support 指向 Issues；
 - [ ] 图片素材无真实关系数据、无误导性 X 官方暗示；
 - [ ] ZIP 根目录正确，版本号递增，保留上一版产物；
 - [ ] 重新核验 Chrome Web Store 政策与 X 条款；
