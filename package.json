@@ -1,6 +1,6 @@
 {
   "name": "chrome-x-not-brother",
-  "version": "0.4.7",
+  "version": "0.4.8",
   "private": true,
   "description": "A local-first Chrome extension that annotates and collects X relationship observations.",
   "homepage": "https://github.com/interjc/chrome-x-not-brother#readme",

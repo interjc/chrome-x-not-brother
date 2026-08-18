@@ -28,6 +28,12 @@ Not Brother is an independent extension and is not affiliated with, endorsed by,
 
 Source code is available at https://github.com/interjc/chrome-x-not-brother. Report problems and ask for support on the repository Issues page.
 
+### Version 0.4.8 release notes
+
+- Identifies Home timeline authors from status permalinks, avatars, and cleaned handle text so known local records can annotate cards without a hover card.
+- Reads follow relationship fields X already loaded into the current page UI store, tweet components, and completed GraphQL responses, so Home and reply authors can be labeled without hovering.
+- Still does not send extra X requests, auto-scroll, or open hover cards. Hover remains only a fallback when those already-loaded fields are missing.
+
 ### Version 0.4.7 release notes
 
 - Adds a visible-page 2-second fallback rescan, immediate focus/visibility recovery, and serialized scan scheduling for more reliable live annotations.
@@ -68,6 +74,13 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 源码位于 https://github.com/interjc/chrome-x-not-brother。问题反馈与支持请使用仓库的 Issues 页面。
 
+### 0.4.8 更新说明
+
+- 首页时间线可从 status 链接、头像和去掉格式字符的 handle 识别作者，本地已确认关系无需悬停即可回标。
+- 读取 X 已为当前页载入的 UI store、帖子组件和已完成 GraphQL 响应中的关注关系字段，使首页和评论区作者通常不必悬停即可标注。
+- 仍不会额外请求 X 接口、自动滚动或打开浮窗；只有上述已载入字段缺失时，悬停才作为补充路径。
+
+
 ### 0.4.7 更新说明
 
 - 新增可见页面 2 秒兜底复扫、焦点/可见性恢复时立即检查和串行扫描调度，提高实时标注健壮性。
@@ -107,6 +120,13 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 兄貴じゃないは独立した拡張機能であり、X Corp. との提携、承認、スポンサー関係はありません。
 
 ソースコードは https://github.com/interjc/chrome-x-not-brother で公開しています。不具合報告とサポートはリポジトリの Issues ページをご利用ください。
+
+### 0.4.8 更新内容
+
+- ホームタイムラインの作者を status リンク、アバター、整形済みハンドルから識別し、ローカル確認済みの関係をホバーなしで再表示できます。
+- 現在のページの UI ストア、ツイートコンポーネント、およびページが完了済みの GraphQL 応答に既に載っているフォロー関係を読み取り、ホームや返信作者をホバーなしで注釈できます。
+- 追加の X リクエスト、自動スクロール、ホバーカードの自動表示は行いません。これらの読み込み済みフィールドがない場合だけ、ホバーを補足手段として使います。
+
 
 ### 0.4.7 更新内容
 
