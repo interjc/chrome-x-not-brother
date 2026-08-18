@@ -83,11 +83,12 @@ git commit -m "Prepare Chrome Web Store listing, legal pages, and feedback links
 git push origin main
 ```
 
-推送后先打开仓库 **Settings → Pages**：
+推送后必须先打开仓库 **Settings → Pages**（workflow 自己打不开这个开关时会报 `Get Pages site failed`）：
 
-1. Build and deployment → Source 选 **GitHub Actions**；
-2. 到 **Actions** 里确认 `Deploy GitHub Pages` 跑成功；
-3. 用无痕窗口打开第 1 节的隐私政策和条款地址，必须看到完整 HTML 页面，不能是 404。
+1. 打开 https://github.com/interjc/chrome-x-not-brother/settings/pages
+2. Build and deployment → Source 选 **GitHub Actions** 并保存；
+3. 到 **Actions** 打开失败的 `Deploy GitHub Pages`，点 **Re-run all jobs**；
+4. 等它变绿后，用无痕窗口打开第 1 节的隐私政策地址，必须看到完整 HTML，不能是 404。
 
 Chrome Web Store 不接受 `github.com/.../blob/...` 这种仓库文件链接，必须用上面的 `interjc.github.io` 地址。
 
