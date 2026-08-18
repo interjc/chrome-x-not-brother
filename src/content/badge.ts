@@ -2,6 +2,8 @@ import type { DisplayRelationship } from "../domain/types";
 import { relationshipPresentation, type AppLocale } from "../i18n";
 
 const BADGE_ATTRIBUTE = "data-xro-badge";
+const BADGE_ROW_ATTRIBUTE = "data-xro-badge-row";
+const BADGE_ROW_CLASS = "xro-name-badge-row";
 const IDENTITY_ATTRIBUTE = "data-xro-relationship";
 const IDENTITY_CLASSES = [
   "xro-identity-mark",
@@ -9,20 +11,38 @@ const IDENTITY_CLASSES = [
   "xro-identity-mark--blocked_by",
 ];
 
-function handleElement(anchor: HTMLElement, handle: string): HTMLElement | null {
+function identityElement(anchor: HTMLElement, handle: string): HTMLElement | null {
   const normalizedHandle = handle.toLowerCase();
+  const visibleHandle = `@${normalizedHandle}`;
+  const handleText = [...anchor.querySelectorAll<HTMLElement>("span")].find(
+    (element) => (element.textContent ?? "").trim().toLowerCase() === visibleHandle,
+  );
+  const handleLink = handleText?.closest<HTMLAnchorElement>("a[href]") ?? null;
+  const profileLinks: HTMLAnchorElement[] = [];
   for (const link of anchor.querySelectorAll<HTMLAnchorElement>("a[href]")) {
     try {
       const url = new URL(link.getAttribute("href") ?? "", "https://x.com");
-      if (url.pathname.toLowerCase() === `/${normalizedHandle}`) return link;
+      if (url.pathname.toLowerCase() === `/${normalizedHandle}`) profileLinks.push(link);
     } catch {
       // Ignore malformed host links and fall back to exact visible handle text.
     }
   }
-  const visibleHandle = `@${normalizedHandle}`;
-  return [...anchor.querySelectorAll<HTMLElement>("span")].find(
-    (element) => (element.textContent ?? "").trim().toLowerCase() === visibleHandle,
-  ) ?? null;
+  return profileLinks.find((link) => link !== handleLink) ?? profileLinks[0] ?? handleLink ?? handleText ?? null;
+}
+
+function markBadgeRow(row: HTMLElement): void {
+  row.setAttribute(BADGE_ROW_ATTRIBUTE, "");
+  row.classList.add(BADGE_ROW_CLASS);
+}
+
+function clearBadgeRows(anchor: HTMLElement): void {
+  const rows = anchor.matches(`[${BADGE_ROW_ATTRIBUTE}]`)
+    ? [anchor, ...anchor.querySelectorAll<HTMLElement>(`[${BADGE_ROW_ATTRIBUTE}]`)]
+    : [...anchor.querySelectorAll<HTMLElement>(`[${BADGE_ROW_ATTRIBUTE}]`)];
+  for (const row of rows) {
+    row.removeAttribute(BADGE_ROW_ATTRIBUTE);
+    row.classList.remove(BADGE_ROW_CLASS);
+  }
 }
 
 function clearIdentityMark(anchor: HTMLElement): void {
@@ -50,9 +70,15 @@ export function setRelationshipBadge(
   badge.title = `${handle} · ${presentation.description}`;
   badge.setAttribute("aria-label", `${handle}: ${presentation.label}`);
   if (!existing) {
-    const identityHandle = handleElement(anchor, handle);
-    if (identityHandle) identityHandle.insertAdjacentElement("afterend", badge);
-    else anchor.append(badge);
+    const identity = identityElement(anchor, handle);
+    if (identity) {
+      identity.insertAdjacentElement("afterend", badge);
+      markBadgeRow(badge.parentElement ?? anchor);
+    } else {
+      anchor.append(badge);
+    }
+  } else if (badge.parentElement) {
+    markBadgeRow(badge.parentElement);
   }
 }
 
@@ -62,9 +88,17 @@ export function removeRelationshipBadges(root: ParentNode = document): void {
     ? [root, ...root.querySelectorAll<HTMLElement>(`[${IDENTITY_ATTRIBUTE}]`)]
     : [...root.querySelectorAll<HTMLElement>(`[${IDENTITY_ATTRIBUTE}]`)];
   for (const identity of marked) clearIdentityMark(identity);
+  if (root instanceof HTMLElement) clearBadgeRows(root);
+  else {
+    for (const row of root.querySelectorAll<HTMLElement>(`[${BADGE_ROW_ATTRIBUTE}]`)) {
+      row.removeAttribute(BADGE_ROW_ATTRIBUTE);
+      row.classList.remove(BADGE_ROW_CLASS);
+    }
+  }
 }
 
 export function removeRelationshipBadge(anchor: HTMLElement): void {
   for (const badge of anchor.querySelectorAll(`[${BADGE_ATTRIBUTE}]`)) badge.remove();
+  clearBadgeRows(anchor);
   clearIdentityMark(anchor);
 }

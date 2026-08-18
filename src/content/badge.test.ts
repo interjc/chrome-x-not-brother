@@ -8,13 +8,36 @@ import {
 describe("relationship badge", () => {
   it("updates one DOM-safe badge instead of duplicating it", () => {
     const anchor = document.createElement("div");
-    anchor.innerHTML = '<span>Name</span><a href="/Alice">@Alice</a>';
+    anchor.innerHTML = '<span>Name</span><a href="/Alice"><span>@Alice</span></a>';
     setRelationshipBadge(anchor, "mutual", "Alice", "zh-CN");
     setRelationshipBadge(anchor, "changed", "Alice", "zh-CN");
     expect(anchor.querySelectorAll("[data-xro-badge]")).toHaveLength(1);
     expect(anchor.textContent).toContain("关系变化");
     expect(anchor.innerHTML).not.toContain("script");
     expect(anchor.querySelector("a + [data-xro-badge]")).not.toBeNull();
+  });
+
+  it("keeps a reply-thread badge beside the display name instead of creating a second row", () => {
+    const anchor = document.createElement("div");
+    anchor.innerHTML = `
+      <div class="identity-column">
+        <a href="/Shiori_1001_"><span>シオリ</span></a>
+      </div>
+      <div class="metadata-row">
+        <a href="/Shiori_1001_"><span>@Shiori_1001_</span></a><span>·</span><time>8月14日</time>
+      </div>
+    `;
+
+    setRelationshipBadge(anchor, "blocked_by", "Shiori_1001_", "zh-CN");
+
+    const row = anchor.querySelector<HTMLElement>("[data-xro-badge-row]");
+    expect(row?.classList.contains("xro-name-badge-row")).toBe(true);
+    expect(row?.querySelector("a + [data-xro-badge='blocked_by']")).not.toBeNull();
+    expect(anchor.querySelector(".metadata-row [data-xro-badge]")).toBeNull();
+
+    removeRelationshipBadge(anchor);
+    expect(anchor.querySelector("[data-xro-badge-row]")).toBeNull();
+    expect(anchor.querySelector(".xro-name-badge-row")).toBeNull();
   });
 
   it("adds and removes a strong identity mark for blocked-by", () => {

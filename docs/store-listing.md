@@ -26,8 +26,9 @@ Not Brother only processes account identity and relationship hints rendered on t
 
 Not Brother is an independent extension and is not affiliated with, endorsed by, or sponsored by X Corp.
 
-### Version 0.4.4 release notes
+### Version 0.4.5 release notes
 
+- Keeps relationship badges on the same line as the X display name without moving handle or date metadata.
 - Adds a persistent NB floating button for the X-page observer overview.
 - Improves blocked-by detection from fully loaded author hover cards.
 - Reads matching hover-card follow controls to identify mutual and one-way relationships in reply threads.
@@ -56,8 +57,9 @@ Not Brother is an independent extension and is not affiliated with, endorsed by,
 
 不是兄弟是独立开发的扩展，与 X Corp. 不存在隶属、认可或赞助关系。
 
-### 0.4.4 更新说明
+### 0.4.5 更新说明
 
+- 关系徽标与 X 显示名称保持同一行，不移动 `@handle` 与日期元数据。
 - X 页面观察概览可收起为保持状态的 NB 悬浮球。
 - 改进从完整作者浮窗识别“拉黑了我”的能力。
 - 使用匹配作者浮窗的关注控件识别评论区互关和我单向关注。
@@ -86,8 +88,9 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 
 兄貴じゃないは独立した拡張機能であり、X Corp. との提携、承認、スポンサー関係はありません。
 
-### 0.4.4 更新内容
+### 0.4.5 更新内容
 
+- 関係バッジを X の表示名と同じ行に保ち、`@handle` と日付の配置は変更しません。
 - X ページの観察概要を、状態を保つ NB フローティングボタンへ収納できます。
 - 完全に読み込まれた作者ホバーカードからのブロック検出を改善しました。
 - 一致する作者ホバーカードのフォロー操作表示から、返信スレッドの相互・片方向フォローを識別します。

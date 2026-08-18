@@ -8,6 +8,8 @@ Treat a missing element as internal unknown. A broken selector must reduce confi
 
 Keep both `UserName` and reply-thread `User-Name` fixtures. Remove `tweetText` from platform-notice matching so user-authored words cannot become blocked-by evidence. Generic unavailable posts remain internal unknown.
 
+Keep injected badges in the display-name row. X renders the display name and metadata as separate nested flex regions, so mark only the badge's immediate name row as horizontal; do not move native nodes or apply spacing that changes the outer `User-Name` geometry. Removal must clear the injected row marker as well as the badge.
+
 The interaction-restriction path requires reply, repost, and like all to be non-actionable plus another page post with all three actionable. Traverse action ancestors through the thread surface because X may place disabled state outside a testid button. Independently, a fully loaded already-visible hover card with no following/follower links produces `blocked-profile-summary-restriction`. Preserve negative fixtures for only-repost-disabled, missing-baseline, and normal-count hover cards.
 
 For ordinary relationship enrichment, map each fully loaded visible hover card to its exact normalized handle. Prefer stable `*-follow`, `*-unfollow`, and `userFollowIndicator` testids, and preserve a cross-handle negative fixture so a visible card cannot contaminate another author.

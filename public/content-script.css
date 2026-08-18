@@ -11,12 +11,24 @@
   font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.02em;
-  line-height: 16px;
-  margin-inline-start: 6px;
-  padding: 0 6px;
+  line-height: 14px;
+  margin-inline-start: 5px;
+  padding: 0 5px;
   pointer-events: none;
   vertical-align: 1px;
   white-space: nowrap;
+}
+
+.xro-name-badge-row {
+  align-items: center !important;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  min-width: 0;
+}
+
+.xro-name-badge-row > a {
+  min-width: 0;
 }
 
 .xro-badge--mutual { --xro-tone: #a8e89a; background: #dff7d9; }
@@ -33,32 +45,28 @@
 .xro-identity-mark--following_only {
   background: linear-gradient(90deg, rgb(241 184 75 / 0.13), transparent 88%);
   box-shadow: inset 3px 0 #d59420;
-  margin-inline: -6px -3px;
-  padding-inline: 6px 3px;
 }
 
 .xro-identity-mark--blocked_by {
   background: linear-gradient(90deg, rgb(228 109 95 / 0.2), transparent 92%);
   box-shadow: inset 4px 0 #d84e41;
-  margin-inline: -7px -4px;
-  padding-inline: 7px 4px;
 }
 
 .xro-badge--following_only {
   border-radius: 4px;
   box-shadow: 2px 2px 0 rgb(100 70 15 / 0.18);
-  font-size: 11px;
-  line-height: 18px;
+  font-size: 10px;
+  line-height: 16px;
 }
 
 .xro-badge--blocked_by {
   border: 2px solid #b93f35;
   border-radius: 3px;
-  box-shadow: 3px 3px 0 rgb(94 28 23 / 0.22);
-  font-size: 11px;
+  box-shadow: 2px 2px 0 rgb(94 28 23 / 0.22);
+  font-size: 10px;
   font-weight: 900;
-  line-height: 18px;
-  padding-inline: 4px 7px;
+  line-height: 14px;
+  padding-inline: 3px 5px;
 }
 
 .xro-badge--blocked_by::before {
@@ -67,12 +75,12 @@
   color: #fff8f4;
   content: "!";
   display: inline-flex;
-  font-size: 9px;
-  height: 12px;
+  font-size: 8px;
+  height: 10px;
   justify-content: center;
   line-height: 1;
-  margin-inline-end: 4px;
-  width: 12px;
+  margin-inline-end: 3px;
+  width: 10px;
 }
 
 .xro-observer-panel {
