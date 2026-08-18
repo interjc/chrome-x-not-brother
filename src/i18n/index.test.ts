@@ -23,6 +23,9 @@ describe("runtime internationalization", () => {
   it("substitutes values and localizes domain presentation", () => {
     expect(translate("en", "changedCount", { count: 3 })).toBe("3 relationships changed");
     expect(relationshipPresentation("ja", "blocked_by").shortLabel).toBe("ブロック");
+    expect(relationshipPresentation("zh-CN", "followed_back").shortLabel).toBe("回关了你");
+    expect(relationshipPresentation("en", "unfollowed_you").label).toBe("Unfollowed you");
+    expect(relationshipPresentation("ja", "blocked_you").label).toContain("ブロック");
     expect(sourceTypeLabel("zh-CN", "thread")).toBe("评论区");
   });
 

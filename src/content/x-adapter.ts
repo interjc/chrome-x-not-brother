@@ -70,9 +70,29 @@ function matchesAny(text: string, patterns: RegExp[]): boolean {
   return patterns.some((pattern) => pattern.test(text));
 }
 
+function isSemanticallyVisible(element: HTMLElement): boolean {
+  let current: HTMLElement | null = element;
+  while (current) {
+    if (
+      current.hidden ||
+      current.hasAttribute("inert") ||
+      current.getAttribute("aria-hidden") === "true"
+    ) return false;
+    const style = current.ownerDocument.defaultView?.getComputedStyle(current);
+    if (
+      style?.display === "none" ||
+      style?.visibility === "hidden" ||
+      style?.opacity === "0"
+    ) return false;
+    current = current.parentElement;
+  }
+  return true;
+}
+
 function visibleHoverCardsByHandle(doc: Document): Map<string, HTMLElement> {
   const cards = new Map<string, HTMLElement>();
   for (const card of doc.querySelectorAll<HTMLElement>('[data-testid="HoverCard"]')) {
+    if (!isSemanticallyVisible(card)) continue;
     if (card.querySelector('[role="progressbar"], [data-testid="loadingSpinner"]')) continue;
     const handle = findHandle(card);
     if (!handle) continue;
@@ -121,8 +141,9 @@ function engagementControlIsActionable(surface: Element, selector: string): bool
 }
 
 function engagementIsUnavailable(surface: Element): boolean {
-  return ENGAGEMENT_SELECTORS.every(
-    (selector) => !engagementControlIsActionable(surface, selector),
+  return ENGAGEMENT_SELECTORS.every((selector) =>
+    surface.querySelector(selector) !== null &&
+    !engagementControlIsActionable(surface, selector),
   );
 }
 

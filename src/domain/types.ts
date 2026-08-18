@@ -7,7 +7,14 @@ export const RELATIONSHIP_KINDS = [
 ] as const;
 
 export type RelationshipKind = (typeof RELATIONSHIP_KINDS)[number];
-export type DisplayRelationship = RelationshipKind | "changed";
+export type RelationshipChangeKind =
+  | "followed_back"
+  | "unfollowed_you"
+  | "blocked_you";
+export type DisplayRelationship =
+  | RelationshipKind
+  | RelationshipChangeKind
+  | "changed";
 
 export const SOURCE_TYPES = [
   "profile",

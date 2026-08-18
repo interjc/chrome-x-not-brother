@@ -52,6 +52,16 @@ describe("relationship badge", () => {
     expect(anchor.querySelector("[data-xro-badge]")).toBeNull();
   });
 
+  it("keeps a newly blocked change prominent while showing the event label", () => {
+    const anchor = document.createElement("div");
+    anchor.innerHTML = '<a href="/Alice">@Alice</a>';
+    setRelationshipBadge(anchor, "blocked_you", "Alice", "zh-CN");
+
+    expect(anchor.dataset.xroRelationship).toBe("blocked_you");
+    expect(anchor.classList.contains("xro-identity-mark--blocked_by")).toBe(true);
+    expect(anchor.querySelector("[data-xro-badge='blocked_you']")?.textContent).toBe("拉黑了你");
+  });
+
   it("removes injected badges without touching the host content", () => {
     const root = document.createElement("div");
     root.textContent = "Host";

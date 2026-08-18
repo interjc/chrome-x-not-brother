@@ -11,10 +11,12 @@ describe("observer panel", () => {
       summary: { total: 12, followingOnly: 3, blockedBy: 2, changed: 1 },
       locale: "zh-CN",
       collapsed: false,
+      version: "0.4.7",
     }, onOpen, () => undefined);
 
     expect(panel.textContent).toContain("观察中");
     expect(panel.textContent).toContain("12");
+    expect(panel.dataset.xroVersion).toBe("0.4.7");
     panel.querySelector<HTMLButtonElement>(".xro-observer-panel__action")?.click();
     expect(onOpen).toHaveBeenCalledOnce();
   });

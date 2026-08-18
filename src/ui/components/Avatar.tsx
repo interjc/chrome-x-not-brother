@@ -9,6 +9,15 @@ export function Avatar({
 }) {
   const letter = (displayName ?? handle).slice(0, 1).toUpperCase();
   if (!avatarUrl) return <span className="avatar avatar--fallback">{letter}</span>;
-  return <img className="avatar" src={avatarUrl} alt="" loading="lazy" referrerPolicy="no-referrer" />;
+  return (
+    <img
+      alt=""
+      className="avatar"
+      height="42"
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      src={avatarUrl}
+      width="42"
+    />
+  );
 }
-

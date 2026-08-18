@@ -10,6 +10,7 @@ import type {
 import type { ObserverSettings } from "../domain/types";
 import { getExtensionLocale } from "../i18n";
 import { actionPresentation } from "./action-state";
+import { broadcastDataChanged } from "./data-change-broadcast";
 import {
   deleteUserRecord,
   getObservationSummary,
@@ -124,6 +125,20 @@ chrome.runtime.onMessage.addListener(
       return true;
     }
 
+    if (message.type === "data:changed") {
+      if (!sender.url?.startsWith(chrome.runtime.getURL(""))) {
+        sendResponse({ ok: false, error: "Data changes are accepted only from extension pages" });
+        return false;
+      }
+      void broadcastDataChanged(chrome.tabs)
+        .then(() => sendResponse({ ok: true }))
+        .catch((error: unknown) => sendResponse({
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        }));
+      return true;
+    }
+
     return false;
   },
 );
@@ -152,7 +167,7 @@ async function handleUpsert(
         (!viewerHandle || observation.userKey !== viewerHandle),
     ),
   );
-  void chrome.runtime.sendMessage({ type: "data:changed" }).catch(() => undefined);
+  void broadcastDataChanged(chrome.tabs).catch(() => undefined);
   return { ok: true, users };
 }
 

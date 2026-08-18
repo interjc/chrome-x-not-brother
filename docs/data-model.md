@@ -42,6 +42,8 @@ handle 更名会在 0.1 中形成新记录，因为扩展不读取 X 私有 user
 7. JSON/CSV 导出和 JSON 导入都过滤 unknown，旧备份不能重新引入它。
 8. service worker 获得 `viewerHandle` 后删除同 key 的 users 与 observations；所有概览查询、导入和导出也再次排除该 key。
 
+变化事件不新增数据库字段，也不改变导出 schema。展示层在 `hasChanged=true` 时根据 `previousRelationship → currentRelationship` 动态推导：`following_only → mutual` 为 `followed_back`，`mutual → following_only` 为 `unfollowed_you`，任意已知非 blocked 状态变为 `blocked_by` 为 `blocked_you`；其他转换使用通用 `changed`。因此旧档案无需迁移即可获得细分展示，dock 仍按 `hasChanged` 汇总一个变化总数。
+
 blocked-by 可保存 `blocked-notice`、`blocked-interaction-restriction` 或 `blocked-profile-summary-restriction`。后两者分别表示评论区三项互动限制已通过同页正常帖子对照，或已完整加载的作者浮窗缺少所有 following/follower 链接。
 
 content script 可通过 service worker 的 `users:lookup` 批量查询页面当前可见的小写 handle。查询只返回已知关系并排除 viewer；它不会创建 observation 或改变 `lastSeenAt`，只用于把已有本地知识重新显示在页面 ID 区域。

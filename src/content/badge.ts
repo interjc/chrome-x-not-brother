@@ -59,14 +59,19 @@ export function setRelationshipBadge(
   const existing = anchor.querySelector<HTMLElement>(`[${BADGE_ATTRIBUTE}]`);
   const badge = existing ?? document.createElement("span");
   const presentation = relationshipPresentation(locale, relationship);
+  const identityRelationship = relationship === "blocked_you"
+    ? "blocked_by"
+    : relationship === "unfollowed_you"
+      ? "following_only"
+      : relationship;
   clearIdentityMark(anchor);
-  if (relationship === "following_only" || relationship === "blocked_by") {
+  if (identityRelationship === "following_only" || identityRelationship === "blocked_by") {
     anchor.setAttribute(IDENTITY_ATTRIBUTE, relationship);
-    anchor.classList.add("xro-identity-mark", `xro-identity-mark--${relationship}`);
+    anchor.classList.add("xro-identity-mark", `xro-identity-mark--${identityRelationship}`);
   }
   badge.setAttribute(BADGE_ATTRIBUTE, relationship);
   badge.className = `xro-badge xro-badge--${relationship}`;
-  badge.textContent = presentation.shortLabel;
+  if (badge.textContent !== presentation.shortLabel) badge.textContent = presentation.shortLabel;
   badge.title = `${handle} · ${presentation.description}`;
   badge.setAttribute("aria-label", `${handle}: ${presentation.label}`);
   if (!existing) {

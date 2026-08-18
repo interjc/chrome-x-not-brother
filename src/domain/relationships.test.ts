@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   candidateDisplayRelationship,
+  displayRelationship,
   isCollectableRelationship,
   mergeUserObservation,
+  relationshipChangeKind,
   resolveRelationship,
 } from "./relationships";
 import type { ObservationDraft, UserRecord } from "./types";
@@ -101,5 +103,30 @@ describe("mergeUserObservation", () => {
     expect(late.user.lastSeenAt).toBe(3_000);
     expect(late.user.observationCount).toBe(current.observationCount + 1);
     expect(late.appendHistory).toBe(true);
+  });
+});
+
+describe("relationship change presentation", () => {
+  it.each([
+    ["following_only", "mutual", "followed_back"],
+    ["mutual", "following_only", "unfollowed_you"],
+    ["mutual", "blocked_by", "blocked_you"],
+    ["following_only", "blocked_by", "blocked_you"],
+  ] as const)("describes %s → %s as %s", (previous, current, expected) => {
+    const changed = mergeUserObservation(
+      existing(previous),
+      observation(current, 2_000),
+    ).user;
+    expect(relationshipChangeKind(changed)).toBe(expected);
+    expect(displayRelationship(changed)).toBe(expected);
+  });
+
+  it("keeps ambiguous or viewer-driven transitions generic", () => {
+    const changed = mergeUserObservation(
+      existing("mutual"),
+      observation("follows_you_only", 2_000),
+    ).user;
+    expect(relationshipChangeKind(changed)).toBeNull();
+    expect(displayRelationship(changed)).toBe("changed");
   });
 });

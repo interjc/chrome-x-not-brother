@@ -2,6 +2,7 @@ import type {
   DisplayRelationship,
   ObservationDraft,
   RelationshipFacts,
+  RelationshipChangeKind,
   RelationshipKind,
   UserRecord,
 } from "./types";
@@ -14,8 +15,21 @@ export function resolveRelationship(facts: RelationshipFacts): RelationshipKind 
   return "unknown";
 }
 
+export function relationshipChangeKind(
+  user: UserRecord,
+): RelationshipChangeKind | null {
+  if (!user.hasChanged || !user.previousRelationship) return null;
+  const previous = user.previousRelationship;
+  const current = user.currentRelationship;
+  if (current === "blocked_by" && previous !== "blocked_by") return "blocked_you";
+  if (previous === "following_only" && current === "mutual") return "followed_back";
+  if (previous === "mutual" && current === "following_only") return "unfollowed_you";
+  return null;
+}
+
 export function displayRelationship(user: UserRecord): DisplayRelationship {
-  return user.hasChanged ? "changed" : user.currentRelationship;
+  if (!user.hasChanged) return user.currentRelationship;
+  return relationshipChangeKind(user) ?? "changed";
 }
 
 export function isCollectableRelationship(

@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { displayRelationship } from "../domain/relationships";
 import { parseDatabaseExport, usersToCsv } from "../domain/export";
-import type { DisplayRelationship, ObservationRecord, UserRecord } from "../domain/types";
+import type { ObservationRecord, RelationshipKind, UserRecord } from "../domain/types";
 import {
   getExtensionLocale,
   relationshipPresentation,
@@ -31,7 +31,7 @@ import { absoluteTime, downloadFile, relativeTime } from "./format";
 import { useObserverSettings, useUsers } from "./hooks";
 import { CURRENT_CONSENT_VERSION } from "../storage/settings";
 
-type Filter = "all" | DisplayRelationship;
+type Filter = "all" | "changed" | Exclude<RelationshipKind, "unknown">;
 type Sort = "recent" | "handle" | "observations";
 
 const locale = getExtensionLocale();
@@ -49,6 +49,14 @@ const filters: { key: Filter; label: string }[] = [
   { key: "follows_you_only", label: relationshipPresentation(locale, "follows_you_only").label },
   { key: "blocked_by", label: relationshipPresentation(locale, "blocked_by").label },
 ];
+
+async function notifyDataChanged(): Promise<void> {
+  try {
+    await chrome.runtime.sendMessage({ type: "data:changed" });
+  } catch {
+    // The local mutation already succeeded; open X tabs can recover on reload.
+  }
+}
 
 function countFor(users: UserRecord[], filter: Filter): number {
   if (filter === "all") return users.length;
@@ -159,6 +167,7 @@ function Dashboard() {
       const payload = parseDatabaseExport(JSON.parse(await file.text()) as unknown);
       await importDatabase(payload);
       if (settings.viewerHandle) await deleteUserRecord(settings.viewerHandle);
+      await notifyDataChanged();
       setNotice(t("importSuccess", { count: payload.users.length }));
     } catch {
       setNotice(t("importFailed"));
@@ -168,13 +177,20 @@ function Dashboard() {
   async function clearEverything(): Promise<void> {
     if (!window.confirm(t("clearConfirm"))) return;
     await clearDatabase();
+    await notifyDataChanged();
     setNotice(t("clearSuccess"));
   }
 
   async function deleteOne(user: UserRecord): Promise<void> {
     if (!window.confirm(t("deleteConfirm", { handle: user.handle }))) return;
     await deleteUserRecord(user.key);
+    await notifyDataChanged();
     setNotice(t("deleteSuccess", { handle: user.handle }));
+  }
+
+  async function acknowledgeChange(userKey: string): Promise<void> {
+    await acknowledgeRelationshipChange(userKey);
+    await notifyDataChanged();
   }
 
   async function enableObserver(): Promise<void> {
@@ -309,7 +325,7 @@ function Dashboard() {
                     <small>{t("observationCount", { count: user.observationCount, source: sourceTypeLabel(locale, user.lastSourceType) })}</small>
                   </div>
                   <div className="user-record__actions">
-                    {user.hasChanged ? <button title={t("acknowledgeChangeTitle")} aria-label={t("acknowledgeChangeAria")} onClick={() => void acknowledgeRelationshipChange(user.key)}><Icon name="check" /></button> : null}
+                    {user.hasChanged ? <button title={t("acknowledgeChangeTitle")} aria-label={t("acknowledgeChangeAria")} onClick={() => void acknowledgeChange(user.key)}><Icon name="check" /></button> : null}
                     <button title={t("viewHistoryTitle")} aria-label={t("viewHistoryAria")} className={expanded ? "is-active" : ""} onClick={() => setExpandedUser(expanded ? null : user.key)}><Icon name="history" /></button>
                     <button title={t("deleteRecordTitle")} aria-label={t("deleteRecordAria")} onClick={() => void deleteOne(user)}><Icon name="trash" /></button>
                   </div>

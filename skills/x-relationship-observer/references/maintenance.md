@@ -10,9 +10,13 @@ Keep both `UserName` and reply-thread `User-Name` fixtures. Remove `tweetText` f
 
 Keep injected badges in the display-name row. X renders the display name and metadata as separate nested flex regions, so mark only the badge's immediate name row as horizontal; do not move native nodes or apply spacing that changes the outer `User-Name` geometry. Removal must clear the injected row marker as well as the badge.
 
-The interaction-restriction path requires reply, repost, and like all to be non-actionable plus another page post with all three actionable. Traverse action ancestors through the thread surface because X may place disabled state outside a testid button. Independently, a fully loaded already-visible hover card with no following/follower links produces `blocked-profile-summary-restriction`. Preserve negative fixtures for only-repost-disabled, missing-baseline, and normal-count hover cards.
+Use a hybrid page monitor: semantic MutationObserver signals for child, text, and relationship-relevant attribute changes plus a 2-second fallback rescan only while the active observer page is visible. Focus and visibility restoration request an immediate pass. Keep processing single-flight and signature-deduplicated, but commit a signature only after the service worker confirms that user was persisted so a transient message failure remains retryable. Pause periodic work while hidden, and tear down timers and listeners when the extension context becomes invalid. Never broaden the poll into scrolling, navigation, private state, network interception, or X actions.
 
-For ordinary relationship enrichment, map each fully loaded visible hover card to its exact normalized handle. Prefer stable `*-follow`, `*-unfollow`, and `userFollowIndicator` testids, and preserve a cross-handle negative fixture so a visible card cannot contaminate another author.
+Archive mutations and observations from another X tab must invalidate content caches through a service-worker `data:changed` broadcast. Use `chrome.tabs.query`/`sendMessage` without requesting the `tabs` permission, ignore tabs with no receiver, clear record/requested caches in every content recipient, and retain observation signatures so an intentional deletion is not immediately reinserted from unchanged visible evidence.
+
+The interaction-restriction path requires reply, repost, and like controls to be present but non-actionable plus another page post with all three actionable; missing controls are not disabled controls. Traverse action ancestors through the thread surface because X may place disabled state outside a testid button. Independently, a fully loaded already-visible hover card with no following/follower links produces `blocked-profile-summary-restriction`. Preserve negative fixtures for only-repost-disabled, missing-controls, missing-baseline, and normal-count hover cards.
+
+For ordinary relationship enrichment, map each fully loaded, semantically visible hover card to its exact normalized handle. Reject `hidden`, `inert`, `aria-hidden`, `display:none`, `visibility:hidden`, and zero-opacity stale cards. Prefer stable `*-follow`, `*-unfollow`, and `userFollowIndicator` testids, and preserve cross-handle and hidden-card negative fixtures so one card cannot contaminate another author.
 
 Keep the zero-record dock and side-panel guidance aligned across English, Japanese, and Simplified Chinese. It should explain the user hover needed to make X relationship evidence visible without suggesting automated scanning.
 
@@ -30,6 +34,8 @@ Treat `dockCollapsed` as a presentation-only `chrome.storage.local` preference. 
 
 Repository startup and install cleanup must purge legacy unknown users and observations. Import, export, summaries, content messages, and background writes must all keep the same filter.
 
+Specific change events are derived presentation, not stored relationship kinds: following-only to mutual is followed-back, mutual to following-only is unfollowed-you, and any known non-blocked relationship to blocked-by is blocked-you. Keep ambiguous or viewer-driven transitions generic, keep the dock statistic aggregated by `hasChanged`, and do not migrate the database merely to store these display labels.
+
 ## Dependencies
 
 Load nvm, update intentionally, inspect release notes, run the complete check suite, and rebuild the release archive. Manifest runtime code must remain local.
@@ -43,6 +49,8 @@ After copy changes, check the 420px side panel, dashboard, toolbar titles, injec
 ## Incident response
 
 When an unpacked extension is reloaded, existing X tabs retain an orphaned content script whose Chrome extension APIs are invalid. Treat `Extension context invalidated` or a missing `chrome.storage.local` as lifecycle termination: catch pending promises, stop timers, disconnect MutationObserver, and remove injected UI. Do not retry or log repeated warnings. Refresh the X tab after reloading the extension to inject the new content script.
+
+The injected dock exposes the running candidate version through its read-only `data-xro-version` attribute. Confirm it matches the intended package after refreshing X before accepting live-page results.
 
 If badges destabilize X or produce false labels:
 

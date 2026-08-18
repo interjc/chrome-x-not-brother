@@ -2,9 +2,9 @@ import "@fontsource-variable/instrument-sans";
 import "@fontsource-variable/newsreader";
 import "./styles.css";
 
+import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { displayRelationship } from "../domain/relationships";
-import type { RelationshipKind } from "../domain/types";
 import {
   getExtensionLocale,
   relationshipPresentation,
@@ -17,14 +17,13 @@ import { Icon } from "./components/Icon";
 import { RelationshipPill } from "./components/RelationshipPill";
 import { relativeTime } from "./format";
 import { useObserverSettings, useUsers } from "./hooks";
+import {
+  filterSidePanelUsers,
+  SIDE_PANEL_SUMMARY_KINDS,
+  toggleSidePanelFilter,
+  type SidePanelFilter,
+} from "./sidepanel-model";
 import { CURRENT_CONSENT_VERSION } from "../storage/settings";
-
-const summaryKinds: RelationshipKind[] = [
-  "mutual",
-  "following_only",
-  "follows_you_only",
-  "blocked_by",
-];
 
 const locale = getExtensionLocale();
 const t = (key: MessageKey, values?: Record<string, string | number>) =>
@@ -32,7 +31,8 @@ const t = (key: MessageKey, values?: Record<string, string | number>) =>
 document.documentElement.lang = locale;
 document.title = t("brandName");
 
-function SidePanel() {
+export function SidePanel() {
+  const [filter, setFilter] = useState<SidePanelFilter>("all");
   const { users: observedUsers, loading: usersLoading } = useUsers();
   const { settings, settingsReady, setSettings, setSetting } = useObserverSettings();
   const users = settingsReady
@@ -42,7 +42,19 @@ function SidePanel() {
     : [];
   const loading = usersLoading || !settingsReady;
   const changed = users.filter((user) => user.hasChanged).length;
+  const changedText = changed.toLocaleString(locale);
   const hasConsent = settings.consentVersion >= CURRENT_CONSENT_VERSION;
+  const filteredUsers = filterSidePanelUsers(users, filter);
+  const visibleUsers = filteredUsers.slice(0, filter === "all" ? 8 : 40);
+  const filterLabel = filter === "all"
+    ? t("recentHeading")
+    : filter === "changed"
+      ? relationshipPresentation(locale, "changed").label
+      : relationshipPresentation(locale, filter).label;
+
+  function toggleFilter(next: Exclude<SidePanelFilter, "all">): void {
+    setFilter((current) => toggleSidePanelFilter(current, next));
+  }
 
   return (
     <main className="app app--sidepanel">
@@ -96,28 +108,52 @@ function SidePanel() {
       </section>
 
       <section className={`mini-stats${settingsReady && !hasConsent ? " is-locked" : ""}`} aria-label={t("relationshipOverview")}>
-        {summaryKinds.map((kind) => (
-          <article className={`mini-stat mini-stat--${kind}`} key={kind}>
-            <i aria-hidden="true" />
-            <span>{relationshipPresentation(locale, kind).shortLabel}</span>
-            <strong>{users.filter((user) => user.currentRelationship === kind).length}</strong>
-          </article>
-        ))}
+        {SIDE_PANEL_SUMMARY_KINDS.map((kind) => {
+          const count = users.filter((user) => user.currentRelationship === kind).length;
+          const countText = count.toLocaleString(locale);
+          const label = relationshipPresentation(locale, kind).shortLabel;
+          return (
+            <button
+              aria-label={t("filterRelationshipAria", { label, count: countText })}
+              aria-pressed={filter === kind}
+              className={`mini-stat mini-stat--${kind}${filter === kind ? " is-active" : ""}`}
+              key={kind}
+              onClick={() => toggleFilter(kind)}
+              type="button"
+            >
+              <i aria-hidden="true" />
+              <span>{label}</span>
+              <strong>{countText}</strong>
+            </button>
+          );
+        })}
       </section>
 
-      {changed > 0 ? (
-        <section className="change-callout">
+      {changed > 0 || filter === "changed" ? (
+        <button
+          aria-label={t("filterRelationshipAria", {
+            label: relationshipPresentation(locale, "changed").label,
+            count: changedText,
+          })}
+          aria-pressed={filter === "changed"}
+          className={`change-callout${filter === "changed" ? " is-active" : ""}`}
+          onClick={() => toggleFilter("changed")}
+          type="button"
+        >
           <Icon name="history" />
-          <div><strong>{t("changedCount", { count: changed })}</strong><span>{t("changedHint")}</span></div>
-        </section>
+          <div><strong>{t("changedCount", { count: changedText })}</strong><span>{t("changedHint")}</span></div>
+        </button>
       ) : null}
 
       <section className={`recent-section${settingsReady && !hasConsent ? " is-locked" : ""}`}>
         <div className="section-heading">
-          <div><span>RECENT</span><h2>{t("recentHeading")}</h2></div>
+          <div>
+            <span>{t(filter === "all" ? "sideRecentEyebrow" : "sideFilteredEyebrow")}</span>
+            <h1>{filterLabel}</h1>
+          </div>
           <Icon name="clock" />
         </div>
-        <div className="recent-list">
+        <div aria-live="polite" className="recent-list">
           {!loading && users.length === 0 ? (
             <div className="empty-state">
               <span className="empty-state__orb"><Icon name="eye" /></span>
@@ -125,15 +161,32 @@ function SidePanel() {
               <p>{t("emptyFirstBody")}</p>
             </div>
           ) : null}
-          {users.slice(0, 8).map((user) => (
-            <article className="recent-user" key={user.key}>
+          {!loading && users.length > 0 && filteredUsers.length === 0 ? (
+            <div className="empty-state empty-state--filtered">
+              <span className="empty-state__orb"><Icon name="search" /></span>
+              <strong>{t("filteredEmptyTitle")}</strong>
+              <p>{t("filteredEmptyBody")}</p>
+            </div>
+          ) : null}
+          {visibleUsers.map((user) => (
+            <a
+              aria-label={t("openProfileAria", { handle: user.handle })}
+              className="recent-user"
+              href={`https://x.com/${encodeURIComponent(user.handle)}`}
+              key={user.key}
+              rel="noreferrer"
+              target="_blank"
+            >
               <Avatar avatarUrl={user.avatarUrl} displayName={user.displayName} handle={user.handle} />
               <div className="recent-user__identity">
                 <strong>{user.displayName ?? `@${user.handle}`}</strong>
-                <span>@{user.handle} · {relativeTime(user.lastSeenAt, locale)}</span>
+                <span translate="no">@{user.handle} · {relativeTime(user.lastSeenAt, locale)}</span>
               </div>
-              <RelationshipPill relationship={displayRelationship(user)} locale={locale} />
-            </article>
+              <span className="recent-user__relation">
+                <RelationshipPill relationship={displayRelationship(user)} locale={locale} />
+                <Icon name="external" />
+              </span>
+            </a>
           ))}
         </div>
       </section>
@@ -154,4 +207,5 @@ function SidePanel() {
   );
 }
 
-createRoot(document.getElementById("root")!).render(<SidePanel />);
+const root = document.getElementById("root");
+if (root) createRoot(root).render(<SidePanel />);

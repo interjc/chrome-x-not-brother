@@ -32,9 +32,12 @@
 }
 
 .xro-badge--mutual { --xro-tone: #a8e89a; background: #dff7d9; }
+.xro-badge--followed_back { --xro-tone: #71c667; background: #dff7d9; }
 .xro-badge--following_only { --xro-tone: #f1b84b; background: #fff0c9; }
+.xro-badge--unfollowed_you { --xro-tone: #ed9a3a; background: #fff0c9; }
 .xro-badge--follows_you_only { --xro-tone: #78bfea; background: #dff2ff; }
 .xro-badge--blocked_by { --xro-tone: #e46d5f; background: #ffe1db; }
+.xro-badge--blocked_you { --xro-tone: #e14f42; background: #ffe1db; }
 .xro-badge--changed { --xro-tone: #df7ac5; background: #ffe0f5; }
 
 .xro-identity-mark {
@@ -52,14 +55,16 @@
   box-shadow: inset 4px 0 #d84e41;
 }
 
-.xro-badge--following_only {
+.xro-badge--following_only,
+.xro-badge--unfollowed_you {
   border-radius: 4px;
   box-shadow: 2px 2px 0 rgb(100 70 15 / 0.18);
   font-size: 10px;
   line-height: 16px;
 }
 
-.xro-badge--blocked_by {
+.xro-badge--blocked_by,
+.xro-badge--blocked_you {
   border: 2px solid #b93f35;
   border-radius: 3px;
   box-shadow: 2px 2px 0 rgb(94 28 23 / 0.22);
@@ -69,7 +74,8 @@
   padding-inline: 3px 5px;
 }
 
-.xro-badge--blocked_by::before {
+.xro-badge--blocked_by::before,
+.xro-badge--blocked_you::before {
   align-items: center;
   background: #b93f35;
   color: #fff8f4;
@@ -244,9 +250,12 @@
 .xro-observer-panel__action:focus-visible { outline: 3px solid #78bfea; outline-offset: -3px; }
 
 :root[data-xro-theme="dark"] .xro-badge--mutual { background: #183b25; color: #b8efa9; }
+:root[data-xro-theme="dark"] .xro-badge--followed_back { background: #183b25; color: #b8efa9; }
 :root[data-xro-theme="dark"] .xro-badge--following_only { background: #493817; color: #ffd77b; }
+:root[data-xro-theme="dark"] .xro-badge--unfollowed_you { background: #493817; color: #ffd77b; }
 :root[data-xro-theme="dark"] .xro-badge--follows_you_only { background: #173747; color: #a8dcf8; }
 :root[data-xro-theme="dark"] .xro-badge--blocked_by { background: #4b211e; color: #ffaea5; }
+:root[data-xro-theme="dark"] .xro-badge--blocked_you { background: #4b211e; color: #ffaea5; }
 :root[data-xro-theme="dark"] .xro-badge--changed { background: #46213d; color: #ffb4e8; }
 :root[data-xro-theme="dark"] .xro-identity-mark--following_only { background: linear-gradient(90deg, rgb(241 184 75 / 0.17), transparent 88%); }
 :root[data-xro-theme="dark"] .xro-identity-mark--blocked_by { background: linear-gradient(90deg, rgb(228 109 95 / 0.23), transparent 92%); }

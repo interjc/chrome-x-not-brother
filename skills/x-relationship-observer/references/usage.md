@@ -16,4 +16,10 @@ A fully loaded visible author hover card may also supplement ordinary relationsh
 
 When the active observer still has zero records, the X-page dock and side-panel empty state tell the user to hover a reply author. This is an evidence-availability instruction, not a claim that the extension scans or opens every hover card automatically.
 
+DOM mutations normally trigger an immediate debounced pass. While the consented observer page is visible, a 2-second fallback rescan covers reused nodes and missed asynchronous updates; returning focus or visibility triggers an immediate pass. Hidden pages pause periodic work, and signature deduplication prevents unchanged evidence from appending history every interval.
+
 JSON export preserves users and observation history. CSV export contains the current user summary. Import accepts only a Not Brother JSON export and merges it into local data.
+
+Unreviewed changes are specific when the stored transition is attributable to the other account: one-way to mutual displays followed-back, mutual to one-way displays unfollowed-you, and a known normal relationship to blocked-by displays blocked-you. Other transitions remain generic. Page badges, recent records, and the fieldbook show the event; the dock keeps one aggregate changed count. Reviewing the change restores the current base-relationship label without deleting history.
+
+In the Side Panel, activate a base-relationship count or the changed callout to filter the recent list; activate the selected category again to show all recent users. A filtered view shows up to 40 recent matches and an explicit empty state when none exist. Activating a user row opens that standard X profile in a new tab from the user gesture; it does not start automated traversal.

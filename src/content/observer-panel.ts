@@ -8,6 +8,7 @@ export interface ObserverPanelModel {
   summary: ObservationSummary | null;
   locale: AppLocale;
   collapsed: boolean;
+  version?: string;
 }
 
 const ROOT_ID = "not-brother-observer-panel";
@@ -35,11 +36,14 @@ export function renderObserverPanel(
     model.summary,
     model.locale,
     model.collapsed,
+    model.version,
   ]);
   if (existing?.dataset.xroRenderKey === renderKey) return existing;
   root.id = ROOT_ID;
   root.dataset.xroRenderKey = renderKey;
   root.setAttribute("data-xro-overlay", "");
+  if (model.version) root.dataset.xroVersion = model.version;
+  else delete root.dataset.xroVersion;
   root.className = [
     "xro-observer-panel",
     `xro-observer-panel--${model.state}`,

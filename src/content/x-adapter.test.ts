@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { scanXDocument, sourceTypeFromUrl } from "./x-adapter";
+import {
+  scanXDocument,
+  sourceTypeFromUrl,
+  viewerHandleFromDocument,
+} from "./x-adapter";
 
 function fixture(body: string): Document {
   return new DOMParser().parseFromString(`<html><body>${body}</body></html>`, "text/html");
@@ -13,6 +17,16 @@ describe("sourceTypeFromUrl", () => {
   it("only treats the viewer's own relationship lists as authoritative", () => {
     expect(sourceTypeFromUrl(new URL("https://x.com/Viewer/following"), "viewer")).toBe("following");
     expect(sourceTypeFromUrl(new URL("https://x.com/Other/following"), "viewer")).toBe("unknown");
+  });
+});
+
+describe("viewerHandleFromDocument", () => {
+  it("uses the signed-in account switcher instead of the current page author", () => {
+    const doc = fixture(`${accountSwitcher("interjc")}
+      <a data-testid="AppTabBar_Profile_Link" href="/interjc">Profile</a>
+      <article><div data-testid="UserName"><a href="/iamcheyan">@iamcheyan</a></div></article>`);
+
+    expect(viewerHandleFromDocument(doc)).toBe("interjc");
   });
 });
 
@@ -156,6 +170,25 @@ describe("scanXDocument", () => {
     expect(candidate?.observation.relationship).toBe("unknown");
   });
 
+  it("does not treat unrendered engagement controls as disabled even with a normal baseline", () => {
+    const doc = fixture(`${accountSwitcher()}
+      <article data-testid="tweet">
+        <div data-testid="User-Name"><span>Normal</span><a href="/Normal">@Normal</a></div>
+        <button data-testid="reply"></button>
+        <button data-testid="retweet"></button>
+        <button data-testid="like"></button>
+      </article>
+      <div data-testid="cellInnerDiv">
+        <article data-testid="tweet">
+          <div data-testid="User-Name"><span>Unrendered</span><a href="/Unrendered">@Unrendered</a></div>
+        </article>
+      </div>`);
+    const candidate = scanXDocument(doc, "https://x.com/Someone/status/123", 100)
+      .find((item) => item.observation.handle === "Unrendered");
+
+    expect(candidate?.observation.relationship).toBe("unknown");
+  });
+
   it("does not infer blocked-by when only repost is unavailable", () => {
     const doc = fixture(`${accountSwitcher()}
       <article data-testid="tweet">
@@ -282,6 +315,21 @@ describe("scanXDocument", () => {
     const candidate = scanXDocument(doc, "https://x.com/Someone/status/123", 100)
       .find((item) => item.observation.handle === "Loading");
 
+    expect(candidate?.observation.relationship).toBe("unknown");
+  });
+
+  it("does not use a hidden stale hover card for relationship evidence", () => {
+    const doc = fixture(`${accountSwitcher()}<article>
+      <div data-testid="User-Name"><span>Hidden</span><a href="/Hidden">@Hidden</a></div>
+    </article>
+    <div aria-hidden="true">
+      <div data-testid="HoverCard">
+        <a href="/Hidden">@Hidden</a>
+        <button data-testid="789-unfollow">Following</button>
+      </div>
+    </div>`);
+
+    const [candidate] = scanXDocument(doc, "https://x.com/Someone/status/123", 100);
     expect(candidate?.observation.relationship).toBe("unknown");
   });
 

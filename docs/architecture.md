@@ -26,15 +26,18 @@ flowchart LR
 
 - 只运行在 `https://x.com/*`；
 - 用 MutationObserver 观察用户正常浏览产生的 DOM；
+- MutationObserver 同时监听子树新增、关系文案和 `aria-disabled` / `disabled` / `data-testid` / `href` 等关键属性；观察器运行且标签页可见时，每 2 秒兜底复扫当前已渲染 DOM，恢复焦点或从后台返回时立即复扫；
 - 所有选择器、保留路径和本地化文案位于 `src/content/x-adapter.ts`；
 - 把同一 handle 的候选按证据强度合并；
+- 从本地用户记录的前后基础关系动态推导“回关了你”“取关了你”“拉黑了你”三类明确变化展示；无法归因的转换保留通用 changed，dock 继续按 `hasChanged` 汇总；
 - 将 unknown 保留为短暂内部结果，只用于移除过期徽标；不发送、不收集；
 - 在评论线程将三项互动全部不可用与同页正常控制组合，生成 `blocked-interaction-restriction`；将完整加载但缺少 following/follower 链接的已显示浮窗归一化为独立的 `blocked-profile-summary-restriction`；
 - 将完整加载的可见浮窗按 handle 精确配给底层作者卡片，并用 `*-follow`、`*-unfollow` 和 `userFollowIndicator` 补充普通关系事实；
 - 通过 `users:lookup` 批量读取可见 handle 的本地已知关系，使已确认账号在证据浮层关闭后继续回标；
 - 识别当前登录 handle 并在扫描阶段排除本人；
 - 插入观察状态/概览 dock；其本地 `dockCollapsed` 设置控制完整面板或状态悬浮球，用户手势可恢复面板或通过 service worker 打开当前标签页的 Side Panel；
-- 对发送签名去重，减少重复数据库消息；
+- 对已确认持久化的发送签名去重；消息失败或 service worker 未返回对应用户时不提交签名，后续复扫会重试；
+- 所有扫描经过 180ms 合并与 single-flight 串行门控：扫描期间的新触发只排队一次补扫，定期复扫不会并发执行或重复追加相同历史；隐藏标签页暂停定期复扫；扩展上下文终止时移除 DOM Observer、计时器及页面/Chrome 事件监听；
 - 不调用 `fetch`，不打开 URL，不点击页面控制。
 
 ### Service worker
@@ -46,6 +49,7 @@ flowchart LR
 - 用 action badge 同步显示 `ON` 或需要注意的 `!` 状态；
 - 首次安装打开本地 dashboard 引导页；
 - 清理 viewer 本人记录并向 content script 返回本地概览；
+- 把新观察以及档案页的确认、删除、导入、清空广播给所有已注入的 X content script，使其清除关系查询缓存并合并复扫；广播使用现有 `chrome.tabs` 消息能力，不申请 `tabs` 权限也不读取标签页内容；
 - 仅向 `x.com` content script 返回其请求 handle 的已知本地用户记录；
 - 处理用户主动打开完整管理页的请求。
 
@@ -53,7 +57,7 @@ flowchart LR
 
 - 与 service worker 同属扩展 origin，可以安全访问扩展 IndexedDB；
 - Dexie `liveQuery` 驱动 UI 数据更新；
-- Side Panel 提供概览，dashboard 提供完整本地数据管理。
+- Side Panel 提供概览、键盘可达的本地分类筛选和用户手势 Profile 链接，筛选不写数据库也不预取资料；dashboard 提供完整本地数据管理。两者通过共享 hook 订阅 `chrome.storage.onChanged`，已打开页面会即时接收 viewer handle、观察器和徽标设置变化。
 
 ### Internationalization
 

@@ -2,7 +2,12 @@ import { liveQuery } from "dexie";
 import { useCallback, useEffect, useState } from "react";
 import type { ObserverSettings, UserRecord } from "../domain/types";
 import { db } from "../storage/database";
-import { DEFAULT_SETTINGS, getSettings, updateSettings } from "../storage/settings";
+import {
+  DEFAULT_SETTINGS,
+  getSettings,
+  SETTINGS_KEY,
+  updateSettings,
+} from "../storage/settings";
 
 export function useUsers(): { users: UserRecord[]; loading: boolean } {
   const [users, setUsers] = useState<UserRecord[]>([]);
@@ -38,16 +43,36 @@ export function useObserverSettings(): {
   const [settingsReady, setSettingsReady] = useState(false);
 
   useEffect(() => {
+    let active = true;
+    const handleStorageChanged = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string,
+    ): void => {
+      if (!active || areaName !== "local" || !changes[SETTINGS_KEY]) return;
+      const saved = changes[SETTINGS_KEY].newValue as
+        | Partial<ObserverSettings>
+        | undefined;
+      setSettings({ ...DEFAULT_SETTINGS, ...saved });
+      setSettingsReady(true);
+    };
+
+    chrome.storage.onChanged.addListener(handleStorageChanged);
     void getSettings().then(
       (next) => {
+        if (!active) return;
         setSettings(next);
         setSettingsReady(true);
       },
       (error: unknown) => {
+        if (!active) return;
         console.error("Could not read Not Brother settings", error);
         setSettingsReady(true);
       },
     );
+    return () => {
+      active = false;
+      chrome.storage.onChanged.removeListener(handleStorageChanged);
+    };
   }, []);
 
   const patchSettings = useCallback(async (patch: Partial<ObserverSettings>) => {

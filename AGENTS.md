@@ -11,6 +11,8 @@ The extension has exactly two product responsibilities:
 
 Do not add code that automatically scrolls X, opens profiles, calls private X endpoints, or clicks Follow, Unfollow, Block, Mute, or any other X account-action control. X account mutations are outside the product boundary.
 
+A standard X profile link in extension UI may open only from an explicit user click or keyboard activation. Never pre-open, prefetch, traverse, or batch-navigate profile pages.
+
 ## Node environment
 
 Node.js is installed and managed through **nvm**. Non-interactive shells on this machine may otherwise resolve the system Node 8 binary, which is too old for this project.
@@ -55,6 +57,7 @@ Use `npm run package` only when preparing a loadable release archive.
 - Treat missing relationship evidence as the internal `unknown` result; never badge, persist, import, export, or count it, and never infer a negative relationship from an unrelated timeline card.
 - Store extension data through the background service worker. Content scripts must not use the page origin's IndexedDB.
 - Preserve observation history. A known state may replace another known state; an internal `unknown` result must be discarded before persistence and must not erase a known state.
+- Derive change presentation without changing stored relationship facts: following-only to mutual is followed-back, mutual to following-only is unfollowed-you, and any known non-blocked state to blocked-by is blocked-you. Keep ambiguous or viewer-driven transitions generic, and keep the dock change statistic aggregated.
 - Use text content and DOM APIs for injected UI. Do not inject HTML strings into X.
 - Keep all runtime code bundled locally. Manifest V3 forbids remotely hosted executable code.
 - Route every user-visible runtime string through `src/i18n/`; keep English, Japanese, and Simplified Chinese catalogs complete. Extension pages follow the Chrome UI language, while UI injected into X follows the page language.
@@ -66,6 +69,9 @@ Use `npm run package` only when preparing a loadable release archive.
 - Use a fully loaded visible hover card only for the matching handle. Its stable follow/unfollow control and `userFollowIndicator` may supplement the underlying card's ordinary relationship facts; never leak one hover card's facts to another author.
 - Query the local archive for handles already visible on the page. A known stored relationship may annotate a card whose current DOM has no fresh evidence; this is not an unknown badge.
 - Preserve toolbar state, first-install guidance, the X-page observer dock and its persistent panel/floating-ball preference, and light/dark theme parity.
+- Preserve the hybrid page monitor: semantic DOM mutations plus a 2-second fallback rescan only while the consented observer page is visible, immediate focus/visibility recovery, single-flight processing, signature deduplication only after confirmed persistence so transient failures retry, and complete timer/listener teardown on extension-context invalidation.
+- Preserve cross-tab cache invalidation through service-worker `data:changed` broadcasts. Do not add the `tabs` permission; tabs without a content-script receiver are expected, and intentional archive deletion must not clear observation signatures and immediately reinsert unchanged evidence.
+- Keep extension pages subscribed to `chrome.storage.onChanged` through the shared settings hook so viewer exclusion and observer controls remain consistent across an already-open Side Panel, dashboard, and X tabs.
 
 ## Documentation
 

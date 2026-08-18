@@ -39,16 +39,24 @@ import {
   isExtensionContextInvalidated,
 } from "./extension-context";
 import {
+  createPeriodicRescanController,
+  type PeriodicRescanController,
+} from "./periodic-rescan";
+import { createObservationSignatureTracker } from "./observation-signatures";
+import {
+  createProcessScheduler,
+  type ProcessScheduler,
+} from "./process-scheduler";
+import {
   scanXDocument,
   type ExtractedCandidate,
   viewerHandleFromDocument,
 } from "./x-adapter";
 
 const PROCESS_DELAY_MS = 180;
-const sentSignatures = new Map<string, string>();
+const observationSignatures = createObservationSignatureTracker();
 const recordCache = new Map<string, UserRecord>();
 const requestedUserKeys = new Set<string>();
-let scheduled: number | null = null;
 let currentUrl = location.href;
 let latestSettings: ObserverSettings | null = null;
 let latestSummary: ObservationSummary | null = null;
@@ -57,15 +65,46 @@ let summaryRefreshInFlight = false;
 let stopped = false;
 let heartbeatId: number | null = null;
 let observer: MutationObserver | null = null;
+let periodicRescan: PeriodicRescanController | null = null;
+let processScheduler: ProcessScheduler | null = null;
+let extensionListenersRegistered = false;
+
+function handleStorageChanged(
+  changes: Record<string, chrome.storage.StorageChange>,
+  areaName: string,
+): void {
+  if (areaName === "local" && changes[SETTINGS_KEY]) scheduleProcess();
+}
+
+function handleRuntimeMessage(message: RuntimeMessage): false {
+  if (message.type === "data:changed") {
+    recordCache.clear();
+    requestedUserKeys.clear();
+    if (latestSettings?.observerEnabled) scheduleProcess();
+    if (latestSettings) void refreshSummary();
+  }
+  return false;
+}
+
+function removeExtensionListeners(): void {
+  if (!extensionListenersRegistered) return;
+  extensionListenersRegistered = false;
+  if (!hasExtensionContext()) return;
+  chrome.storage.onChanged.removeListener(handleStorageChanged);
+  chrome.runtime.onMessage.removeListener(handleRuntimeMessage);
+}
 
 function stopContentScript(): void {
   if (stopped) return;
   stopped = true;
-  if (scheduled !== null) window.clearTimeout(scheduled);
-  scheduled = null;
+  processScheduler?.stop();
+  processScheduler = null;
   if (heartbeatId !== null) window.clearInterval(heartbeatId);
   heartbeatId = null;
+  periodicRescan?.stop();
+  periodicRescan = null;
   observer?.disconnect();
+  removeExtensionListeners();
   removeRelationshipBadges();
   removeObserverPanel(document);
 }
@@ -119,6 +158,7 @@ function renderPanel(settings: ObserverSettings): void {
     summary: latestSummary,
     locale: getDocumentLocale(document),
     collapsed: settings.dockCollapsed,
+    version: chrome.runtime.getManifest().version,
   }, () => void openSidePanel(), (collapsed) => void setPanelCollapsed(collapsed));
 }
 
@@ -143,6 +183,7 @@ async function refreshSummary(): Promise<void> {
     const response = (await chrome.runtime.sendMessage({
       type: "summary:get",
     })) as GetSummaryResponse | { ok: false; error: string };
+    if (stopped) return;
     if (response.ok) {
       latestSummary = response.summary;
       latestSummaryReadAt = Date.now();
@@ -154,15 +195,6 @@ async function refreshSummary(): Promise<void> {
     latestSummaryReadAt = Date.now();
     summaryRefreshInFlight = false;
   }
-}
-
-function candidateSignature(observation: ObservationDraft): string {
-  return [
-    observation.userKey,
-    observation.relationship,
-    observation.sourceUrl,
-    observation.evidence.join("|"),
-  ].join("::");
 }
 
 function bestObservations(candidates: ExtractedCandidate[]): ObservationDraft[] {
@@ -221,10 +253,10 @@ async function hydrateRecordCache(candidates: ExtractedCandidate[]): Promise<voi
 }
 
 async function processPage(): Promise<void> {
-  scheduled = null;
   if (stopped) return;
   syncPageTheme();
   const settings = await getSettings();
+  if (stopped) return;
   latestSettings = settings;
   renderPanel(settings);
   if (
@@ -239,25 +271,23 @@ async function processPage(): Promise<void> {
     void refreshSummary();
   }
   const viewerHandle = viewerHandleFromDocument(document);
+  const viewerKey = viewerHandle?.toLowerCase() ?? settings.viewerHandle;
   const candidates = scanXDocument(document, location.href).filter(
-    (candidate) => candidate.observation.userKey !== settings.viewerHandle,
+    (candidate) => candidate.observation.userKey !== viewerKey,
   );
   const collectableCandidates = candidates.filter((item) =>
     isCollectableRelationship(item.observation.relationship),
   );
 
   await hydrateRecordCache(candidates);
+  if (stopped) return;
 
   if (settings.showBadges) annotate(candidates);
   else removeRelationshipBadges();
 
-  const observations = bestObservations(collectableCandidates).filter((observation) => {
-    const signature = candidateSignature(observation);
-    if (sentSignatures.get(observation.userKey) === signature) return false;
-    sentSignatures.set(observation.userKey, signature);
-    return true;
-  });
-  const viewerKey = viewerHandle?.toLowerCase() ?? null;
+  const observations = observationSignatures.filterUnsent(
+    bestObservations(collectableCandidates),
+  );
   const viewerNeedsSync = viewerKey !== null && settings.viewerHandle !== viewerKey;
   if (observations.length === 0 && !viewerNeedsSync) return;
 
@@ -271,6 +301,7 @@ async function processPage(): Promise<void> {
       | UpsertObservationsResponse
       | { ok: false; error: string };
     if (response.ok) {
+      observationSignatures.markPersisted(observations, response.users);
       for (const user of response.users) recordCache.set(user.key, user);
       if (settings.showBadges) annotate(candidates);
       await refreshSummary();
@@ -281,30 +312,41 @@ async function processPage(): Promise<void> {
 }
 
 function scheduleProcess(): void {
-  if (stopped || scheduled !== null) return;
-  scheduled = window.setTimeout(() => {
-    void processPage().catch((error: unknown) =>
-      handleRuntimeError(error, "Could not process the current page"));
-  }, PROCESS_DELAY_MS);
+  processScheduler?.request();
+}
+
+function nodeIsInsideInjectedUi(node: Node): boolean {
+  const element = node instanceof Element ? node : node.parentElement;
+  return Boolean(element?.closest("[data-xro-badge], [data-xro-overlay]"));
 }
 
 observer = new MutationObserver((mutations) => {
   if (stopped) return;
   if (
-    mutations.every((mutation) =>
-      [...mutation.addedNodes, ...mutation.removedNodes].every(
-        (node) =>
-          node instanceof Element &&
-          node.closest("[data-xro-badge], [data-xro-overlay]"),
-      ),
-    )
+    mutations.every((mutation) => nodeIsInsideInjectedUi(mutation.target))
   ) {
     return;
   }
   scheduleProcess();
 });
 
-observer.observe(document.documentElement, { childList: true, subtree: true });
+observer.observe(document.documentElement, {
+  childList: true,
+  subtree: true,
+  characterData: true,
+  attributes: true,
+  attributeFilter: [
+    "aria-disabled",
+    "aria-hidden",
+    "aria-label",
+    "data-testid",
+    "disabled",
+    "hidden",
+    "href",
+    "inert",
+    "role",
+  ],
+});
 
 heartbeatId = window.setInterval(() => {
   if (stopped) return;
@@ -321,19 +363,28 @@ heartbeatId = window.setInterval(() => {
 }, 800);
 
 if (hasExtensionContext()) {
-  chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === "local" && changes[SETTINGS_KEY]) scheduleProcess();
+  processScheduler = createProcessScheduler({
+    window,
+    delayMs: PROCESS_DELAY_MS,
+    task: processPage,
+    onError: (error) => handleRuntimeError(error, "Could not process the current page"),
   });
 
-  chrome.runtime.onMessage.addListener((message: RuntimeMessage) => {
-    if (message.type === "data:changed" && latestSettings?.observerEnabled) {
-      recordCache.clear();
-      requestedUserKeys.clear();
-      scheduleProcess();
-      void refreshSummary();
-    }
-    return false;
+  chrome.storage.onChanged.addListener(handleStorageChanged);
+  chrome.runtime.onMessage.addListener(handleRuntimeMessage);
+  extensionListenersRegistered = true;
+
+  periodicRescan = createPeriodicRescanController({
+    document,
+    window,
+    shouldRescan: () => Boolean(
+      latestSettings &&
+      latestSettings.consentVersion >= CURRENT_CONSENT_VERSION &&
+      latestSettings.observerEnabled,
+    ),
+    onRescan: scheduleProcess,
   });
+  periodicRescan.start();
 
   scheduleProcess();
 } else {
