@@ -16,10 +16,10 @@ Python is managed through pyenv. The repository currently has no Python runtime 
 
 ## Architecture
 
-- `src/content/`: inspect already-rendered X DOM, read already-loaded page UI store relationship fields through `page-store.ts` and the main-world `page-bridge.ts`, combine semantic mutation events with a visible-page 2-second fallback rescan, serialize triggers, normalize evidence, discard internal unknown, inject badges, and send known observation drafts whose signatures are committed only after persistence succeeds.
+- `src/content/`: inspect already-rendered X DOM, read already-loaded page UI store relationship fields through `page-store.ts` and the main-world `page-bridge.ts`, pair display names and avatars to the same handle, combine semantic mutation events with a visible-page 2-second fallback rescan, serialize triggers, normalize evidence, discard internal unknown, inject badges, and send known observation drafts whose signatures are committed only after persistence succeeds.
 - `src/content/observer-panel.ts`: render the X-page state/summary dock, its accessible panel/floating-ball toggle, and forward its user gesture to Side Panel.
 - `src/background/`: persist messages, remove the signed-in viewer, expose summaries, show toolbar state, and initialize Chrome side-panel/onboarding behavior.
-- `src/domain/`: types, relationship resolution, data merge semantics, derived followed-back/unfollowed-you/blocked-you presentation, import, and export.
+- `src/domain/`: types, relationship resolution, data merge semantics, derived unfollowed-you/you-unfollowed/blocked-you presentation, mutual-always-mutual display, none-for-both-unfollowed, import, and export.
 - `src/i18n/`: type-checked English, Japanese, and Simplified Chinese runtime catalogs, locale resolution, relationship labels, and source labels.
 - `src/storage/`: IndexedDB access and local settings.
 - `src/ui/`: side panel, its pure filter model, user-gesture profile links, dashboard, shared components, presentation, and a shared storage-change-aware settings hook.

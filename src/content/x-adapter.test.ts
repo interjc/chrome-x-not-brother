@@ -49,6 +49,15 @@ describe("scanXDocument", () => {
     expect(candidate?.observation.relationship).toBe("following_only");
   });
 
+  it("reads explicit neither-following on a UserCell as none", () => {
+    const doc = fixture(`${accountSwitcher()}<div data-testid="UserCell">
+      <div data-testid="UserName"><span>Alice Example</span><span>@Alice</span></div>
+      <button data-testid="123-follow">Follow</button>
+    </div>`);
+    const [candidate] = scanXDocument(doc, "https://x.com/search?q=alice", 100);
+    expect(candidate?.observation.relationship).toBe("none");
+  });
+
   it("reads a Simplified Chinese follows-you-only relationship", () => {
     const doc = fixture(`${accountSwitcher()}<div data-testid="UserCell">
       <div data-testid="UserName"><span>小明</span><span>@XiaoMing</span></div>
@@ -438,6 +447,49 @@ describe("scanXDocument", () => {
     expect(candidate?.observation).toMatchObject({
       relationship: "mutual",
       evidence: ["following-control", "follows-you-label"],
+    });
+  });
+
+  it("does not use the handle/time separator as a display name", () => {
+    const doc = fixture(`${accountSwitcher()}<div data-testid="UserCell">
+      <div data-testid="UserAvatar-Container-OpenAI">
+        <a href="/OpenAI"><img src="https://pbs.twimg.com/profile_images/1/openai_normal.jpg" alt=""></a>
+      </div>
+      <div data-testid="UserName">
+        <a href="/OpenAI">OpenAI</a>
+        <span>@OpenAI</span>
+        <span>·</span>
+      </div>
+    </div>`);
+    const [candidate] = scanXDocument(doc, "https://x.com/Viewer/following", 100);
+    expect(candidate?.observation).toMatchObject({
+      handle: "OpenAI",
+      displayName: "OpenAI",
+      avatarUrl: "https://pbs.twimg.com/profile_images/1/openai_x96.jpg",
+    });
+  });
+
+  it("pairs the avatar to the matching handle instead of a quoted author", () => {
+    const doc = fixture(`${accountSwitcher()}<article data-testid="tweet">
+      <div data-testid="Tweet-User-Avatar">
+        <a href="/Alice"><img src="https://pbs.twimg.com/profile_images/1/alice_normal.jpg" alt=""></a>
+      </div>
+      <div data-testid="User-Name">
+        <a href="/Alice/status/1"><span>Alice Example</span></a>
+        <span>@Alice</span>
+      </div>
+      <article data-testid="tweet">
+        <div data-testid="Tweet-User-Avatar">
+          <a href="/Quoted"><img src="https://pbs.twimg.com/profile_images/2/quoted_normal.jpg" alt=""></a>
+        </div>
+        <div data-testid="User-Name"><span>Quoted Person</span><span>@Quoted</span></div>
+      </article>
+    </article>`);
+    const alice = scanXDocument(doc, "https://x.com/home", 100)
+      .find((item) => item.observation.handle === "Alice");
+    expect(alice?.observation).toMatchObject({
+      displayName: "Alice Example",
+      avatarUrl: "https://pbs.twimg.com/profile_images/1/alice_x96.jpg",
     });
   });
 

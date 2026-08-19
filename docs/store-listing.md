@@ -18,7 +18,7 @@ Annotate relationship evidence visible on X and keep a private observation histo
 
 Not Brother is a local-first relationship observer for X. While you browse x.com normally, it annotates relationship evidence already visible on the page and keeps a private observation history in this Chrome profile.
 
-The extension can identify mutual follows, accounts you follow that do not follow you back, accounts that follow you, opportunistic evidence that an account has blocked you, and changes between previously observed states. Attributable changes are labeled as followed you back, unfollowed you, or blocked you; the compact X-page panel keeps one aggregate change count. Insufficient evidence produces no label and no saved record.
+The extension can identify mutual follows, accounts you follow that do not follow you back, accounts that follow you, opportunistic evidence that an account has blocked you, and changes between previously observed states. Mutual stays labeled mutual. One-way following stays labeled one-way unless history shows they unfollowed you. Newly blocked states get a specific label; if neither account follows the other, no badge is shown. The compact X-page panel keeps one aggregate change count. Insufficient evidence produces no label and no saved record.
 
 Use the Chrome side panel for a compact overview or open the Relationship Fieldbook to search, filter, sort, review changes, export JSON or CSV, merge a JSON backup, and delete local records. The observer panel on X can minimize to an NB floating button and retains its state locally.
 
@@ -64,7 +64,7 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 不是兄弟是一款本地优先的 X 关系观察器。你正常浏览 x.com 时，它会标注页面已经显示的关系证据，并把观察历史私密地保存在当前 Chrome 配置中。
 
-扩展可以识别互相关注、我关注但对方没有关注我、对方关注了我、对方拉黑了我的机会式证据，以及前后观察状态的变化。可以归因的变化会明确显示为“回关了你”“取关了你”或“拉黑了你”，X 页面概览仍只保留一个变化合计数字。证据不足时不会显示标签，也不会保存记录。
+扩展可以识别互相关注、我关注但对方没有关注我、对方关注了我、对方拉黑了我的机会式证据，以及前后观察状态的变化。已经互关就显示“互关”。我单向关注默认显示“单向关注”；只有跟历史比对确认对方取关，或对方拉黑，才用更具体的文案。双方都已取消关注时不显示徽标。X 页面概览仍只保留一个变化合计数字。证据不足时不会显示标签，也不会保存记录。
 
 你可以通过 Chrome 侧边栏查看简明概览，也可以打开关系档案库进行搜索、筛选、排序、核对变化、导出 JSON 或 CSV、合并 JSON 备份和删除本地记录。X 页面上的观察概览可收起为 NB 悬浮球，并在本机记住状态。
 
@@ -111,7 +111,7 @@ X に表示された関係の証拠へ注釈を付け、この Chrome プロフ�
 
 兄貴じゃないは、ローカル優先の X 関係オブザーバーです。通常どおり x.com を閲覧している間に、ページ上へすでに表示された関係の証拠へ注釈を付け、観察履歴を現在の Chrome プロファイル内だけに保存します。
 
-相互フォロー、自分だけがフォローしているアカウント、自分をフォローしているアカウント、相手からブロックされたことを示す状況的な証拠、以前の観察からの関係変化を識別できます。相手に帰属できる変化は「フォローバック」「フォロー解除」「ブロック」と明示し、X ページの概要では一つの変化合計として表示します。証拠が足りない場合はラベルを表示せず、記録も保存しません。
+相互フォロー、自分だけがフォローしているアカウント、自分をフォローしているアカウント、相手からブロックされたことを示す状況的な証拠、以前の観察からの関係変化を識別できます。相互フォローはそのまま「相互」と表示します。片側のフォロー解除やブロックは具体的なラベルになり、双方ともフォローしていない場合はバッジを出しません。X ページの概要では一つの変化合計として表示します。証拠が足りない場合はラベルを表示せず、記録も保存しません。
 
 Chrome のサイドパネルでは概要を確認できます。関係アーカイブでは、検索、絞り込み、並べ替え、変化の確認、JSON または CSV のエクスポート、JSON バックアップの統合、ローカル記録の削除を行えます。X ページの観察概要は NB フローティングボタンに収納でき、その状態をローカルに保持します。
 

@@ -1,5 +1,6 @@
-import type { DisplayRelationship } from "../domain/types";
+import type { DisplayRelationship, RelationshipKind } from "../domain/types";
 import { relationshipPresentation, type AppLocale } from "../i18n";
+import { USER_NAME_SELECTOR } from "./x-adapter";
 
 const BADGE_ATTRIBUTE = "data-xro-badge";
 const BADGE_ROW_ATTRIBUTE = "data-xro-badge-row";
@@ -10,27 +11,94 @@ const IDENTITY_CLASSES = [
   "xro-identity-mark--following_only",
   "xro-identity-mark--blocked_by",
 ];
+const USER_CARD_SELECTOR = '[data-testid="UserCell"], [data-testid="HoverCard"]';
+const AVATAR_IDENTITY_SELECTOR =
+  '[data-testid="Tweet-User-Avatar"], [data-testid="UserAvatar-Container"], [data-testid^="UserAvatar-Container-"]';
 
-function identityElement(anchor: HTMLElement, handle: string): HTMLElement | null {
+function isAvatarIdentity(element: Element): boolean {
+  if (element.closest(AVATAR_IDENTITY_SELECTOR)) return true;
+  return element instanceof HTMLAnchorElement && element.querySelector(":scope img") !== null;
+}
+
+function userCardFrom(element: HTMLElement): HTMLElement | null {
+  return element.closest<HTMLElement>(USER_CARD_SELECTOR);
+}
+
+function isProfileLink(link: HTMLAnchorElement, handle: string): boolean {
+  const normalizedHandle = handle.toLowerCase();
+  try {
+    const url = new URL(link.getAttribute("href") ?? "", "https://x.com");
+    const path = url.pathname.toLowerCase();
+    return path === `/${normalizedHandle}` || path.startsWith(`/${normalizedHandle}/`);
+  } catch {
+    return false;
+  }
+}
+
+function identityInRoot(root: HTMLElement, handle: string): HTMLElement | null {
   const normalizedHandle = handle.toLowerCase();
   const visibleHandle = `@${normalizedHandle}`;
-  const handleText = [...anchor.querySelectorAll<HTMLElement>("span")].find(
+  const handleText = [...root.querySelectorAll<HTMLElement>("span")].find(
     (element) => (element.textContent ?? "").trim().toLowerCase() === visibleHandle,
   );
   const handleLink = handleText?.closest<HTMLAnchorElement>("a[href]") ?? null;
-  const profileLinks: HTMLAnchorElement[] = [];
-  for (const link of anchor.querySelectorAll<HTMLAnchorElement>("a[href]")) {
-    try {
-      const url = new URL(link.getAttribute("href") ?? "", "https://x.com");
-      const path = url.pathname.toLowerCase();
-      if (path === `/${normalizedHandle}` || path.startsWith(`/${normalizedHandle}/`)) {
-        profileLinks.push(link);
-      }
-    } catch {
-      // Ignore malformed host links and fall back to exact visible handle text.
-    }
+  const profileLinks = [...root.querySelectorAll<HTMLAnchorElement>("a[href]")]
+    .filter((link) => isProfileLink(link, handle) && !isAvatarIdentity(link));
+  return profileLinks.find((link) => link !== handleLink) ??
+    profileLinks[0] ??
+    handleLink ??
+    handleText ??
+    null;
+}
+
+function identityElement(anchor: HTMLElement, handle: string): HTMLElement | null {
+  const inAnchor = identityInRoot(anchor, handle);
+  if (inAnchor && !isAvatarIdentity(inAnchor)) return inAnchor;
+  const card = userCardFrom(anchor);
+  if (!card || card === anchor) return inAnchor && !isAvatarIdentity(inAnchor) ? inAnchor : null;
+  const name = card.querySelector<HTMLElement>(USER_NAME_SELECTOR);
+  if (name) {
+    const inName = identityInRoot(name, handle);
+    if (inName && !isAvatarIdentity(inName)) return inName;
   }
-  return profileLinks.find((link) => link !== handleLink) ?? profileLinks[0] ?? handleLink ?? handleText ?? null;
+  const inCard = identityInRoot(card, handle);
+  return inCard && !isAvatarIdentity(inCard) ? inCard : null;
+}
+
+function userCardAvatar(card: HTMLElement, handle: string): HTMLElement | null {
+  const containers = [...card.querySelectorAll<HTMLElement>(AVATAR_IDENTITY_SELECTOR)];
+  const matching = containers.find((element) => {
+    const link = element.closest("a[href]");
+    return link instanceof HTMLAnchorElement ? isProfileLink(link, handle) : true;
+  });
+  if (matching) return matching.closest("a[href]") ?? matching;
+  return [...card.querySelectorAll<HTMLAnchorElement>("a[href]")]
+    .find((link) => isProfileLink(link, handle) && isAvatarIdentity(link)) ?? null;
+}
+
+function placeUserCardBadge(card: HTMLElement, badge: HTMLElement, handle: string): boolean {
+  const avatar = userCardAvatar(card, handle);
+  if (!avatar) return false;
+  const parent = avatar.parentElement;
+  const stackOnParent = parent !== null && parent.querySelector(USER_NAME_SELECTOR) === null;
+  const stack = stackOnParent ? parent : avatar;
+  stack.classList.add("xro-user-card-avatar-stack");
+  if (stackOnParent) avatar.insertAdjacentElement("afterend", badge);
+  else avatar.append(badge);
+  return true;
+}
+
+function userCardBadgeMisplaced(badge: HTMLElement, card: HTMLElement): boolean {
+  return badge.closest(".xro-user-card-avatar-stack") === null ||
+    badge.closest(USER_NAME_SELECTOR) !== null ||
+    !card.contains(badge);
+}
+
+function clearUserCardStacks(root: ParentNode): void {
+  const stacks = root instanceof HTMLElement && root.classList.contains("xro-user-card-avatar-stack")
+    ? [root, ...root.querySelectorAll<HTMLElement>(".xro-user-card-avatar-stack")]
+    : [...root.querySelectorAll<HTMLElement>(".xro-user-card-avatar-stack")];
+  for (const stack of stacks) stack.classList.remove("xro-user-card-avatar-stack");
 }
 
 function markBadgeRow(row: HTMLElement): void {
@@ -58,34 +126,56 @@ export function setRelationshipBadge(
   relationship: DisplayRelationship,
   handle: string,
   locale: AppLocale,
+  currentRelationship?: RelationshipKind,
 ): void {
-  const existing = anchor.querySelector<HTMLElement>(`[${BADGE_ATTRIBUTE}]`);
+  const card = userCardFrom(anchor);
+  const searchRoot = card ?? anchor;
+  const existing = searchRoot.querySelector<HTMLElement>(`[${BADGE_ATTRIBUTE}]`);
   const badge = existing ?? document.createElement("span");
   const presentation = relationshipPresentation(locale, relationship);
-  const identityRelationship = relationship === "blocked_you"
+  const identityRelationship = relationship === "blocked_you" || relationship === "blocked_by"
     ? "blocked_by"
-    : relationship === "unfollowed_you"
+    : relationship === "following_only" ||
+        (relationship === "unfollowed_you" && currentRelationship === "following_only")
       ? "following_only"
       : relationship;
+  const identity = identityElement(anchor, handle);
   clearIdentityMark(anchor);
-  if (identityRelationship === "following_only" || identityRelationship === "blocked_by") {
+  if (card) {
+    const name = card.querySelector<HTMLElement>(USER_NAME_SELECTOR);
+    if (name) clearIdentityMark(name);
+  }
+  if (
+    !card &&
+    (identityRelationship === "following_only" || identityRelationship === "blocked_by")
+  ) {
     anchor.setAttribute(IDENTITY_ATTRIBUTE, relationship);
     anchor.classList.add("xro-identity-mark", `xro-identity-mark--${identityRelationship}`);
   }
   badge.setAttribute(BADGE_ATTRIBUTE, relationship);
   badge.className = `xro-badge xro-badge--${relationship}`;
+  if (card) badge.classList.add("xro-badge--user-card");
   if (badge.textContent !== presentation.shortLabel) badge.textContent = presentation.shortLabel;
   badge.title = `${handle} · ${presentation.description}`;
   badge.setAttribute("aria-label", `${handle}: ${presentation.label}`);
-  if (!existing) {
-    const identity = identityElement(anchor, handle);
+  const misplaced = existing !== null && (
+    card ? userCardBadgeMisplaced(existing, card) : false
+  );
+  if (card && (!existing || misplaced)) {
+    if (existing && misplaced) existing.remove();
+    if (!placeUserCardBadge(card, badge, handle) && identity && !isAvatarIdentity(identity)) {
+      identity.insertAdjacentElement("afterend", badge);
+    } else if (!badge.isConnected && !isAvatarIdentity(anchor)) {
+      anchor.append(badge);
+    }
+  } else if (!card && !existing) {
     if (identity) {
       identity.insertAdjacentElement("afterend", badge);
       markBadgeRow(badge.parentElement ?? anchor);
     } else {
       anchor.append(badge);
     }
-  } else if (badge.parentElement) {
+  } else if (!card && badge.parentElement) {
     markBadgeRow(badge.parentElement);
   }
 }
@@ -103,10 +193,16 @@ export function removeRelationshipBadges(root: ParentNode = document): void {
       row.classList.remove(BADGE_ROW_CLASS);
     }
   }
+  clearUserCardStacks(root);
 }
 
 export function removeRelationshipBadge(anchor: HTMLElement): void {
-  for (const badge of anchor.querySelectorAll(`[${BADGE_ATTRIBUTE}]`)) badge.remove();
-  clearBadgeRows(anchor);
-  clearIdentityMark(anchor);
+  const root = userCardFrom(anchor) ?? anchor;
+  for (const badge of root.querySelectorAll(`[${BADGE_ATTRIBUTE}]`)) badge.remove();
+  const marked = root.matches(`[${IDENTITY_ATTRIBUTE}]`)
+    ? [root, ...root.querySelectorAll<HTMLElement>(`[${IDENTITY_ATTRIBUTE}]`)]
+    : [...root.querySelectorAll<HTMLElement>(`[${IDENTITY_ATTRIBUTE}]`)];
+  for (const identity of marked) clearIdentityMark(identity);
+  clearBadgeRows(root);
+  clearUserCardStacks(root);
 }

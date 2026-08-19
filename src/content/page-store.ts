@@ -1,4 +1,8 @@
 import {
+  isUsableDisplayName,
+  normalizeProfileImageUrl,
+} from "../domain/identity";
+import {
   isCollectableRelationship,
   resolveRelationship,
 } from "../domain/relationships";
@@ -13,6 +17,8 @@ export interface PageUserRelationship {
   following: boolean | null;
   followsYou: boolean | null;
   blockedBy: boolean | null;
+  displayName: string | null;
+  avatarUrl: string | null;
 }
 
 export interface PageStoreQueryMessage {
@@ -52,6 +58,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function booleanField(...values: unknown[]): boolean | null {
   for (const value of values) {
     if (typeof value === "boolean") return value;
+  }
+  return null;
+}
+
+function stringField(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
   }
   return null;
 }
@@ -99,7 +112,23 @@ function pageUserFromUnknown(value: unknown): PageUserRelationship | null {
     perspectives.blocked_by,
   );
   if (following === null && followsYou === null && blockedBy === null) return null;
-  return { handle, following, followsYou, blockedBy };
+  const displayName = stringField(value.name, legacy.name);
+  const avatarUrl = normalizeProfileImageUrl(
+    stringField(
+      value.profile_image_url_https,
+      legacy.profile_image_url_https,
+      value.profile_image_url,
+      legacy.profile_image_url,
+    ),
+  );
+  return {
+    handle,
+    following,
+    followsYou,
+    blockedBy,
+    displayName: displayName && isUsableDisplayName(displayName, handle) ? displayName : null,
+    avatarUrl,
+  };
 }
 
 function rememberUser(
@@ -295,14 +324,32 @@ export function readPageUserRelationships(doc: Document): Map<string, PageUserRe
   return users;
 }
 
+function withPageStoreIdentity(
+  observation: ObservationDraft,
+  pageUser: PageUserRelationship,
+): ObservationDraft {
+  const displayName = isUsableDisplayName(observation.displayName, observation.handle)
+    ? observation.displayName
+    : pageUser.displayName;
+  const avatarUrl = observation.avatarUrl ?? pageUser.avatarUrl;
+  if (
+    displayName === observation.displayName &&
+    avatarUrl === observation.avatarUrl
+  ) return observation;
+  return { ...observation, displayName, avatarUrl };
+}
+
 export function applyPageStoreRelationships(
   candidates: ExtractedCandidate[],
   users: Map<string, PageUserRelationship>,
 ): void {
   if (users.size === 0) return;
   for (const candidate of candidates) {
-    if (isCollectableRelationship(candidate.observation.relationship)) continue;
     const pageUser = users.get(candidate.observation.userKey);
+    if (pageUser) {
+      candidate.observation = withPageStoreIdentity(candidate.observation, pageUser);
+    }
+    if (isCollectableRelationship(candidate.observation.relationship)) continue;
     if (!pageUser) continue;
     const relationship = resolveRelationship({
       following: pageUser.following,
@@ -310,12 +357,11 @@ export function applyPageStoreRelationships(
       blockedBy: pageUser.blockedBy === true,
     });
     if (!isCollectableRelationship(relationship)) continue;
-    const next: ObservationDraft = {
+    candidate.observation = {
       ...candidate.observation,
       relationship,
       evidence: ["page-user-entity"],
     };
-    candidate.observation = next;
   }
 }
 

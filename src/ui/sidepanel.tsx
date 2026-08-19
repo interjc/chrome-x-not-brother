@@ -5,7 +5,8 @@ import "./styles.css";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { PROJECT_FEEDBACK_URL } from "../domain/project";
-import { displayRelationship } from "../domain/relationships";
+import { visibleDisplayName } from "../domain/identity";
+import { displayRelationship, isDisplayedUser } from "../domain/relationships";
 import {
   getExtensionLocale,
   relationshipPresentation,
@@ -38,7 +39,7 @@ export function SidePanel() {
   const { settings, settingsReady, setSettings, setSetting } = useObserverSettings();
   const users = settingsReady
     ? observedUsers.filter((user) =>
-      user.key !== settings.viewerHandle && user.currentRelationship !== "unknown",
+      user.key !== settings.viewerHandle && isDisplayedUser(user),
     )
     : [];
   const loading = usersLoading || !settingsReady;
@@ -180,7 +181,7 @@ export function SidePanel() {
             >
               <Avatar avatarUrl={user.avatarUrl} displayName={user.displayName} handle={user.handle} />
               <div className="recent-user__identity">
-                <strong>{user.displayName ?? `@${user.handle}`}</strong>
+                <strong>{visibleDisplayName(user.displayName, user.handle)}</strong>
                 <span translate="no">@{user.handle} · {relativeTime(user.lastSeenAt, locale)}</span>
               </div>
               <span className="recent-user__relation">

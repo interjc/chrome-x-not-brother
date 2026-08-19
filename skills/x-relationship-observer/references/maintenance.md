@@ -36,7 +36,7 @@ Treat `dockCollapsed` as a presentation-only `chrome.storage.local` preference. 
 
 Repository startup and install cleanup must purge legacy unknown users and observations. Import, export, summaries, content messages, and background writes must all keep the same filter.
 
-Specific change events are derived presentation, not stored relationship kinds: following-only to mutual is followed-back, mutual to following-only is unfollowed-you, and any known non-blocked relationship to blocked-by is blocked-you. Keep ambiguous or viewer-driven transitions generic, keep the dock statistic aggregated by `hasChanged`, and do not migrate the database merely to store these display labels.
+Specific change events are derived presentation, not stored relationship kinds: a current mutual state always displays mutual. A current following-only state displays following-only unless history shows they used to follow the viewer (mutual or follows-you-only to following-only, or follows-you-only to none), which is unfollowed-you. Mutual to follows-you-only is you-unfollowed, and any known non-blocked relationship to blocked-by is blocked-you. Explicit neither-following is stored `none` only to replace a visible relationship so stale badges can be removed; only follows-you-only to none among neither-following badges as unfollowed-you, and `none` is not a first-seen collectable state. Keep other ambiguous double-action transitions generic, keep the dock statistic aggregated by `hasChanged`, and do not migrate the database merely to store these display labels.
 
 ## Dependencies
 

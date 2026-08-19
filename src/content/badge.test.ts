@@ -17,6 +17,32 @@ describe("relationship badge", () => {
     expect(anchor.querySelector("a + [data-xro-badge]")).not.toBeNull();
   });
 
+  it("places a related-user badge under the avatar", () => {
+    const cell = document.createElement("div");
+    cell.setAttribute("data-testid", "UserCell");
+    cell.innerHTML = `
+      <div class="avatar-column">
+        <a href="/mranti" data-testid="UserAvatar-Container-mranti">
+          <img src="https://pbs.twimg.com/profile_images/1.jpg" alt="">
+        </a>
+      </div>
+      <div data-testid="UserName">
+        <div class="name-line"><a href="/mranti"><span>Michael Anti</span></a></div>
+        <div class="handle-line"><span>@mranti</span></div>
+      </div>
+      <button>正在关注</button>
+    `;
+
+    const avatar = cell.querySelector<HTMLElement>("[data-testid='UserAvatar-Container-mranti']");
+    setRelationshipBadge(avatar ?? cell, "mutual", "mranti", "zh-CN");
+
+    const stack = cell.querySelector(".avatar-column");
+    expect(stack?.classList.contains("xro-user-card-avatar-stack")).toBe(true);
+    expect(stack?.querySelector("a + [data-xro-badge='mutual']")).not.toBeNull();
+    expect(cell.querySelector("[data-xro-badge]")?.textContent).toBe("互关");
+    expect(cell.querySelector("[data-testid='UserName'] [data-xro-badge]")).toBeNull();
+  });
+
   it("places a home-timeline badge after the display name that links to the status permalink", () => {
     const anchor = document.createElement("div");
     anchor.innerHTML = `
@@ -73,7 +99,28 @@ describe("relationship badge", () => {
 
     expect(anchor.dataset.xroRelationship).toBe("blocked_you");
     expect(anchor.classList.contains("xro-identity-mark--blocked_by")).toBe(true);
-    expect(anchor.querySelector("[data-xro-badge='blocked_you']")?.textContent).toBe("拉黑了你");
+    expect(anchor.querySelector("[data-xro-badge='blocked_you']")?.textContent).toBe("对方拉黑");
+  });
+
+  it("shows mutual instead of a follow-back event label", () => {
+    const anchor = document.createElement("div");
+    anchor.innerHTML = '<a href="/Alice">@Alice</a>';
+    setRelationshipBadge(anchor, "mutual", "Alice", "zh-CN");
+
+    expect(anchor.querySelector("[data-xro-badge='mutual']")?.textContent).toBe("互关");
+  });
+
+  it("marks one-way unfollow only when the viewer still follows", () => {
+    const stillFollowing = document.createElement("div");
+    stillFollowing.innerHTML = '<a href="/Alice">@Alice</a>';
+    setRelationshipBadge(stillFollowing, "unfollowed_you", "Alice", "zh-CN", "following_only");
+    expect(stillFollowing.classList.contains("xro-identity-mark--following_only")).toBe(true);
+
+    const theyUnfollowed = document.createElement("div");
+    theyUnfollowed.innerHTML = '<a href="/Bob">@Bob</a>';
+    setRelationshipBadge(theyUnfollowed, "unfollowed_you", "Bob", "zh-CN", "none");
+    expect(theyUnfollowed.querySelector("[data-xro-badge='unfollowed_you']")?.textContent).toBe("对方取关");
+    expect(theyUnfollowed.classList.contains("xro-identity-mark--following_only")).toBe(false);
   });
 
   it("removes injected badges without touching the host content", () => {

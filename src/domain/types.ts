@@ -3,13 +3,15 @@ export const RELATIONSHIP_KINDS = [
   "following_only",
   "follows_you_only",
   "blocked_by",
+  "none",
   "unknown",
 ] as const;
 
 export type RelationshipKind = (typeof RELATIONSHIP_KINDS)[number];
+export type VisibleRelationship = Exclude<RelationshipKind, "unknown" | "none">;
 export type RelationshipChangeKind =
-  | "followed_back"
   | "unfollowed_you"
+  | "you_unfollowed"
   | "blocked_you";
 export type DisplayRelationship =
   | RelationshipKind

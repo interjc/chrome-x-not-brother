@@ -1,3 +1,7 @@
+import {
+  isUsableDisplayName,
+  normalizeProfileImageUrl,
+} from "../domain/identity";
 import { resolveRelationship } from "../domain/relationships";
 import type {
   EvidenceType,
@@ -12,11 +16,13 @@ export interface ExtractedCandidate {
 }
 
 const HANDLE_PATTERN = /^@?([A-Za-z0-9_]{1,15})$/;
-const USER_NAME_SELECTOR =
+export const USER_NAME_SELECTOR =
   '[data-testid="UserName"], [data-testid="User-Name"], [data-testid="User-Names"]';
 const TWEET_SURFACE_SELECTOR = 'article[data-testid="tweet"], [data-testid="UserCell"]';
 const AVATAR_LINK_SELECTOR =
-  '[data-testid="Tweet-User-Avatar"] a[href], [data-testid="UserAvatar-Container"] a[href]';
+  '[data-testid="Tweet-User-Avatar"] a[href], [data-testid="UserAvatar-Container"] a[href], [data-testid^="UserAvatar-Container-"] a[href]';
+const AVATAR_CONTAINER_SELECTOR =
+  '[data-testid="Tweet-User-Avatar"], [data-testid="UserAvatar-Container"], [data-testid^="UserAvatar-Container-"]';
 const RESERVED_PATHS = new Set([
   "home",
   "explore",
@@ -218,13 +224,13 @@ function firstDirect<T extends Element>(surface: Element, selector: string): T |
 }
 
 function findHandle(area: Element): string | null {
+  for (const element of area.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+    const fromHref = handleFromHref(element.getAttribute("href"));
+    if (fromHref) return fromHref;
+  }
   for (const element of area.querySelectorAll<HTMLElement>("a[href], span")) {
     const fromText = handleFromText(element.textContent ?? "");
     if (fromText) return fromText;
-    if (element instanceof HTMLAnchorElement) {
-      const fromHref = handleFromHref(element.getAttribute("href"));
-      if (fromHref) return fromHref;
-    }
   }
   return handleFromHref(area.getAttribute("href"));
 }
@@ -241,13 +247,14 @@ function authorHandleFromSurface(surface: Element): string | null {
 function identityAnchorFromSurface(surface: HTMLElement, handle: string): HTMLElement {
   const name = firstDirect<HTMLElement>(surface, USER_NAME_SELECTOR);
   if (name) return name;
-  const avatar = firstDirect<HTMLElement>(surface, AVATAR_LINK_SELECTOR);
-  if (avatar) return avatar;
   const normalized = handle.toLowerCase();
   for (const link of surface.querySelectorAll<HTMLAnchorElement>("a[href]")) {
     if (isInsideNestedSurface(link, surface)) continue;
-    if (handleFromHref(link.getAttribute("href"))?.toLowerCase() === normalized) return link;
+    if (handleFromHref(link.getAttribute("href"))?.toLowerCase() !== normalized) continue;
+    if (!link.closest(AVATAR_CONTAINER_SELECTOR) && !link.querySelector("img")) return link;
   }
+  const avatar = firstDirect<HTMLElement>(surface, AVATAR_LINK_SELECTOR);
+  if (avatar) return avatar;
   return surface;
 }
 
@@ -347,18 +354,64 @@ function relationshipFacts(
 }
 
 function displayNameFromArea(area: Element, handle: string): string | null {
-  const candidates = area.querySelectorAll<HTMLElement>("span");
-  for (const element of candidates) {
-    const text = (element.textContent ?? "").trim();
-    if (!text || text.startsWith("@") || text.toLowerCase() === handle.toLowerCase()) continue;
-    if (text.length <= 80) return text;
+  const fromLink = displayNameFromProfileLink(area, handle);
+  if (fromLink) return fromLink;
+  const leaves: string[] = [];
+  for (const element of area.querySelectorAll<HTMLElement>("span")) {
+    if (element.querySelector("span")) continue;
+    const text = cleanedText(element.textContent ?? "");
+    if (handleFromText(text) || !isUsableDisplayName(text, handle)) continue;
+    leaves.push(text);
+  }
+  if (leaves.length === 0) return null;
+  if (leaves.every((part) => [...part].length === 1)) {
+    const joined = leaves.join("");
+    return isUsableDisplayName(joined, handle) ? joined : leaves[0] ?? null;
+  }
+  return leaves[0] ?? null;
+}
+
+function displayNameFromProfileLink(area: Element, handle: string): string | null {
+  const normalized = handle.toLowerCase();
+  for (const link of area.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+    if (handleFromHref(link.getAttribute("href"))?.toLowerCase() !== normalized) continue;
+    const text = cleanedText(link.textContent ?? "");
+    const withoutHandle = cleanedText(
+      text.replace(new RegExp(`@${handle}\\b`, "ig"), ""),
+    );
+    if (isUsableDisplayName(withoutHandle, handle)) return withoutHandle;
   }
   return null;
 }
 
-function avatarFromSurface(surface: Element): string | null {
-  const image = surface.querySelector<HTMLImageElement>('img[src*="profile_images"]');
-  return image?.src ?? null;
+function profileImageUrlFrom(image: HTMLImageElement | null): string | null {
+  if (!image) return null;
+  const src = image.currentSrc || image.getAttribute("src") || "";
+  const fromSrc = normalizeProfileImageUrl(src);
+  if (fromSrc) return fromSrc;
+  const srcset = image.getAttribute("srcset");
+  if (!srcset) return null;
+  const last = srcset.split(",").at(-1)?.trim().split(/\s+/)[0];
+  return normalizeProfileImageUrl(last);
+}
+
+function avatarFromSurface(surface: Element, handle: string): string | null {
+  const normalized = handle.toLowerCase();
+  for (const link of surface.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+    if (isInsideNestedSurface(link, surface)) continue;
+    if (handleFromHref(link.getAttribute("href"))?.toLowerCase() !== normalized) continue;
+    const url = profileImageUrlFrom(link.querySelector("img"));
+    if (url) return url;
+  }
+  const container = firstDirect<HTMLElement>(surface, AVATAR_CONTAINER_SELECTOR);
+  const fromContainer = profileImageUrlFrom(container?.querySelector("img") ?? null);
+  if (fromContainer) return fromContainer;
+  for (const image of surface.querySelectorAll<HTMLImageElement>("img")) {
+    if (isInsideNestedSurface(image, surface)) continue;
+    const url = profileImageUrlFrom(image);
+    if (url) return url;
+  }
+  return null;
 }
 
 function observationFor(
@@ -383,7 +436,7 @@ function observationFor(
     userKey: handle.toLowerCase(),
     handle,
     displayName: displayNameFromArea(area, handle),
-    avatarUrl: avatarFromSurface(surface),
+    avatarUrl: avatarFromSurface(surface, handle),
     profileUrl: `https://x.com/${handle}`,
     observedAt,
     sourceUrl: sourceUrl.href,

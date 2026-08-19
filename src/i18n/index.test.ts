@@ -23,9 +23,20 @@ describe("runtime internationalization", () => {
   it("substitutes values and localizes domain presentation", () => {
     expect(translate("en", "changedCount", { count: 3 })).toBe("3 relationships changed");
     expect(relationshipPresentation("ja", "blocked_by").shortLabel).toBe("ブロック");
-    expect(relationshipPresentation("zh-CN", "followed_back").shortLabel).toBe("回关了你");
-    expect(relationshipPresentation("en", "unfollowed_you").label).toBe("Unfollowed you");
+    expect(relationshipPresentation("zh-CN", "mutual").shortLabel).toBe("互关");
+    expect(relationshipPresentation("zh-CN", "unfollowed_you").shortLabel).toBe("对方取关");
+    expect(relationshipPresentation("zh-CN", "you_unfollowed").shortLabel).toBe("你已取关");
+    expect(relationshipPresentation("zh-CN", "blocked_you").shortLabel).toBe("对方拉黑");
+    expect(relationshipPresentation("zh-CN", "blocked_you").label).toBe("对方把我拉黑");
+    expect(relationshipPresentation("en", "unfollowed_you").label).toBe("They unfollowed");
     expect(relationshipPresentation("ja", "blocked_you").label).toContain("ブロック");
+    for (const kind of [
+      "unfollowed_you",
+      "you_unfollowed",
+      "blocked_you",
+    ] as const) {
+      expect([...relationshipPresentation("zh-CN", kind).shortLabel]).toHaveLength(4);
+    }
     expect(sourceTypeLabel("zh-CN", "thread")).toBe("评论区");
   });
 

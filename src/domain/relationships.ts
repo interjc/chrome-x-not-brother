@@ -1,3 +1,4 @@
+import { preferAvatarUrl, preferDisplayName } from "./identity";
 import type {
   DisplayRelationship,
   ObservationDraft,
@@ -12,6 +13,7 @@ export function resolveRelationship(facts: RelationshipFacts): RelationshipKind 
   if (facts.following === true && facts.followsYou === true) return "mutual";
   if (facts.following === true && facts.followsYou === false) return "following_only";
   if (facts.following === false && facts.followsYou === true) return "follows_you_only";
+  if (facts.following === false && facts.followsYou === false) return "none";
   return "unknown";
 }
 
@@ -22,14 +24,23 @@ export function relationshipChangeKind(
   const previous = user.previousRelationship;
   const current = user.currentRelationship;
   if (current === "blocked_by" && previous !== "blocked_by") return "blocked_you";
-  if (previous === "following_only" && current === "mutual") return "followed_back";
   if (previous === "mutual" && current === "following_only") return "unfollowed_you";
+  if (previous === "follows_you_only" && current === "following_only") return "unfollowed_you";
+  if (previous === "follows_you_only" && current === "none") return "unfollowed_you";
+  if (previous === "mutual" && current === "follows_you_only") return "you_unfollowed";
   return null;
 }
 
 export function displayRelationship(user: UserRecord): DisplayRelationship {
-  if (!user.hasChanged) return user.currentRelationship;
-  return relationshipChangeKind(user) ?? "changed";
+  if (user.currentRelationship === "mutual") return "mutual";
+  if (user.hasChanged) {
+    const event = relationshipChangeKind(user);
+    if (event) return event;
+    if (user.currentRelationship === "following_only") return "following_only";
+    if (isVisibleRelationship(user.currentRelationship)) return "changed";
+  }
+  if (!isVisibleRelationship(user.currentRelationship)) return "unknown";
+  return user.currentRelationship;
 }
 
 export function isCollectableRelationship(
@@ -38,14 +49,53 @@ export function isCollectableRelationship(
   return relationship !== "unknown";
 }
 
+export function isVisibleRelationship(
+  relationship: RelationshipKind,
+): relationship is Exclude<RelationshipKind, "unknown" | "none"> {
+  return relationship !== "unknown" && relationship !== "none";
+}
+
+export function isDisplayedUser(user: UserRecord): boolean {
+  return displayRelationship(user) !== "unknown";
+}
+
+export function shouldPersistObservation(
+  observation: ObservationDraft,
+  existing?: UserRecord,
+): boolean {
+  if (!isCollectableRelationship(observation.relationship)) return false;
+  if (observation.relationship === "none") {
+    return Boolean(existing && isVisibleRelationship(existing.currentRelationship));
+  }
+  return true;
+}
+
 export function candidateDisplayRelationship(
   relationship: RelationshipKind,
   stored?: UserRecord,
 ): DisplayRelationship | null {
-  if (stored && isCollectableRelationship(stored.currentRelationship)) {
-    return displayRelationship(stored);
+  if (isVisibleRelationship(relationship)) {
+    if (stored && stored.currentRelationship === relationship) {
+      const display = displayRelationship(stored);
+      return display === "unknown" ? null : display;
+    }
+    if (
+      relationship === "following_only" &&
+      (stored?.currentRelationship === "mutual" ||
+        stored?.currentRelationship === "follows_you_only")
+    ) {
+      return "unfollowed_you";
+    }
+    return relationship;
   }
-  return isCollectableRelationship(relationship) ? relationship : null;
+  if (relationship === "none" && stored?.currentRelationship === "follows_you_only") {
+    return "unfollowed_you";
+  }
+  if (stored) {
+    const display = displayRelationship(stored);
+    return display === "unknown" ? null : display;
+  }
+  return null;
 }
 
 export interface MergeResult {
@@ -64,8 +114,8 @@ export function mergeUserObservation(
       user: {
         key: observation.userKey,
         handle: observation.handle,
-        displayName: observation.displayName,
-        avatarUrl: observation.avatarUrl,
+        displayName: preferDisplayName(observation.displayName, null, observation.handle),
+        avatarUrl: preferAvatarUrl(observation.avatarUrl, null),
         profileUrl: observation.profileUrl,
         currentRelationship: observation.relationship,
         previousRelationship: null,
@@ -103,6 +153,10 @@ export function mergeUserObservation(
   const nextRelationship = replaceCurrent
     ? observation.relationship
     : existing.currentRelationship;
+  const reviewableChange = stateChanged && (
+    nextRelationship !== "none" ||
+    existing.currentRelationship === "follows_you_only"
+  );
   const appendHistory =
     stateChanged ||
     observation.sourceUrl !== existing.lastSourceUrl ||
@@ -112,17 +166,25 @@ export function mergeUserObservation(
     user: {
       ...existing,
       handle: observation.handle,
-      displayName: observation.displayName ?? existing.displayName,
-      avatarUrl: observation.avatarUrl ?? existing.avatarUrl,
+      displayName: preferDisplayName(
+        observation.displayName,
+        existing.displayName,
+        observation.handle,
+      ),
+      avatarUrl: preferAvatarUrl(observation.avatarUrl, existing.avatarUrl),
       profileUrl: observation.profileUrl,
       currentRelationship: nextRelationship,
       previousRelationship: stateChanged
         ? existing.currentRelationship
         : existing.previousRelationship,
-      hasChanged: existing.hasChanged || stateChanged,
-      changeDetectedAt: stateChanged
-        ? observation.observedAt
-        : existing.changeDetectedAt,
+      hasChanged: nextRelationship === "none" && !reviewableChange
+        ? false
+        : existing.hasChanged || reviewableChange,
+      changeDetectedAt: nextRelationship === "none" && !reviewableChange
+        ? null
+        : reviewableChange
+          ? observation.observedAt
+          : existing.changeDetectedAt,
       lastSeenAt: Math.max(existing.lastSeenAt, observation.observedAt),
       observationCount: existing.observationCount + 1,
       lastSourceUrl: observation.sourceUrl,
@@ -142,6 +204,8 @@ export function relationshipRank(relationship: RelationshipKind): number {
     case "following_only":
     case "follows_you_only":
       return 3;
+    case "none":
+      return 2;
     case "unknown":
       return 1;
   }

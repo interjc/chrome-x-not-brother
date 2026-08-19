@@ -21,7 +21,7 @@
 
 关系档案的确认、删除、导入和清空必须向 service worker 发送 `data:changed`，service worker 再用 `chrome.tabs.sendMessage` 尝试通知全部标签页；没有 content script 的标签页拒绝消息属于正常情况。content script 收到后无条件清除 record/requested cache，运行中才安排复扫。不要清空 observation signature，否则用户刚删除的当前可见记录可能被同一证据立即重新写回。
 
-帖子作者常使用 `data-testid="User-Name"`，列表/资料常使用 `UserName`，偶发 `User-Names`，三者都必须保留 fixture。首页时间线的显示名称经常链到 `/handle/status/:id`，`@handle` 可能被隐藏或带双向隔离符；handle 提取必须接受这类 profile 子路径、头像链接和去掉格式字符后的 `@handle`，才能把作者识别为可回标的可见 handle。不得把推文正文里的 @提及当成作者，也不得把引用帖缺失的 handle 回退成外层头像。blocked-by 平台提示匹配必须排除 `tweetText`；不得把用户正文或泛化的 “This Post is unavailable” 当作拉黑证据。互动限制路径还必须确认回复、转发、点赞三种控件都已实际渲染，控件缺失不能等同于禁用。
+帖子作者常使用 `data-testid="User-Name"`，列表/资料常使用 `UserName`，偶发 `User-Names`，三者都必须保留 fixture。首页时间线的显示名称经常链到 `/handle/status/:id`，`@handle` 可能被隐藏或带双向隔离符；handle 提取必须接受这类 profile 子路径、头像链接和去掉格式字符后的 `@handle`，才能把作者识别为可回标的可见 handle。不得把推文正文里的 @提及当成作者，也不得把引用帖缺失的 handle 回退成外层头像。显示名不得使用 `·` / `.` 等间隔符，头像必须配对同一 handle 的 profile 链接或 `UserAvatar-Container-*`，不得抓引用帖里的第一张 `profile_images`。相关用户等 UserCell 的关系徽标必须放在头像正下方，不得插进显示名称行或盖住关注按钮。blocked-by 平台提示匹配必须排除 `tweetText`；不得把用户正文或泛化的 “This Post is unavailable” 当作拉黑证据。互动限制路径还必须确认回复、转发、点赞三种控件都已实际渲染，控件缺失不能等同于禁用。
 
 评论区互动限制的结构规则必须同时覆盖 reply、retweet/unretweet、like/unlike。只有三组控件均已渲染、全部不可操作且同页存在三组均正常的帖子时才生成 `blocked-interaction-restriction`。X 可能把 `data-testid` 放在按钮本身、把禁用状态放在更外层祖先，因此 actionability 检查必须遍历到评论 surface。
 
@@ -48,7 +48,7 @@ content script 必须把这种情况视为生命周期结束：捕获 promise re
 
 任何 schema 变化都必须使用新的 Dexie version 和迁移。不得在升级时静默清空数据库。破坏性迁移需要明确发布说明和用户备份步骤。
 
-“回关了你”“取关了你”“拉黑了你”是从前后基础关系动态推导的展示事件，不是新的数据库关系值。修改推导规则时覆盖三种正向转换与用户自身关注变化的歧义反例；保持 dock 只按 `hasChanged` 汇总，不要为展示标签增加 schema 字段。
+“对方取关”“你已取关”“对方拉黑”是从前后基础关系动态推导的展示事件，不是新的数据库关系值。当前已是互关时直接显示“互关”。当前是我单向关注时默认显示“单向关注”；`mutual → following_only`、`follows_you_only → following_only` 与 `follows_you_only → none` 才显示对方取关。修改推导规则时覆盖这些转换、互关覆盖显示，以及互关双方同时取消关注（`none`）撤标且不进入概览的反例；保持 dock 只按 `hasChanged` 汇总，不要为展示标签增加 schema 字段。
 
 如果读取的数据类型、用途、传输对象或保存位置发生实质变化，提高 `CURRENT_CONSENT_VERSION`，同步修改首次披露与隐私文档，并在新版本继续观察前重新取得用户同意。纯文案修正不得随意重置同意。
 

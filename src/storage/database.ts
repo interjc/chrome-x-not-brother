@@ -6,7 +6,12 @@ import type {
   ObservationSummary,
   UserRecord,
 } from "../domain/types";
-import { isCollectableRelationship, mergeUserObservation } from "../domain/relationships";
+import {
+  isCollectableRelationship,
+  isDisplayedUser,
+  mergeUserObservation,
+  shouldPersistObservation,
+} from "../domain/relationships";
 import { createDatabaseExport } from "../domain/export";
 
 class NotBrotherDatabase extends Dexie {
@@ -42,6 +47,7 @@ export async function upsertObservations(
     const updated: UserRecord[] = [];
     for (const observation of latestByUser.values()) {
       const existing = await db.users.get(observation.userKey);
+      if (!shouldPersistObservation(observation, existing)) continue;
       const merged = mergeUserObservation(existing, observation);
       await db.users.put(merged.user);
       if (merged.appendHistory) await db.observations.add({ ...observation });
@@ -88,7 +94,7 @@ export async function getObservationSummary(
   excludedUserKey: string | null = null,
 ): Promise<ObservationSummary> {
   const users = (await db.users.toArray()).filter((user) =>
-    user.currentRelationship !== "unknown" &&
+    isDisplayedUser(user) &&
     (!excludedUserKey || user.key !== excludedUserKey),
   );
   return {
@@ -129,7 +135,7 @@ export async function exportDatabase(
   ]);
   return createDatabaseExport(
     users.filter(
-      (user) => user.currentRelationship !== "unknown" &&
+      (user) => isCollectableRelationship(user.currentRelationship) &&
         (!excludedUserKey || user.key !== excludedUserKey),
     ),
     observations.filter(

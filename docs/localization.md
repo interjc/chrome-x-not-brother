@@ -21,7 +21,7 @@ Chrome 在 Manifest 解析阶段需要 `public/_locales/en/messages.json`、`ja/
 运行时 UI 使用 `src/i18n/index.ts`。中文 catalog 定义 `MessageKey`，英文和日文 catalog 必须满足完全相同的 key 集合，TypeScript 会拒绝缺失或多余项。该模块还集中提供：
 
 - `{count}`、`{handle}` 等纯文本占位符替换；
-- 四种基础关系、三种可归因变化事件和通用 changed 的 label、short label 与 description，以及仅供内部兼容的 unknown 文案（运行时不展示或持久化）；
+- 四种可见基础关系、三种可归因变化事件、双方无关的 `none`、通用 changed 的 label、short label 与 description，以及仅供内部兼容的 unknown 文案（运行时不展示或持久化）；
 - profile、timeline、thread 等观察来源名称；
 - 文档语言和 Chrome UI 语言归一化。
 
@@ -29,7 +29,7 @@ Chrome 在 Manifest 解析阶段需要 `public/_locales/en/messages.json`、`ja/
 
 零记录引导也必须三语一致：它应说明没有徽标时可以悬停作者读取补充关系；不得翻译成扩展会自动打开浮窗，也不得再暗示首页必须先悬停。出现首条观察后，dock 改回通用的“只记录当前页面可见证据”。
 
-变化事件也属于运行时词库：中文使用“回关了你 / 取关了你 / 拉黑了你”，英文使用 “Followed back / Unfollowed you / Blocked you”，日文使用「フォローバック / フォロー解除 / ブロック」。dock 不拆分三类事件，只本地化一个变化总数。
+变化事件也属于运行时词库：当前已是互关时中文显示“互关”。我单向关注默认显示“单向关注”；只有历史比对确认对方取关后才用四字短标“对方取关 / 你已取关 / 对方拉黑”，英文使用 “They unfollowed / You unfollowed / They blocked you”，日文使用「相手が解除 / 自分が解除 / 相手がブロック」。其他双方都已取消关注不显示徽标。dock 不拆分这些事件，只本地化一个变化总数。
 
 Side Panel 分类筛选的 eyebrow、空状态、`aria-pressed` 操作说明和打开 Profile 的 ARIA label 同样必须三语完整；分类本身复用关系展示词库，不维护第二套名称。
 

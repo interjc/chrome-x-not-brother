@@ -31,11 +31,30 @@
   min-width: 0;
 }
 
+.xro-user-card-avatar-stack {
+  align-items: center !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: none;
+  gap: 4px;
+}
+
+.xro-badge--user-card {
+  margin: 0;
+  max-width: 64px;
+  overflow: hidden;
+  padding-inline: 4px;
+  pointer-events: none;
+  position: relative;
+  text-overflow: ellipsis;
+  z-index: 1;
+}
+
 .xro-badge--mutual { --xro-tone: #a8e89a; background: #dff7d9; }
-.xro-badge--followed_back { --xro-tone: #71c667; background: #dff7d9; }
 .xro-badge--following_only { --xro-tone: #f1b84b; background: #fff0c9; }
 .xro-badge--unfollowed_you { --xro-tone: #ed9a3a; background: #fff0c9; }
-.xro-badge--follows_you_only { --xro-tone: #78bfea; background: #dff2ff; }
+.xro-badge--follows_you_only,
+.xro-badge--you_unfollowed { --xro-tone: #78bfea; background: #dff2ff; }
 .xro-badge--blocked_by { --xro-tone: #e46d5f; background: #ffe1db; }
 .xro-badge--blocked_you { --xro-tone: #e14f42; background: #ffe1db; }
 .xro-badge--changed { --xro-tone: #df7ac5; background: #ffe0f5; }
@@ -250,10 +269,10 @@
 .xro-observer-panel__action:focus-visible { outline: 3px solid #78bfea; outline-offset: -3px; }
 
 :root[data-xro-theme="dark"] .xro-badge--mutual { background: #183b25; color: #b8efa9; }
-:root[data-xro-theme="dark"] .xro-badge--followed_back { background: #183b25; color: #b8efa9; }
 :root[data-xro-theme="dark"] .xro-badge--following_only { background: #493817; color: #ffd77b; }
 :root[data-xro-theme="dark"] .xro-badge--unfollowed_you { background: #493817; color: #ffd77b; }
-:root[data-xro-theme="dark"] .xro-badge--follows_you_only { background: #173747; color: #a8dcf8; }
+:root[data-xro-theme="dark"] .xro-badge--follows_you_only,
+:root[data-xro-theme="dark"] .xro-badge--you_unfollowed { background: #173747; color: #a8dcf8; }
 :root[data-xro-theme="dark"] .xro-badge--blocked_by { background: #4b211e; color: #ffaea5; }
 :root[data-xro-theme="dark"] .xro-badge--blocked_you { background: #4b211e; color: #ffaea5; }
 :root[data-xro-theme="dark"] .xro-badge--changed { background: #46213d; color: #ffb4e8; }

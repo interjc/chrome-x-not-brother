@@ -6,7 +6,8 @@ import type { CSSProperties, ChangeEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { PROJECT_FEEDBACK_URL } from "../domain/project";
-import { displayRelationship } from "../domain/relationships";
+import { visibleDisplayName } from "../domain/identity";
+import { displayRelationship, isDisplayedUser } from "../domain/relationships";
 import { parseDatabaseExport, usersToCsv } from "../domain/export";
 import type { ObservationRecord, RelationshipKind, UserRecord } from "../domain/types";
 import {
@@ -32,7 +33,7 @@ import { absoluteTime, downloadFile, relativeTime } from "./format";
 import { useObserverSettings, useUsers } from "./hooks";
 import { CURRENT_CONSENT_VERSION } from "../storage/settings";
 
-type Filter = "all" | "changed" | Exclude<RelationshipKind, "unknown">;
+type Filter = "all" | "changed" | Exclude<RelationshipKind, "unknown" | "none">;
 type Sort = "recent" | "handle" | "observations";
 
 const locale = getExtensionLocale();
@@ -103,7 +104,7 @@ function Dashboard() {
   const { settings, settingsReady, setSettings, setSetting } = useObserverSettings();
   const users = settingsReady
     ? observedUsers.filter((user) =>
-      user.key !== settings.viewerHandle && user.currentRelationship !== "unknown",
+      user.key !== settings.viewerHandle && isDisplayedUser(user),
     )
     : [];
   const loading = usersLoading || !settingsReady;
@@ -312,7 +313,7 @@ function Dashboard() {
                   <div className="user-record__number">{String(index + 1).padStart(3, "0")}</div>
                   <Avatar avatarUrl={user.avatarUrl} displayName={user.displayName} handle={user.handle} />
                   <div className="user-record__identity">
-                    <strong>{user.displayName ?? `@${user.handle}`}</strong>
+                    <strong>{visibleDisplayName(user.displayName, user.handle)}</strong>
                     <a href={user.profileUrl} target="_blank" rel="noreferrer">@{user.handle}<Icon name="external" /></a>
                   </div>
                   <div className="user-record__relationship">

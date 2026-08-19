@@ -29,13 +29,13 @@ flowchart LR
 - MutationObserver 同时监听子树新增、关系文案和 `aria-disabled` / `disabled` / `data-testid` / `href` 等关键属性；观察器运行且标签页可见时，每 2 秒兜底复扫当前已渲染 DOM，恢复焦点或从后台返回时立即复扫；
 - 所有选择器、保留路径和本地化文案位于 `src/content/x-adapter.ts`；
 - 把同一 handle 的候选按证据强度合并；
-- 从本地用户记录的前后基础关系动态推导“回关了你”“取关了你”“拉黑了你”三类明确变化展示；无法归因的转换保留通用 changed，dock 继续按 `hasChanged` 汇总；
+- 从本地用户记录的前后基础关系动态推导变化展示：当前已是互关则显示“互关”；当前是我单向关注则默认显示“单向关注”，只有历史比对证明对方曾经关注我、现在不关注才显示“对方取关”；其他单方可归因时显示“你已取关”或“对方拉黑”；其他明确双方都已取消关注则不显示徽标；无法单方归因的转换保留通用 changed，dock 继续按 `hasChanged` 汇总；
 - 将 unknown 保留为短暂内部结果，只用于移除过期徽标；不发送、不收集；
 - 在评论线程将三项互动全部不可用与同页正常控制组合，生成 `blocked-interaction-restriction`；将完整加载但缺少 following/follower 链接的已显示浮窗归一化为独立的 `blocked-profile-summary-restriction`；
 - 将完整加载的可见浮窗按 handle 精确配给底层作者卡片，并用 `*-follow`、`*-unfollow` 和 `userFollowIndicator` 补充普通关系事实；
 - 从首页时间线的 status permalink、作者头像和去掉格式字符的 `@handle` 识别作者身份；没有关注控件时仍输出内部 unknown，供本地档案回标，不把它当成未关注；
 - 通过 `users:lookup` 批量读取可见 handle 的本地已知关系，使已确认账号在证据浮层关闭后继续回标；
-- 读取 X 已经为当前页面载入的 UI store、tweet fiber（含祖先组件）以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`，给首页和评论区没有关注控件的卡片补全关系；不发起新的 GraphQL 或 REST 请求；
+- 读取 X 已经为当前页面载入的 UI store、tweet fiber（含祖先组件）以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`，以及已有的 `name` / `profile_image_url_https`，给首页和评论区没有关注控件的卡片补全关系，并补全 DOM 抽坏的显示名和头像；不发起新的 GraphQL 或 REST 请求；
 - 页面主世界 `page-bridge.js` 只把上述已载入字段回传给隔离世界的观察器；DOM 证据优先，store / 已完成响应只填充内部 unknown；
 - 识别当前登录 handle 并在扫描阶段排除本人；
 - 插入观察状态/概览 dock；其本地 `dockCollapsed` 设置控制完整面板或状态悬浮球，用户手势可恢复面板或通过 service worker 打开当前标签页的 Side Panel；

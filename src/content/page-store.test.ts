@@ -49,14 +49,57 @@ describe("page store relationships", () => {
       <div data-testid="User-Name"><a href="/Alice/status/1"><span>Alice Example</span></a></div>
     </article>`);
     attachStore(doc, {
-      "1": { screen_name: "Alice", following: true, followed_by: false },
+      "1": {
+        screen_name: "Alice",
+        name: "Alice Example",
+        profile_image_url_https: "https://pbs.twimg.com/profile_images/1/alice_normal.jpg",
+        following: true,
+        followed_by: false,
+      },
     });
 
     const users = readPageUserRelationships(doc);
     expect(users.get("alice")).toMatchObject({
       handle: "Alice",
+      displayName: "Alice Example",
+      avatarUrl: "https://pbs.twimg.com/profile_images/1/alice_x96.jpg",
       following: true,
       followsYou: false,
+    });
+  });
+
+  it("fills a missing display name and avatar from the already-loaded user entity", () => {
+    const observation = {
+      observation: {
+        userKey: "alice",
+        handle: "Alice",
+        displayName: "·",
+        avatarUrl: null,
+        profileUrl: "https://x.com/Alice",
+        observedAt: 1,
+        sourceUrl: "https://x.com/home",
+        sourceType: "timeline" as const,
+        relationship: "following_only" as const,
+        evidence: ["following-control" as const],
+      },
+      anchor: document.createElement("div"),
+    } satisfies ExtractedCandidate;
+
+    applyPageStoreRelationships([observation], new Map([
+      ["alice", {
+        handle: "Alice",
+        following: true,
+        followsYou: false,
+        blockedBy: false,
+        displayName: "Alice Example",
+        avatarUrl: "https://pbs.twimg.com/profile_images/1/alice_x96.jpg",
+      }],
+    ]));
+
+    expect(observation.observation).toMatchObject({
+      displayName: "Alice Example",
+      avatarUrl: "https://pbs.twimg.com/profile_images/1/alice_x96.jpg",
+      relationship: "following_only",
     });
   });
 
@@ -110,6 +153,40 @@ describe("page store relationships", () => {
     });
   });
 
+  it("turns explicit neither-following store fields into none", () => {
+    const observation = {
+      observation: {
+        userKey: "alice",
+        handle: "Alice",
+        displayName: "Alice",
+        avatarUrl: null,
+        profileUrl: "https://x.com/Alice",
+        observedAt: 1,
+        sourceUrl: "https://x.com/home",
+        sourceType: "timeline" as const,
+        relationship: "unknown" as const,
+        evidence: ["insufficient-evidence" as const],
+      },
+      anchor: document.createElement("div"),
+    } satisfies ExtractedCandidate;
+
+    applyPageStoreRelationships([observation], new Map([
+      ["alice", {
+        handle: "Alice",
+        following: false,
+        followsYou: false,
+        blockedBy: false,
+        displayName: null,
+        avatarUrl: null,
+      }],
+    ]));
+
+    expect(observation.observation).toMatchObject({
+      relationship: "none",
+      evidence: ["page-user-entity"],
+    });
+  });
+
   it("does not invent a relationship when the store omits followsYou", () => {
     const observation = {
       observation: {
@@ -128,7 +205,14 @@ describe("page store relationships", () => {
     } satisfies ExtractedCandidate;
 
     applyPageStoreRelationships([observation], new Map([
-      ["alice", { handle: "Alice", following: true, followsYou: null, blockedBy: null }],
+      ["alice", {
+        handle: "Alice",
+        following: true,
+        followsYou: null,
+        blockedBy: null,
+        displayName: null,
+        avatarUrl: null,
+      }],
     ]));
 
     expect(observation.observation.relationship).toBe("unknown");
@@ -157,6 +241,8 @@ describe("page store relationships", () => {
         following: true,
         followsYou: false,
         blockedBy: null,
+        displayName: null,
+        avatarUrl: null,
       }],
     ]));
 

@@ -9,6 +9,7 @@ import type {
 import {
   candidateDisplayRelationship,
   isCollectableRelationship,
+  isVisibleRelationship,
   relationshipRank,
 } from "../domain/relationships";
 import type {
@@ -218,19 +219,24 @@ function bestObservations(candidates: ExtractedCandidate[]): ObservationDraft[] 
 function annotate(candidates: ExtractedCandidate[]): void {
   const locale = getDocumentLocale(document);
   for (const candidate of candidates) {
+    const stored = recordCache.get(candidate.observation.userKey);
     const relationship = candidateDisplayRelationship(
       candidate.observation.relationship,
-      recordCache.get(candidate.observation.userKey),
+      stored,
     );
     if (!relationship) {
       removeRelationshipBadge(candidate.anchor);
       continue;
     }
+    const currentRelationship = isVisibleRelationship(candidate.observation.relationship)
+      ? candidate.observation.relationship
+      : stored?.currentRelationship;
     setRelationshipBadge(
       candidate.anchor,
       relationship,
       candidate.observation.handle,
       locale,
+      currentRelationship,
     );
   }
 }
