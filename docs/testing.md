@@ -16,12 +16,12 @@ npm run skills:validate
 - 英语、日语、简体中文关系提示；
 - mutual、following-only、follows-you-only、blocked-by，以及内部 unknown 不进入收集；
 - `UserName` 与评论线程 `User-Name` 作者结构；
-- 当前登录用户排除、评论区明确 blocked-by、三项互动受限加同页基线、无计数浮窗独立证据、普通 unavailable 和用户正文防误判；
+- 当前登录用户排除、评论区明确 blocked-by、三项互动受限加同层基线、无计数浮窗独立证据、普通 unavailable 和用户正文防误判；
 - 工具栏 `ON` / `!` 三种状态，以及 X 页面观察 dock 的完整面板/悬浮球切换；
 - 已知关系变化；
 - `following_only → mutual` 与 `follows_you_only → mutual` 显示互关；首次或非取关历史的 `following_only` 显示单向关注；`mutual → following_only`、`follows_you_only → following_only` 与 `follows_you_only → none` 显示对方取关；`mutual → follows_you_only` 和已知正常关系 `→ blocked_by` 分别显示你已取关和对方拉黑；其他明确双方都已取消关注不显示徽标；双方同时变化保持通用 changed，确认后恢复基础关系；
 - unknown 不覆盖已知关系、不显示、不发送，旧 unknown 被清理；
-- 只有转发不可用、互动控件缺失（即使同页有正常对照）、三项受限但缺少同页对照、正常浮窗含计数时不误判 blocked-by；
+- 只有转发不可用、互动控件缺失（即使同页有正常对照）、空 testid 壳、滚动 `pointer-events: none`、`aria-hidden` 虚拟单元格、图片浮层借用背后时间线、三项受限但缺少同层对照、正常浮窗含计数时不误判 blocked-by；
 - 已确认的本地 blocked-by 可回标当前证据不足的同 handle 卡片；
 - 同 handle 完整浮窗可用 follow/unfollow 与 `userFollowIndicator` 补全普通关系，不匹配浮窗不会污染其他作者；
 - 评论线程的徽标固定在显示名称同一行，移除徽标时也清理局部横排类，不改变 `@handle` 与日期结构；
@@ -54,7 +54,7 @@ npm run skills:validate
 10. 打开帖子详情/评论线程，验证带明确 blocked-by 平台提示的 `User-Name` 作者被标注。
 11. 找到一个评论作者的回复、转发、点赞都不可操作、而同页其他帖子三项正常的场景，验证显示名称同一行出现红色 `! 拉黑了你` 增强徽标并写入档案，同时 `@handle` 与日期仍保持 X 原生排列。
 12. 悬停打开一个已知 blocked-by 作者的完整浮窗，验证没有关注/粉丝链接时独立标注并收集；关闭浮窗、刷新页面后仍由本地已知记录回标该评论 ID。
-13. 验证只有转发不可用、普通“帖子不可用”、用户正文写出 blocked you、三项按钮尚未渲染（包括同页存在正常基线时）、三项受限但没有同页基线、正常浮窗含计数时均不标注、不收集。
+13. 验证只有转发不可用、普通“帖子不可用”、用户正文写出 blocked you、三项按钮尚未渲染（包括同页存在正常基线时）、滚动图片查看器右侧列表时出现的空壳/`pointer-events`/`aria-hidden` 单元格、三项受限但没有同层基线、正常浮窗含计数时均不标注、不收集。
 14. 确认自己的帖子/评论没有徽标，Side Panel 最近观察和所有统计也没有本人。
 15. 核对 X 页面 dock 的状态和四项概览，点击本地化详情按钮确认打开当前标签页 Side Panel。
 16. 点击 dock 右上角 `×`，确认收为带对应状态点的 NB 悬浮球；刷新 X 后仍为悬浮球，点击球、按 Enter 和按 Space 都可恢复完整概览。

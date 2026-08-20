@@ -19,7 +19,7 @@ Observe → Mark → Remember → Detect change → Review
 | Mutual | 互关 | 绿色 | following=true 且 followsYou=true |
 | Following only | 单向关注 | 琥珀色 | following=true 且 followsYou=false |
 | Follows you only | 关注了你 | 蓝色 | following=false 且 followsYou=true |
-| Blocked by | 拉黑了你 | 珊瑚红 | 明确平台提示、三项互动限制加同页对照，或已加载的无关系计数浮窗 |
+| Blocked by | 拉黑了你 | 珊瑚红 | 明确平台提示、三项明确禁用加同层对照，或已加载的无关系计数浮窗 |
 | Unfollowed you | 对方取关 | 琥珀色 | 历史比对：互关变为我单向关注，或对方原先关注我现在不再关注 |
 | You unfollowed | 你已取关 | 蓝色 | 互关变为对方关注我 |
 | Blocked you | 对方拉黑 | 红色 | 已知正常关系变为 blocked-by |
@@ -29,7 +29,7 @@ Observe → Mark → Remember → Detect change → Review
 
 `unknown` 只用于 adapter 表示证据不足，不是用户可见关系：不插入徽标、不写本地档案，旧版本的 unknown 记录也会被清理。重点关系采用更强的 ID 区域提示：我单向关注使用琥珀色左边线与底色，blocked-by 使用红色左边线、底色和带 `!` 的高对比矩形徽标。徽标与显示名称放在同一条紧凑横排中，X 的 `@handle` 与日期元数据仍保留在原生位置；底色和边线不增加用户名区域的几何尺寸，避免评论卡片被撑成额外一行。
 
-评论区 blocked-by 有两条独立证据路径：回复、转发、点赞三项同时不可操作且同页另有三项都正常的帖子；或该账号当前已经完整显示的浮窗没有 following/follower 链接。真实 X DOM 可能只把转发设为 disabled，而回复和点赞仍显示为可点击，随后由后端拒绝；这种情况下只有浮窗路径能够被动、无副作用地确认。受保护帖只有转发不可用时不得触发。
+评论区 blocked-by 有两条独立证据路径：回复、转发、点赞三项都已渲染并被明确禁用，且同一浮层或页面层另有三项都正常的帖子；或该账号当前已经完整显示的浮窗没有 following/follower 链接。真实 X DOM 可能只把转发设为 disabled，而回复和点赞仍显示为可点击，随后由后端拒绝；这种情况下只有浮窗路径能够被动、无副作用地确认。受保护帖只有转发不可用时不得触发。图片查看器滚动中的空互动栏或 `pointer-events` 锁定也不得触发。
 
 content script 会向 service worker 批量查询当前可见 handle 的本地已知记录。因此一个账号通过浮窗或资料提示被确认后，即使浮窗关闭或以后某张评论卡片没有新证据，仍会以已保存的可信关系回标 ID；不会显示 unknown。
 

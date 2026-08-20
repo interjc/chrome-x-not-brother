@@ -140,48 +140,100 @@ const ENGAGEMENT_SELECTORS = [
   '[data-testid="retweet"], [data-testid="unretweet"]',
   '[data-testid="like"], [data-testid="unlike"]',
 ] as const;
+const DISABLED_ENGAGEMENT_SELECTOR = ':disabled, [aria-disabled="true"], [inert]';
 
-function engagementControlIsActionable(surface: Element, selector: string): boolean {
-  const control = surface.querySelector<HTMLElement>(selector);
-  if (!control) return false;
-  const interactive = control.matches('button, [role="button"], a[href]')
-    ? control
-    : control.querySelector<HTMLElement>('button, [role="button"], a[href]');
-  if (!interactive) return false;
-  const blockedSelector = ':disabled, [aria-disabled="true"], [aria-hidden="true"], [inert]';
-  let element: HTMLElement | null = interactive;
-  while (element) {
-    if (element.matches(blockedSelector)) return false;
-    const style = element.ownerDocument.defaultView?.getComputedStyle(element);
+type EngagementControlState = "missing" | "restricted" | "actionable";
+
+function isAriaHiddenSubtree(element: HTMLElement): boolean {
+  let current: HTMLElement | null = element;
+  while (current) {
     if (
-      style?.pointerEvents === "none" ||
-      style?.visibility === "hidden" ||
-      style?.display === "none"
-    ) return false;
+      Boolean(current.hidden) ||
+      current.hasAttribute("inert") ||
+      current.getAttribute("aria-hidden") === "true"
+    ) return true;
+    current = current.parentElement;
+  }
+  return false;
+}
+
+function computedStyleHides(element: HTMLElement): boolean {
+  const style = element.ownerDocument.defaultView?.getComputedStyle(element);
+  return style?.display === "none" ||
+    style?.visibility === "hidden" ||
+    style?.opacity === "0";
+}
+
+function walkAncestorsWithinSurface(
+  start: HTMLElement,
+  surface: Element,
+  matches: (element: HTMLElement) => boolean,
+): boolean {
+  let element: HTMLElement | null = start;
+  while (element) {
+    if (matches(element)) return true;
     if (element === surface) break;
     const parentElement: HTMLElement | null = element.parentElement;
     if (!parentElement || !surface.contains(parentElement)) break;
     element = parentElement;
   }
-  return true;
+  return false;
+}
+
+function isRenderedEngagementTarget(element: HTMLElement, surface: Element): boolean {
+  return !walkAncestorsWithinSurface(element, surface, (current) =>
+    Boolean(current.hidden) ||
+    current.getAttribute("aria-hidden") === "true" ||
+    computedStyleHides(current),
+  );
+}
+
+function isExplicitlyDisabledEngagement(element: HTMLElement, surface: Element): boolean {
+  return walkAncestorsWithinSurface(element, surface, (current) =>
+    current.matches(DISABLED_ENGAGEMENT_SELECTOR),
+  );
+}
+
+function engagementControlState(surface: Element, selector: string): EngagementControlState {
+  const control = surface.querySelector<HTMLElement>(selector);
+  if (!control) return "missing";
+  const interactive = control.matches('button, [role="button"], a[href]')
+    ? control
+    : control.querySelector<HTMLElement>('button, [role="button"], a[href]');
+  const target = interactive ?? control;
+  if (!isRenderedEngagementTarget(target, surface)) return "missing";
+  if (isExplicitlyDisabledEngagement(target, surface)) return "restricted";
+  return interactive ? "actionable" : "missing";
 }
 
 function engagementIsUnavailable(surface: Element): boolean {
-  return ENGAGEMENT_SELECTORS.every((selector) =>
-    surface.querySelector(selector) !== null &&
-    !engagementControlIsActionable(surface, selector),
+  if (surface instanceof HTMLElement && isAriaHiddenSubtree(surface)) return false;
+  return ENGAGEMENT_SELECTORS.every(
+    (selector) => engagementControlState(surface, selector) === "restricted",
   );
 }
 
 function engagementIsAvailable(surface: Element): boolean {
-  return ENGAGEMENT_SELECTORS.every((selector) =>
-    engagementControlIsActionable(surface, selector),
+  if (surface instanceof HTMLElement && isAriaHiddenSubtree(surface)) return false;
+  return ENGAGEMENT_SELECTORS.every(
+    (selector) => engagementControlState(surface, selector) === "actionable",
   );
 }
 
-function documentHasActionableEngagement(doc: Document): boolean {
-  return [...doc.querySelectorAll<HTMLElement>('[data-testid="cellInnerDiv"], article')]
-    .some(engagementIsAvailable);
+function containingOverlay(element: Element): Element | null {
+  return element.closest('[aria-modal="true"], [role="dialog"]') ??
+    element.closest("#layers");
+}
+
+function actionableEngagementLayers(doc: Document): Set<Element | "page"> {
+  const layers = new Set<Element | "page">();
+  for (const surface of doc.querySelectorAll<HTMLElement>(
+    '[data-testid="cellInnerDiv"], article',
+  )) {
+    if (!engagementIsAvailable(surface)) continue;
+    layers.add(containingOverlay(surface) ?? "page");
+  }
+  return layers;
 }
 
 function cleanedText(text: string): string {
@@ -481,7 +533,7 @@ export function scanXDocument(
   const candidates: ExtractedCandidate[] = [];
   const seenAnchors = new Set<HTMLElement>();
   const visibleHoverCards = visibleHoverCardsByHandle(doc);
-  const hasActionableEngagement = documentHasActionableEngagement(doc);
+  const engagementLayers = sourceType === "thread" ? actionableEngagementLayers(doc) : null;
 
   const addCandidate = (
     handle: string,
@@ -502,7 +554,7 @@ export function scanXDocument(
     const blockedByInteractionRestriction =
       sourceType === "thread" &&
       engagementIsUnavailable(surface) &&
-      hasActionableEngagement;
+      Boolean(engagementLayers?.has(containingOverlay(surface) ?? "page"));
     const blockedByProfileSummaryRestriction =
       sourceType === "thread" &&
       hoverCard !== null &&

@@ -44,7 +44,7 @@ handle 更名会在 0.1 中形成新记录，因为扩展不读取 X 私有 user
 
 变化事件不新增数据库字段，也不改变导出 schema。展示层在 `hasChanged=true` 时根据 `previousRelationship → currentRelationship` 动态推导：当前已是 `mutual` 一律显示互关；当前 `following_only` 默认显示单向关注，仅当上一状态是 `mutual` 或 `follows_you_only` 时才覆盖为 `unfollowed_you`。`follows_you_only → none` 同样为 `unfollowed_you`，`mutual → follows_you_only` 为 `you_unfollowed`，任意已知非 blocked 状态变为 `blocked_by` 为 `blocked_you`；其他双方同时变化的转换使用通用 `changed`。`none` 可写入 users 以撤掉过期徽标；只有对方取关这一条会显示并进入概览。因此旧档案无需迁移即可获得细分展示，dock 仍按 `hasChanged` 汇总一个变化总数。
 
-blocked-by 可保存 `blocked-notice`、`blocked-interaction-restriction` 或 `blocked-profile-summary-restriction`。后两者分别表示评论区三项互动限制已通过同页正常帖子对照，或已完整加载的作者浮窗缺少所有 following/follower 链接。首页等没有画出关注控件的卡片，可用 `page-user-entity` 表示关系来自当前页已经载入的 UI store 用户实体。
+blocked-by 可保存 `blocked-notice`、`blocked-interaction-restriction` 或 `blocked-profile-summary-restriction`。后两者分别表示评论区三项互动均已明确禁用并已通过同一浮层或页面层的正常帖子对照，或已完整加载的作者浮窗缺少所有 following/follower 链接。首页等没有画出关注控件的卡片，可用 `page-user-entity` 表示关系来自当前页已经载入的 UI store 用户实体。
 
 content script 可通过 service worker 的 `users:lookup` 批量查询页面当前可见的小写 handle。查询只返回已知关系并排除 viewer；它不会创建 observation 或改变 `lastSeenAt`，只用于把已有本地知识重新显示在页面 ID 区域。
 

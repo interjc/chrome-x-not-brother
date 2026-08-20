@@ -38,7 +38,7 @@ Python is managed through pyenv. The repository currently has no Python runtime 
 
 Side Panel interaction changes require both pure filter-model tests and a rendered React component test covering pressed state, filtered/empty lists, viewer exclusion, and the exact user-gesture X profile link.
 
-For thread blocked-by changes, keep fixtures for explicit notices, all-three-disabled controls plus normal-page baseline, already-visible count-less hover cards as independent evidence, normal-count hover cards, partial restrictions, and missing baselines. Keep the prominent badge in the same row as the display name without moving X's native `@handle` or date, and verify stored known records can re-annotate it.
+For thread blocked-by changes, keep fixtures for explicit notices, all-three-disabled controls plus a same-layer baseline, already-visible count-less hover cards as independent evidence, normal-count hover cards, partial restrictions, missing baselines, empty engagement shells, pointer-events scroll locks, aria-hidden virtualized cells, and photo-lightbox overlays that must not borrow a timeline baseline. Keep the prominent badge in the same row as the display name without moving X's native `@handle` or date, and verify stored known records can re-annotate it.
 
 For Home timeline identity, keep fixtures where the display name links to `/handle/status/:id`, the visible `@handle` is missing or bidi-wrapped, only `Tweet-User-Avatar` identifies the author, a matching hover card still enriches that card, and a quoted inner card does not inherit the outer avatar handle.
 

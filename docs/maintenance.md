@@ -23,7 +23,7 @@
 
 帖子作者常使用 `data-testid="User-Name"`，列表/资料常使用 `UserName`，偶发 `User-Names`，三者都必须保留 fixture。首页时间线的显示名称经常链到 `/handle/status/:id`，`@handle` 可能被隐藏或带双向隔离符；handle 提取必须接受这类 profile 子路径、头像链接和去掉格式字符后的 `@handle`，才能把作者识别为可回标的可见 handle。不得把推文正文里的 @提及当成作者，也不得把引用帖缺失的 handle 回退成外层头像。显示名不得使用 `·` / `.` 等间隔符，头像必须配对同一 handle 的 profile 链接或 `UserAvatar-Container-*`，不得抓引用帖里的第一张 `profile_images`。相关用户等 UserCell 的关系徽标必须放在头像正下方，不得插进显示名称行或盖住关注按钮。blocked-by 平台提示匹配必须排除 `tweetText`；不得把用户正文或泛化的 “This Post is unavailable” 当作拉黑证据。互动限制路径还必须确认回复、转发、点赞三种控件都已实际渲染，控件缺失不能等同于禁用。
 
-评论区互动限制的结构规则必须同时覆盖 reply、retweet/unretweet、like/unlike。只有三组控件均已渲染、全部不可操作且同页存在三组均正常的帖子时才生成 `blocked-interaction-restriction`。X 可能把 `data-testid` 放在按钮本身、把禁用状态放在更外层祖先，因此 actionability 检查必须遍历到评论 surface。
+评论区互动限制的结构规则必须同时覆盖 reply、retweet/unretweet、like/unlike。只有三组控件都已渲染成真实可交互节点、并以 `disabled` / `aria-disabled` / `inert` 明确禁用，且同一浮层或页面层存在三组均可操作的对照帖时，才生成 `blocked-interaction-restriction`。空的 testid 壳、滚动时的 `pointer-events: none`、`aria-hidden` 虚拟列表单元格，以及尚未画出的控件都只是内部 unknown。X 可能把 `data-testid` 放在按钮本身、把禁用状态放在更外层祖先，因此明确禁用检查必须遍历到评论 surface，但不得把 `pointer-events` 或祖先 `aria-hidden` 当成拉黑。`/status/:id/photo/:n` 仍按帖子详情处理；图片查看器右侧会话必须用同一 dialog / `#layers` 里的对照帖，不得借用背后时间线。
 
 已显示的 `HoverCard` 在没有 progress/loading 状态且找不到该 handle 的 `/following`、`/followers`、`/verified_followers` 链接时，独立生成 `blocked-profile-summary-restriction`。保留正常浮窗含计数链接、仅禁用转发、没有同页基线和查看者全局受限等反例 fixture。已知记录由 `users:lookup` 回标，删除或导入数据后 `data:changed` 必须清空 content cache 并重新查询。
 

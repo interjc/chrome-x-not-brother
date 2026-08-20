@@ -18,6 +18,13 @@ describe("sourceTypeFromUrl", () => {
     expect(sourceTypeFromUrl(new URL("https://x.com/Viewer/following"), "viewer")).toBe("following");
     expect(sourceTypeFromUrl(new URL("https://x.com/Other/following"), "viewer")).toBe("unknown");
   });
+
+  it("treats a photo lightbox as the underlying thread", () => {
+    expect(sourceTypeFromUrl(
+      new URL("https://x.com/Someone/status/123/photo/1"),
+      "viewer",
+    )).toBe("thread");
+  });
 });
 
 describe("viewerHandleFromDocument", () => {
@@ -130,7 +137,7 @@ describe("scanXDocument", () => {
           <div data-testid="User-Name"><span>Shiori</span><a href="/Shiori_1001_">@Shiori_1001_</a></div>
           <div data-testid="reply" aria-disabled="true"><button></button></div>
           <button data-testid="retweet" aria-disabled="true"></button>
-          <div data-testid="like"><span aria-hidden="true"></span></div>
+          <div data-testid="like" aria-disabled="true"><span aria-hidden="true"></span></div>
         </article>
       </div>`);
     const candidate = scanXDocument(
@@ -196,6 +203,143 @@ describe("scanXDocument", () => {
       .find((item) => item.observation.handle === "Unrendered");
 
     expect(candidate?.observation.relationship).toBe("unknown");
+  });
+
+  it("does not treat empty engagement shells as disabled even with a normal baseline", () => {
+    const doc = fixture(`${accountSwitcher()}
+      <article data-testid="tweet">
+        <div data-testid="User-Name"><span>Normal</span><a href="/Normal">@Normal</a></div>
+        <button data-testid="reply"></button>
+        <button data-testid="retweet"></button>
+        <button data-testid="like"></button>
+      </article>
+      <div data-testid="cellInnerDiv">
+        <article data-testid="tweet">
+          <div data-testid="User-Name"><span>Recycling</span><a href="/Recycling">@Recycling</a></div>
+          <div data-testid="reply"></div>
+          <div data-testid="retweet"></div>
+          <div data-testid="like"></div>
+        </article>
+      </div>`);
+    const candidate = scanXDocument(doc, "https://x.com/Someone/status/123/photo/1", 100)
+      .find((item) => item.observation.handle === "Recycling");
+
+    expect(candidate?.observation.relationship).toBe("unknown");
+  });
+
+  it("does not treat pointer-events none as a blocked-by restriction", () => {
+    const doc = fixture(`${accountSwitcher()}
+      <article data-testid="tweet">
+        <div data-testid="User-Name"><span>Normal</span><a href="/Normal">@Normal</a></div>
+        <button data-testid="reply"></button>
+        <button data-testid="retweet"></button>
+        <button data-testid="like"></button>
+      </article>
+      <div data-testid="cellInnerDiv">
+        <article data-testid="tweet">
+          <div data-testid="User-Name"><span>Scrolling</span><a href="/Scrolling">@Scrolling</a></div>
+          <div style="pointer-events: none">
+            <button data-testid="reply"></button>
+            <button data-testid="retweet"></button>
+            <button data-testid="like"></button>
+          </div>
+        </article>
+      </div>`);
+    const candidate = scanXDocument(doc, "https://x.com/Someone/status/123/photo/1", 100)
+      .find((item) => item.observation.handle === "Scrolling");
+
+    expect(candidate?.observation.relationship).toBe("unknown");
+  });
+
+  it("does not infer blocked-by from an aria-hidden virtualized conversation cell", () => {
+    const doc = fixture(`${accountSwitcher()}
+      <article data-testid="tweet">
+        <div data-testid="User-Name"><span>Normal</span><a href="/Normal">@Normal</a></div>
+        <button data-testid="reply"></button>
+        <button data-testid="retweet"></button>
+        <button data-testid="like"></button>
+      </article>
+      <div data-testid="cellInnerDiv" aria-hidden="true">
+        <article data-testid="tweet">
+          <div data-testid="User-Name"><span>HiddenCell</span><a href="/HiddenCell">@HiddenCell</a></div>
+          <div aria-disabled="true">
+            <button data-testid="reply"></button>
+            <button data-testid="retweet"></button>
+            <button data-testid="like"></button>
+          </div>
+        </article>
+      </div>`);
+    const candidate = scanXDocument(doc, "https://x.com/Someone/status/123/photo/1", 100)
+      .find((item) => item.observation.handle === "HiddenCell");
+
+    expect(candidate?.observation.relationship).toBe("unknown");
+  });
+
+  it("does not use a background timeline as the interaction baseline for a photo overlay", () => {
+    const doc = fixture(`${accountSwitcher()}
+      <article data-testid="tweet">
+        <div data-testid="User-Name"><span>Timeline</span><a href="/Timeline">@Timeline</a></div>
+        <button data-testid="reply"></button>
+        <button data-testid="retweet"></button>
+        <button data-testid="like"></button>
+      </article>
+      <div id="layers">
+        <div role="dialog" aria-modal="true">
+          <div data-testid="cellInnerDiv">
+            <article data-testid="tweet">
+              <div data-testid="User-Name"><span>Overlay</span><a href="/Overlay">@Overlay</a></div>
+              <div aria-disabled="true">
+                <button data-testid="reply"></button>
+                <button data-testid="retweet"></button>
+                <button data-testid="like"></button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>`);
+    const candidate = scanXDocument(doc, "https://x.com/Someone/status/123/photo/1", 100)
+      .find((item) => item.observation.handle === "Overlay");
+
+    expect(candidate?.observation.relationship).toBe("unknown");
+  });
+
+  it("still reads overlay blocked-by when the photo dialog itself has an actionable baseline", () => {
+    const doc = fixture(`${accountSwitcher()}
+      <div aria-hidden="true">
+        <article data-testid="tweet">
+          <div data-testid="User-Name"><span>Timeline</span><a href="/Timeline">@Timeline</a></div>
+          <button data-testid="reply"></button>
+          <button data-testid="retweet"></button>
+          <button data-testid="like"></button>
+        </article>
+      </div>
+      <div id="layers">
+        <div role="dialog" aria-modal="true">
+          <article data-testid="tweet">
+            <div data-testid="User-Name"><span>Original</span><a href="/Original">@Original</a></div>
+            <button data-testid="reply"></button>
+            <button data-testid="retweet"></button>
+            <button data-testid="like"></button>
+          </article>
+          <div data-testid="cellInnerDiv">
+            <article data-testid="tweet">
+              <div data-testid="User-Name"><span>Blocked</span><a href="/Blocked">@Blocked</a></div>
+              <div aria-disabled="true">
+                <button data-testid="reply"></button>
+                <button data-testid="retweet"></button>
+                <button data-testid="like"></button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>`);
+    const candidate = scanXDocument(doc, "https://x.com/Someone/status/123/photo/1", 100)
+      .find((item) => item.observation.handle === "Blocked");
+
+    expect(candidate?.observation).toMatchObject({
+      relationship: "blocked_by",
+      evidence: ["blocked-interaction-restriction"],
+    });
   });
 
   it("does not infer blocked-by when only repost is unavailable", () => {

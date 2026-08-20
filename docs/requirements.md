@@ -25,7 +25,7 @@
 14. 支持帖子详情和评论线程中的 `User-Name` 作者结构；明确“对方拉黑了你”的平台提示可以标记 blocked-by。
 15. 用户可见界面至少支持简体中文、英语和日语自动切换：插件页面跟随 Chrome UI 语言，注入 X 的徽标和观察 dock 优先跟随 X 页面语言，其他语言回退英语。
 16. 不存在用户可见或可持久化的“未知关系”：证据不足时不显示徽标、不写数据库；启动和安装时清理旧版本 unknown 记录，导入导出也过滤 unknown。
-17. 评论区作者的回复、转发、点赞三种控件都实际存在但全部不可操作，且同页存在三项均可操作的正常帖子时，可作为 `blocked-interaction-restriction`；完整加载、没有进度条且同时缺少 following/follower 链接的已显示作者浮窗，可独立作为 `blocked-profile-summary-restriction`。控件尚未渲染、只有转发不可用、普通“帖子不可用”或用户正文不得触发。blocked-by 与我单向关注应紧邻 ID 显著标注，并在本地档案已知后回标以后出现的同 handle 卡片。
+17. 评论区作者的回复、转发、点赞三种控件都已渲染为真实可交互节点并以 `disabled` / `aria-disabled` / `inert` 明确禁用，且同一浮层或页面层存在三项均可操作的正常帖子时，可作为 `blocked-interaction-restriction`；完整加载、没有进度条且同时缺少 following/follower 链接的已显示作者浮窗，可独立作为 `blocked-profile-summary-restriction`。控件尚未渲染、只有 testid 空壳、滚动锁定 `pointer-events: none`、虚拟列表 `aria-hidden` 单元格、只有转发不可用、普通“帖子不可用”或用户正文不得触发。图片查看器按帖子详情识别，但不得用背后时间线当对照。blocked-by 与我单向关注应紧邻 ID 显著标注，并在本地档案已知后回标以后出现的同 handle 卡片。
 18. X 页面观察 dock 可由右上角 `×` 收起为保留运行状态点的 NB 悬浮球；点击悬浮球恢复完整概览，收起偏好保存在扩展本地设置并在刷新后保持。
 19. 已完整加载并显示的作者浮窗只可补充同 handle 卡片的普通关系证据：`*-unfollow` 表示我已关注，`*-follow` 表示我未关注，`userFollowIndicator` 表示 TA 关注了我；取关控件存在但 follow indicator 不存在时可识别为我单向关注。不得跨作者复用浮窗证据，`hidden`、`inert`、`aria-hidden` 或样式隐藏的旧浮窗不得参与判断。
 20. 观察器运行但本地记录为零时，X 页面 dock 与 Side Panel 空状态必须明确提示：首页时间线和评论区需要用户悬停作者头像或 ID，由 X 显示关系浮窗后才能被动读取；不得让用户误以为观察器已扫描所有作者但没有结果。
