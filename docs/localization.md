@@ -9,10 +9,10 @@ Not Brother 首版界面支持简体中文、英语和日语自动切换。国�
 | 表面 | 语言来源 | 原因 |
 | --- | --- | --- |
 | Manifest 名称、说明、Chrome 管理页 | Chrome `_locales` 解析 | 由 Chrome 在扩展启动前选择 |
-| Side Panel、Relationship Fieldbook、工具栏运行时 title | `chrome.i18n.getUILanguage()` | 与 Chrome 自身界面一致 |
+| Side Panel、Relationship Fieldbook、工具栏运行时 title | 默认 `chrome.i18n.getUILanguage()`，可被设置里的 `uiLocale` 覆盖 | 与 Chrome 自身界面一致，并允许在插件面板手工切换 |
 | X 页面关系徽标、观察 dock | X 文档的 `<html lang>`，缺失时回退 Chrome UI 语言 | 注入内容与宿主页面一致 |
 
-语言归一化规则：`zh-*` 使用 `zh-CN`，`ja-*` 使用 `ja`，`en-*` 使用 `en`；任何其他语言完整回退英语。当前不提供手动语言选择器，修改 Chrome 或 X 语言并重新打开/刷新对应页面即可切换。
+语言归一化规则：`zh-*` 使用 `zh-CN`，`ja-*` 使用 `ja`，`en-*` 使用 `en`；任何其他语言完整回退英语。Side Panel 与档案库提供界面语言选择器，默认选中“跟随浏览器语言”；选择英语、日语或简体中文后写入 `chrome.storage.local` 的 `uiLocale`，已打开的扩展页和工具栏 title 即时切换。该偏好是展示设置，不写入 users/observations，也不改变 X 页面注入语言。旧设置缺少该字段时视为 `auto`。
 
 ## 两类词库
 
@@ -23,7 +23,7 @@ Chrome 在 Manifest 解析阶段需要 `public/_locales/en/messages.json`、`ja/
 - `{count}`、`{handle}` 等纯文本占位符替换；
 - 四种可见基础关系、三种可归因变化事件、双方无关的 `none`、通用 changed 的 label、short label 与 description，以及仅供内部兼容的 unknown 文案（运行时不展示或持久化）；
 - profile、timeline、thread 等观察来源名称；
-- 文档语言和 Chrome UI 语言归一化。
+- 文档语言、Chrome UI 语言归一化，以及 `uiLocale` 偏好解析。
 
 相对时间和绝对时间使用 `Intl.RelativeTimeFormat` 与 `Intl.DateTimeFormat`，避免手写三套复数和日期规则。CSV 的稳定字段名保持英文，`relationship_label` 使用导出时的插件语言。
 

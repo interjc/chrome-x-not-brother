@@ -34,11 +34,11 @@ Python is managed through pyenv. The repository currently has no Python runtime 
 3. Run `npm run check`.
 4. Run `npm run build && npm run validate:dist`.
 5. Manually exercise English, Japanese, and Simplified Chinese fixtures or live pages when selectors change.
-6. When UI copy changes, update all three runtime catalogs. When manifest metadata changes, also update `public/_locales/en`, `ja`, and `zh_CN`; verify extension pages follow Chrome UI language and injected X UI follows the page language.
+6. When UI copy changes, update all three runtime catalogs. When manifest metadata changes, also update `public/_locales/en`, `ja`, and `zh_CN`; verify extension pages default to the Chrome UI language, honor a stored `uiLocale` override from the language switcher, and keep injected X UI following the page language.
 
 Side Panel interaction changes require both pure filter-model tests and a rendered React component test covering pressed state, filtered/empty lists, viewer exclusion, and the exact user-gesture X profile link.
 
-For thread blocked-by changes, keep fixtures for explicit notices, all-three-disabled controls plus a same-layer baseline, already-visible count-less hover cards as independent evidence, normal-count hover cards, partial restrictions, missing baselines, empty engagement shells, pointer-events scroll locks, aria-hidden virtualized cells, and photo-lightbox overlays that must not borrow a timeline baseline. Keep the prominent badge in the same row as the display name without moving X's native `@handle` or date, and verify stored known records can re-annotate it.
+For thread blocked-by changes, keep fixtures for explicit notices, all-three-disabled controls plus a same-layer baseline, already-visible count-less hover cards as independent evidence, normal-count hover cards, partial restrictions, missing baselines, empty engagement shells, pointer-events scroll locks, aria-hidden virtualized cells, and photo-lightbox overlays that must not borrow a timeline baseline. Keep the prominent badge immediately before the visible `@handle` without moving X's native handle or date, cover space-between name rows that previously parked the badge after the timestamp, and verify stored known records can re-annotate it.
 
 For Home timeline identity, keep fixtures where the display name links to `/handle/status/:id`, the visible `@handle` is missing or bidi-wrapped, only `Tweet-User-Avatar` identifies the author, a matching hover card still enriches that card, and a quoted inner card does not inherit the outer avatar handle.
 

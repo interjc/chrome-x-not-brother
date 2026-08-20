@@ -8,7 +8,7 @@ import type {
   UpsertObservationsResponse,
 } from "../domain/messages";
 import type { ObserverSettings } from "../domain/types";
-import { getExtensionLocale } from "../i18n";
+import { resolveUiLocale } from "../i18n";
 import { actionPresentation } from "./action-state";
 import { broadcastDataChanged } from "./data-change-broadcast";
 import {
@@ -22,6 +22,7 @@ import {
   CURRENT_CONSENT_VERSION,
   DEFAULT_SETTINGS,
   SETTINGS_KEY,
+  coerceSettings,
   getSettings,
   updateSettings,
 } from "../storage/settings";
@@ -50,10 +51,9 @@ void getSettings().then(async (settings) => {
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName !== "local" || !changes[SETTINGS_KEY]) return;
-  const next = {
-    ...DEFAULT_SETTINGS,
-    ...(changes[SETTINGS_KEY].newValue as Partial<ObserverSettings> | undefined),
-  };
+  const next = coerceSettings(
+    changes[SETTINGS_KEY].newValue as Partial<ObserverSettings> | undefined,
+  );
   void syncActionState(next);
 });
 
@@ -176,7 +176,7 @@ async function openDashboard(_message: OpenDashboardMessage): Promise<void> {
 }
 
 async function syncActionState(settings: ObserverSettings): Promise<void> {
-  const presentation = actionPresentation(settings, getExtensionLocale());
+  const presentation = actionPresentation(settings, resolveUiLocale(settings.uiLocale));
   await Promise.all([
     chrome.action.setBadgeText({ text: presentation.badgeText }),
     chrome.action.setBadgeBackgroundColor({ color: presentation.badgeColor }),

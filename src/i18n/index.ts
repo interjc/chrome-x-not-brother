@@ -1,4 +1,8 @@
-import type { DisplayRelationship, SourceType } from "../domain/types";
+import type {
+  DisplayRelationship,
+  SourceType,
+  UiLocalePreference,
+} from "../domain/types";
 
 export type AppLocale = "en" | "ja" | "zh-CN";
 
@@ -95,6 +99,12 @@ const zhCN = {
   localOnlyFooter: "仅限本地 · IndexedDB · Schema v1",
   sendFeedback: "发送反馈",
   sendFeedbackAria: "在 GitHub Issues 打开反馈页面",
+  languageLabel: "界面语言",
+  languageAria: "选择插件界面语言",
+  languageFollowBrowser: "跟随浏览器语言",
+  languageEnglish: "English",
+  languageJapanese: "日本語",
+  languageChinese: "简体中文",
   filterAll: "全部观察",
   relationshipMutualLabel: "互相关注",
   relationshipMutualShort: "互关",
@@ -252,6 +262,12 @@ const en = {
   localOnlyFooter: "LOCAL ONLY · IndexedDB · Schema v1",
   sendFeedback: "Send feedback",
   sendFeedbackAria: "Open the GitHub Issues feedback page",
+  languageLabel: "Language",
+  languageAria: "Choose the extension interface language",
+  languageFollowBrowser: "Match browser language",
+  languageEnglish: "English",
+  languageJapanese: "日本語",
+  languageChinese: "简体中文",
   filterAll: "All observations",
   relationshipMutualLabel: "Mutual follow",
   relationshipMutualShort: "Mutual",
@@ -406,6 +422,12 @@ const ja = {
   localOnlyFooter: "ローカルのみ · IndexedDB · Schema v1",
   sendFeedback: "フィードバックを送る",
   sendFeedbackAria: "GitHub Issues のフィードバックページを開く",
+  languageLabel: "表示言語",
+  languageAria: "拡張機能の表示言語を選択",
+  languageFollowBrowser: "ブラウザーの言語に合わせる",
+  languageEnglish: "English",
+  languageJapanese: "日本語",
+  languageChinese: "简体中文",
   filterAll: "すべての観察",
   relationshipMutualLabel: "相互フォロー",
   relationshipMutualShort: "相互",
@@ -484,6 +506,15 @@ export function getExtensionLocale(): AppLocale {
         ? navigator.language
         : "en";
   return normalizeLocale(browserLocale);
+}
+
+export function resolveUiLocale(
+  preference: UiLocalePreference | null | undefined,
+): AppLocale {
+  if (preference === "en" || preference === "ja" || preference === "zh-CN") {
+    return preference;
+  }
+  return getExtensionLocale();
 }
 
 export function getDocumentLocale(doc: Document): AppLocale {

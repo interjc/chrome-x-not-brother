@@ -60,14 +60,14 @@ flowchart LR
 
 - 与 service worker 同属扩展 origin，可以安全访问扩展 IndexedDB；
 - Dexie `liveQuery` 驱动 UI 数据更新；
-- Side Panel 提供概览、键盘可达的本地分类筛选和用户手势 Profile 链接，筛选不写数据库也不预取资料；dashboard 提供完整本地数据管理。两者通过共享 hook 订阅 `chrome.storage.onChanged`，已打开页面会即时接收 viewer handle、观察器和徽标设置变化。
+- Side Panel 提供概览、键盘可达的本地分类筛选、界面语言选择和用户手势 Profile 链接，筛选不写数据库也不预取资料；dashboard 提供完整本地数据管理。两者通过共享 hook 订阅 `chrome.storage.onChanged`，已打开页面会即时接收 viewer handle、观察器、徽标和界面语言设置变化。
 
 ### Internationalization
 
 - `public/_locales/{en,ja,zh_CN}/messages.json` 提供 Chrome 解析的扩展名称、说明和工具栏默认标题；Manifest 使用 `__MSG_*__` 并以 `en` 为 `default_locale`。
 - `src/i18n/index.ts` 是运行时 UI 的类型化三语词库，集中提供语言归一化、占位符替换、关系展示和来源名称。
-- Side Panel、dashboard 与 service worker 通过 `chrome.i18n.getUILanguage()` 选择语言；content script 优先读取 X 文档的 `lang`。
-- `zh-*` 归一化为 `zh-CN`，`ja-*` 归一化为 `ja`，其余未支持语言归一化为 `en`。语言不存进用户数据库，也不改变关系事实。
+- Side Panel、dashboard 与 service worker 默认通过 `chrome.i18n.getUILanguage()` 选择语言；`uiLocale` 不是 `auto` 时覆盖为用户在插件面板选择的语言。content script 优先读取 X 文档的 `lang`。
+- `zh-*` 归一化为 `zh-CN`，`ja-*` 归一化为 `ja`，其余未支持语言归一化为 `en`。界面语言偏好只存在 `chrome.storage.local`，不存进用户数据库，也不改变关系事实。
 
 ## 构建
 

@@ -14,6 +14,7 @@ const IDENTITY_CLASSES = [
 const USER_CARD_SELECTOR = '[data-testid="UserCell"], [data-testid="HoverCard"]';
 const AVATAR_IDENTITY_SELECTOR =
   '[data-testid="Tweet-User-Avatar"], [data-testid="UserAvatar-Container"], [data-testid^="UserAvatar-Container-"]';
+const FORMAT_CHARS = /[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g;
 
 function isAvatarIdentity(element: Element): boolean {
   if (element.closest(AVATAR_IDENTITY_SELECTOR)) return true;
@@ -35,20 +36,97 @@ function isProfileLink(link: HTMLAnchorElement, handle: string): boolean {
   }
 }
 
+function cleanedLabel(text: string): string {
+  return text.replace(FORMAT_CHARS, "").normalize("NFKC").trim();
+}
+
+function isTimeLike(element: Element): boolean {
+  return element.closest("time") !== null || element.querySelector("time") !== null;
+}
+
+function handleLabel(handle: string): string {
+  return `@${handle.toLowerCase()}`;
+}
+
+function isVisibleHandleNode(element: Element, handle: string): boolean {
+  if (isTimeLike(element) || isAvatarIdentity(element)) return false;
+  const label = cleanedLabel(element.textContent ?? "")
+    .replace(/[.\u2026]+$/u, "")
+    .toLowerCase();
+  return label === handleLabel(handle);
+}
+
+function innermostHandleNode(root: HTMLElement, handle: string): HTMLElement | null {
+  const matches = [...root.querySelectorAll<HTMLElement>("a[href], span")]
+    .filter((element) => isVisibleHandleNode(element, handle));
+  return matches.find((element) =>
+    !matches.some((other) => other !== element && element.contains(other)),
+  ) ?? null;
+}
+
+function handlePlacementHost(root: HTMLElement, handle: string): HTMLElement | null {
+  const node = innermostHandleNode(root, handle);
+  if (!node) return null;
+  const link = node.closest<HTMLAnchorElement>("a[href]");
+  if (!link || isTimeLike(link) || !root.contains(link) || !isProfileLink(link, handle)) {
+    return node;
+  }
+  const linkLabel = cleanedLabel(link.textContent ?? "")
+    .replace(/[.\u2026]+$/u, "")
+    .toLowerCase();
+  return linkLabel === handleLabel(handle) ? link : node;
+}
+
+function displayNamePlacementHost(root: HTMLElement, handle: string): HTMLElement | null {
+  const handleHost = handlePlacementHost(root, handle);
+  for (const link of root.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+    if (isTimeLike(link) || isAvatarIdentity(link) || !isProfileLink(link, handle)) continue;
+    if (
+      handleHost &&
+      (link === handleHost || handleHost.contains(link) || link.contains(handleHost))
+    ) continue;
+    return link;
+  }
+  return null;
+}
+
 function identityInRoot(root: HTMLElement, handle: string): HTMLElement | null {
-  const normalizedHandle = handle.toLowerCase();
-  const visibleHandle = `@${normalizedHandle}`;
-  const handleText = [...root.querySelectorAll<HTMLElement>("span")].find(
-    (element) => (element.textContent ?? "").trim().toLowerCase() === visibleHandle,
-  );
-  const handleLink = handleText?.closest<HTMLAnchorElement>("a[href]") ?? null;
-  const profileLinks = [...root.querySelectorAll<HTMLAnchorElement>("a[href]")]
-    .filter((link) => isProfileLink(link, handle) && !isAvatarIdentity(link));
-  return profileLinks.find((link) => link !== handleLink) ??
-    profileLinks[0] ??
-    handleLink ??
-    handleText ??
-    null;
+  return displayNamePlacementHost(root, handle) ?? handlePlacementHost(root, handle);
+}
+
+function tweetPlacement(
+  anchor: HTMLElement,
+  handle: string,
+): { host: HTMLElement; position: "beforebegin" | "afterend" } | null {
+  const roots: HTMLElement[] = [anchor];
+  const card = userCardFrom(anchor);
+  const named = (card ?? anchor).matches(USER_NAME_SELECTOR)
+    ? card ?? anchor
+    : (card ?? anchor).querySelector<HTMLElement>(USER_NAME_SELECTOR);
+  if (named && named !== anchor) roots.push(named);
+  if (card && card !== anchor) roots.push(card);
+  for (const root of roots) {
+    const handleHost = handlePlacementHost(root, handle);
+    if (handleHost) return { host: handleHost, position: "beforebegin" };
+  }
+  for (const root of roots) {
+    const display = displayNamePlacementHost(root, handle);
+    if (display) return { host: display, position: "afterend" };
+  }
+  if (!isAvatarIdentity(anchor) && !isTimeLike(anchor)) {
+    return { host: anchor, position: "afterend" };
+  }
+  return null;
+}
+
+function badgeIsPlaced(
+  badge: HTMLElement,
+  host: HTMLElement,
+  position: "beforebegin" | "afterend",
+): boolean {
+  return position === "beforebegin"
+    ? badge.nextElementSibling === host
+    : host.nextElementSibling === badge;
 }
 
 function identityElement(anchor: HTMLElement, handle: string): HTMLElement | null {
@@ -106,6 +184,13 @@ function markBadgeRow(row: HTMLElement): void {
   row.classList.add(BADGE_ROW_CLASS);
 }
 
+function markTightBadgeRow(parent: HTMLElement | null): void {
+  if (!parent) return;
+  if (parent.matches(USER_NAME_SELECTOR)) return;
+  if (parent.querySelector("time")) return;
+  markBadgeRow(parent);
+}
+
 function clearBadgeRows(anchor: HTMLElement): void {
   const rows = anchor.matches(`[${BADGE_ROW_ATTRIBUTE}]`)
     ? [anchor, ...anchor.querySelectorAll<HTMLElement>(`[${BADGE_ROW_ATTRIBUTE}]`)]
@@ -158,8 +243,11 @@ export function setRelationshipBadge(
   if (badge.textContent !== presentation.shortLabel) badge.textContent = presentation.shortLabel;
   badge.title = `${handle} · ${presentation.description}`;
   badge.setAttribute("aria-label", `${handle}: ${presentation.label}`);
+  const placement = card ? null : tweetPlacement(anchor, handle);
   const misplaced = existing !== null && (
-    card ? userCardBadgeMisplaced(existing, card) : false
+    card
+      ? userCardBadgeMisplaced(existing, card)
+      : !placement || !badgeIsPlaced(existing, placement.host, placement.position)
   );
   if (card && (!existing || misplaced)) {
     if (existing && misplaced) existing.remove();
@@ -168,15 +256,19 @@ export function setRelationshipBadge(
     } else if (!badge.isConnected && !isAvatarIdentity(anchor)) {
       anchor.append(badge);
     }
-  } else if (!card && !existing) {
-    if (identity) {
-      identity.insertAdjacentElement("afterend", badge);
-      markBadgeRow(badge.parentElement ?? anchor);
-    } else {
+  } else if (!card && (!existing || misplaced)) {
+    if (existing && misplaced) {
+      existing.remove();
+      clearBadgeRows(anchor);
+    }
+    if (placement) {
+      placement.host.insertAdjacentElement(placement.position, badge);
+      markTightBadgeRow(badge.parentElement);
+    } else if (!isAvatarIdentity(anchor)) {
       anchor.append(badge);
     }
   } else if (!card && badge.parentElement) {
-    markBadgeRow(badge.parentElement);
+    markTightBadgeRow(badge.parentElement);
   }
 }
 

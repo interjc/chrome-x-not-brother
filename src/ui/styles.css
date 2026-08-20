@@ -81,6 +81,30 @@ a { color: inherit; }
 /* Side panel */
 .app--sidepanel { display: flex; flex-direction: column; min-width: 290px; overflow: hidden; }
 .side-header { align-items: center; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; padding: 14px 16px; }
+.side-toolbar { border-bottom: 1px solid var(--line); padding: 8px 16px 10px; }
+.language-switch { align-items: center; display: flex; gap: 8px; min-width: 0; }
+.language-switch span { color: var(--ink-soft); flex: none; font-size: 9px; font-weight: 750; letter-spacing: 0.04em; }
+.language-switch select {
+  appearance: none;
+  background-color: var(--white);
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 14px) calc(50% - 2px), calc(100% - 9px) calc(50% - 2px);
+  background-repeat: no-repeat;
+  background-size: 5px 5px, 5px 5px;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  cursor: pointer;
+  flex: 1;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 0;
+  padding: 7px 28px 7px 9px;
+}
+.language-switch select:focus-visible { outline: 3px solid var(--blue); outline-offset: -3px; }
+.language-switch select:disabled { cursor: not-allowed; opacity: 0.45; }
+.local-settings .language-switch { align-items: stretch; flex-direction: column; gap: 6px; }
 .observer-switch { align-items: center; background: transparent; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; display: flex; font-size: 10px; font-weight: 700; gap: 5px; padding: 7px 9px; }
 .observer-switch svg { height: 13px; width: 13px; }
 .observer-switch.is-on { background: var(--acid); border-color: var(--ink); }
@@ -230,7 +254,7 @@ a { color: inherit; }
 }
 
 @media (max-width: 700px) {
-  .app--dashboard { padding-inline: 17px; }.dashboard-header .brand__copy small, .observer-state { display: none; }.hero h1 { font-size: 58px; }.dashboard-consent { align-items: stretch; grid-template-columns: 1fr; }.dashboard-consent button { justify-content: space-between; }.fieldbook-layout { display: block; }.filter-rail { position: static; }.filter-rail nav { display: flex; overflow-x: auto; }.filter-rail nav button { border-right: 1px solid var(--line); flex: 0 0 auto; grid-template-columns: auto auto; }.filter-rail nav button span { display: none; }.local-settings { display: grid; grid-template-columns: repeat(3, 1fr); }.records-panel { margin-top: 30px; }.records-toolbar { grid-template-columns: 1fr; }.sort-box { display: none; }.export-menu { grid-column: auto; }.stats-strip article { min-height: 100px; padding: 16px; }.stats-strip strong { font-size: 38px; }.user-record { grid-template-columns: 27px 38px 1fr auto; gap: 9px; }.user-record .avatar { height: 37px; width: 37px; }.user-record__relationship, .user-record__observation { grid-column: 3 / -1; }.user-record__actions { grid-column: 4; grid-row: 1 / 2; }.dashboard-footer { grid-template-columns: 1fr auto auto; }.dashboard-footer p:first-of-type { display: none; }
+  .app--dashboard { padding-inline: 17px; }.dashboard-header .brand__copy small, .observer-state { display: none; }.hero h1 { font-size: 58px; }.dashboard-consent { align-items: stretch; grid-template-columns: 1fr; }.dashboard-consent button { justify-content: space-between; }.fieldbook-layout { display: block; }.filter-rail { position: static; }.filter-rail nav { display: flex; overflow-x: auto; }.filter-rail nav button { border-right: 1px solid var(--line); flex: 0 0 auto; grid-template-columns: auto auto; }.filter-rail nav button span { display: none; }.local-settings { display: grid; grid-template-columns: 1fr 1fr; }.local-settings > span, .local-settings .language-switch { grid-column: 1 / -1; }.records-panel { margin-top: 30px; }.records-toolbar { grid-template-columns: 1fr; }.sort-box { display: none; }.export-menu { grid-column: auto; }.stats-strip article { min-height: 100px; padding: 16px; }.stats-strip strong { font-size: 38px; }.user-record { grid-template-columns: 27px 38px 1fr auto; gap: 9px; }.user-record .avatar { height: 37px; width: 37px; }.user-record__relationship, .user-record__observation { grid-column: 3 / -1; }.user-record__actions { grid-column: 4; grid-row: 1 / 2; }.dashboard-footer { grid-template-columns: 1fr auto auto; }.dashboard-footer p:first-of-type { display: none; }
 }
 
 @media (prefers-color-scheme: dark) {

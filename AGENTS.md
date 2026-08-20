@@ -62,7 +62,7 @@ Use `npm run package` only when preparing a loadable release archive.
 - Derive change presentation without changing stored relationship facts: any transition whose current state is mutual displays mutual. A current following-only state displays following-only unless history shows they used to follow the viewer: mutual to following-only, follows-you-only to following-only, or follows-you-only to none is unfollowed-you. Mutual to follows-you-only is you-unfollowed, and any known non-blocked state to blocked-by is blocked-you. Keep other ambiguous double-action transitions generic, never label a viewer action as the other account's action, and keep the dock change statistic aggregated.
 - Use text content and DOM APIs for injected UI. Do not inject HTML strings into X.
 - Keep all runtime code bundled locally. Manifest V3 forbids remotely hosted executable code.
-- Route every user-visible runtime string through `src/i18n/`; keep English, Japanese, and Simplified Chinese catalogs complete. Extension pages follow the Chrome UI language, while UI injected into X follows the page language.
+- Route every user-visible runtime string through `src/i18n/`; keep English, Japanese, and Simplified Chinese catalogs complete. Extension pages default to the Chrome UI language and may be overridden from the Side Panel or dashboard language switcher; UI injected into X follows the page language.
 - Request the minimum Chrome permissions necessary for the feature.
 - Keep the observer disabled until the current prominent-disclosure consent version has been accepted.
 - Exclude the signed-in viewer at scan, storage, summary, and UI layers; never show the viewer in recent observations.
@@ -73,7 +73,7 @@ Use `npm run package` only when preparing a loadable release archive.
 - Preserve toolbar state, first-install guidance, the X-page observer dock and its persistent panel/floating-ball preference, and light/dark theme parity.
 - Preserve the hybrid page monitor: semantic DOM mutations plus a 2-second fallback rescan only while the consented observer page is visible, immediate focus/visibility recovery, single-flight processing, signature deduplication only after confirmed persistence so transient failures retry, and complete timer/listener teardown on extension-context invalidation.
 - Preserve cross-tab cache invalidation through service-worker `data:changed` broadcasts. Do not add the `tabs` permission; tabs without a content-script receiver are expected, and intentional archive deletion must not clear observation signatures and immediately reinsert unchanged evidence.
-- Keep extension pages subscribed to `chrome.storage.onChanged` through the shared settings hook so viewer exclusion and observer controls remain consistent across an already-open Side Panel, dashboard, and X tabs.
+- Keep extension pages subscribed to `chrome.storage.onChanged` through the shared settings hook so viewer exclusion, observer controls, and the UI language preference remain consistent across an already-open Side Panel, dashboard, and X tabs.
 
 ## Documentation
 

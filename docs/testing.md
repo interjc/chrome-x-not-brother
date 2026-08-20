@@ -24,13 +24,13 @@ npm run skills:validate
 - 只有转发不可用、互动控件缺失（即使同页有正常对照）、空 testid 壳、滚动 `pointer-events: none`、`aria-hidden` 虚拟单元格、图片浮层借用背后时间线、三项受限但缺少同层对照、正常浮窗含计数时不误判 blocked-by；
 - 已确认的本地 blocked-by 可回标当前证据不足的同 handle 卡片；
 - 同 handle 完整浮窗可用 follow/unfollow 与 `userFollowIndicator` 补全普通关系，不匹配浮窗不会污染其他作者；
-- 评论线程的徽标固定在显示名称同一行，移除徽标时也清理局部横排类，不改变 `@handle` 与日期结构；
+- 评论线程的徽标固定插在可见 `@handle` 之前，不得出现在时间戳之后；没有可见 handle 时才跟在显示名称后面；移除徽标时也清理局部横排类，不改变 `@handle` 与日期结构；
 - 相关用户 / UserCell 的徽标放在头像正下方，不插入显示名称行；
 - 可见且已启用页面每 2 秒兜底复扫，隐藏页暂停，恢复可见/焦点时立即复扫，重复 start 不产生多个计时器且 stop 清理监听；
 - observation 签名只在对应用户确认持久化后提交；未确认发送保持可重试，已确认的相同证据保持去重；
 - service worker 把数据变化广播到有 content script 的标签页并忽略无接收端标签页；档案页变更会使已打开 X 页清除本地关系缓存；
-- Side Panel 真实 React 组件中的分类按钮、`aria-pressed` 切换、同分类再次取消、变化筛选、筛选空状态、本人排除，以及标准 `https://x.com/<handle>` 新标签链接；
-- 已打开扩展页面通过共享 settings hook 接收其他上下文的 viewer handle 与观察器设置变化，并在卸载时移除监听；
+- Side Panel 真实 React 组件中的分类按钮、`aria-pressed` 切换、同分类再次取消、变化筛选、筛选空状态、本人排除、标准 `https://x.com/<handle>` 新标签链接，以及语言选择器默认跟随浏览器并在手工切换后即时改写面板文案；
+- 已打开扩展页面通过共享 settings hook 接收其他上下文的 viewer handle、观察器和界面语言设置变化，并在卸载时移除监听；
 - 观察器总数为零时，dock 与 Side Panel 三语空状态把悬停说成补充路径；首条观察后 dock 恢复可见证据说明；
 - 首页时间线可从 `/handle/status/:id`、头像链接或带双向隔离符的 `@handle` 识别作者，证据不足时保持 unknown 且不把引用帖回退成外层作者；
 - 当前页 UI store、tweet 祖先 fiber，以及页面已完成的 TweetDetail 等 GraphQL 响应中的 `following` / `followed_by` / `blocked_by` 可把首页和评论区 unknown 卡片提升为已知关系；store 里已有查看者时仍要继续读回复作者；缺少完整布尔值不得编造；DOM 已可收集证据时 store 不得覆盖；
@@ -48,11 +48,11 @@ npm run skills:validate
 4. 打开 X 首页，确认自己关注的作者在无需悬停时出现单向关注或互关徽标；完全没有载入关系字段的卡片不得出现“未知”徽标，也不得进入最近观察。
 5. 打开自己的 following 页面，验证可见 UserCell 的 following 证据。
 6. 打开自己的 followers 页面，验证 follows-you 证据。
-7. 分别把 Chrome UI 设为英语、日语和简体中文，验证 Side Panel、管理页、首次披露、工具栏 title、时间与确认对话框自动切换；未支持语言应完整回退英语。
+7. 分别把 Chrome UI 设为英语、日语和简体中文，验证 Side Panel、管理页、首次披露、工具栏 title、时间与确认对话框自动切换；未支持语言应完整回退英语。打开 Side Panel 确认语言选择器默认是“跟随浏览器语言”，再分别选日语和简体中文，确认面板文案、`document.documentElement.lang` 和已打开档案库即时切换，X 页面徽标与 dock 仍跟随 X 语言。
 8. 把 X 语言设成与 Chrome 不同的支持语言，验证 X 页面徽标和观察 dock 跟随 X 而不是 Chrome。
 9. 主动打开一个明确显示 blocked notice 的测试资料，验证本地化的“拉黑了你”。
 10. 打开帖子详情/评论线程，验证带明确 blocked-by 平台提示的 `User-Name` 作者被标注。
-11. 找到一个评论作者的回复、转发、点赞都不可操作、而同页其他帖子三项正常的场景，验证显示名称同一行出现红色 `! 拉黑了你` 增强徽标并写入档案，同时 `@handle` 与日期仍保持 X 原生排列。
+11. 找到一个评论作者的回复、转发、点赞都不可操作、而同页其他帖子三项正常的场景，验证 `@handle` 前面出现红色 `! 拉黑了你` 增强徽标并写入档案，同时 `@handle` 与日期仍保持 X 原生排列。
 12. 悬停打开一个已知 blocked-by 作者的完整浮窗，验证没有关注/粉丝链接时独立标注并收集；关闭浮窗、刷新页面后仍由本地已知记录回标该评论 ID。
 13. 验证只有转发不可用、普通“帖子不可用”、用户正文写出 blocked you、三项按钮尚未渲染（包括同页存在正常基线时）、滚动图片查看器右侧列表时出现的空壳/`pointer-events`/`aria-hidden` 单元格、三项受限但没有同层基线、正常浮窗含计数时均不标注、不收集。
 14. 确认自己的帖子/评论没有徽标，Side Panel 最近观察和所有统计也没有本人。

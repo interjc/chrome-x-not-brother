@@ -2,13 +2,13 @@ import "@fontsource-variable/instrument-sans";
 import "@fontsource-variable/newsreader";
 import "./styles.css";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { PROJECT_FEEDBACK_URL } from "../domain/project";
 import { visibleDisplayName } from "../domain/identity";
 import { displayRelationship, isDisplayedUser } from "../domain/relationships";
 import {
-  getExtensionLocale,
+  resolveUiLocale,
   relationshipPresentation,
   translate,
   type MessageKey,
@@ -16,6 +16,7 @@ import {
 import { Avatar } from "./components/Avatar";
 import { Brand } from "./components/Brand";
 import { Icon } from "./components/Icon";
+import { LanguageSwitch } from "./components/LanguageSwitch";
 import { RelationshipPill } from "./components/RelationshipPill";
 import { relativeTime } from "./format";
 import { useObserverSettings, useUsers } from "./hooks";
@@ -27,16 +28,18 @@ import {
 } from "./sidepanel-model";
 import { CURRENT_CONSENT_VERSION } from "../storage/settings";
 
-const locale = getExtensionLocale();
-const t = (key: MessageKey, values?: Record<string, string | number>) =>
-  translate(locale, key, values);
-document.documentElement.lang = locale;
-document.title = t("brandName");
-
 export function SidePanel() {
   const [filter, setFilter] = useState<SidePanelFilter>("all");
   const { users: observedUsers, loading: usersLoading } = useUsers();
   const { settings, settingsReady, setSettings, setSetting } = useObserverSettings();
+  const locale = resolveUiLocale(settings.uiLocale);
+  const t = (key: MessageKey, values?: Record<string, string | number>) =>
+    translate(locale, key, values);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    document.title = translate(locale, "brandName");
+  }, [locale]);
   const users = settingsReady
     ? observedUsers.filter((user) =>
       user.key !== settings.viewerHandle && isDisplayedUser(user),
@@ -74,6 +77,14 @@ export function SidePanel() {
           <span>{t(settings.observerEnabled ? "observing" : "paused")}</span>
         </button>
       </header>
+      <div className="side-toolbar">
+        <LanguageSwitch
+          disabled={!settingsReady}
+          locale={locale}
+          value={settings.uiLocale}
+          onChange={(uiLocale) => void setSetting("uiLocale", uiLocale)}
+        />
+      </div>
 
       {settingsReady && !hasConsent ? (
         <section className="consent-card" aria-labelledby="consent-title">

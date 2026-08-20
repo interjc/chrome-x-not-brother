@@ -11,10 +11,11 @@ import { displayRelationship, isDisplayedUser } from "../domain/relationships";
 import { parseDatabaseExport, usersToCsv } from "../domain/export";
 import type { ObservationRecord, RelationshipKind, UserRecord } from "../domain/types";
 import {
-  getExtensionLocale,
+  resolveUiLocale,
   relationshipPresentation,
   sourceTypeLabel,
   translate,
+  type AppLocale,
   type MessageKey,
 } from "../i18n";
 import {
@@ -28,6 +29,7 @@ import {
 import { Avatar } from "./components/Avatar";
 import { Brand } from "./components/Brand";
 import { Icon } from "./components/Icon";
+import { LanguageSwitch } from "./components/LanguageSwitch";
 import { RelationshipPill } from "./components/RelationshipPill";
 import { absoluteTime, downloadFile, relativeTime } from "./format";
 import { useObserverSettings, useUsers } from "./hooks";
@@ -36,21 +38,26 @@ import { CURRENT_CONSENT_VERSION } from "../storage/settings";
 type Filter = "all" | "changed" | Exclude<RelationshipKind, "unknown" | "none">;
 type Sort = "recent" | "handle" | "observations";
 
-const locale = getExtensionLocale();
-const t = (key: MessageKey, values?: Record<string, string | number>) =>
-  translate(locale, key, values);
 const extensionVersion = chrome.runtime.getManifest?.().version ?? "dev";
-document.documentElement.lang = locale;
-document.title = t("dashboardTitle");
 
-const filters: { key: Filter; label: string }[] = [
-  { key: "all", label: t("filterAll") },
-  { key: "changed", label: relationshipPresentation(locale, "changed").label },
-  { key: "mutual", label: relationshipPresentation(locale, "mutual").label },
-  { key: "following_only", label: relationshipPresentation(locale, "following_only").label },
-  { key: "follows_you_only", label: relationshipPresentation(locale, "follows_you_only").label },
-  { key: "blocked_by", label: relationshipPresentation(locale, "blocked_by").label },
-];
+function t(
+  locale: AppLocale,
+  key: MessageKey,
+  values?: Record<string, string | number>,
+) {
+  return translate(locale, key, values);
+}
+
+function filterOptions(locale: AppLocale): { key: Filter; label: string }[] {
+  return [
+    { key: "all", label: t(locale, "filterAll") },
+    { key: "changed", label: relationshipPresentation(locale, "changed").label },
+    { key: "mutual", label: relationshipPresentation(locale, "mutual").label },
+    { key: "following_only", label: relationshipPresentation(locale, "following_only").label },
+    { key: "follows_you_only", label: relationshipPresentation(locale, "follows_you_only").label },
+    { key: "blocked_by", label: relationshipPresentation(locale, "blocked_by").label },
+  ];
+}
 
 async function notifyDataChanged(): Promise<void> {
   try {
@@ -66,7 +73,7 @@ function countFor(users: UserRecord[], filter: Filter): number {
   return users.filter((user) => user.currentRelationship === filter).length;
 }
 
-function UserHistory({ userKey }: { userKey: string }) {
+function UserHistory({ userKey, locale }: { userKey: string; locale: AppLocale }) {
   const [items, setItems] = useState<ObservationRecord[] | null>(null);
 
   useEffect(() => {
@@ -79,18 +86,18 @@ function UserHistory({ userKey }: { userKey: string }) {
   }, [userKey]);
 
   if (items === null) {
-    return <p className="history-loading">{t("historyLoading")}</p>;
+    return <p className="history-loading">{t(locale, "historyLoading")}</p>;
   }
 
   return (
     <div className="history-list">
-      {items.length === 0 ? <p>{t("historyEmpty")}</p> : null}
+      {items.length === 0 ? <p>{t(locale, "historyEmpty")}</p> : null}
       {items.slice(0, 30).map((item) => (
         <div className="history-item" key={item.id ?? `${item.userKey}-${item.observedAt}`}>
           <time>{absoluteTime(item.observedAt, locale)}</time>
           <RelationshipPill relationship={item.relationship} locale={locale} />
           <span>{sourceTypeLabel(locale, item.sourceType)}</span>
-          <a href={item.sourceUrl} target="_blank" rel="noreferrer" title={t("openObservationSource")}>
+          <a href={item.sourceUrl} target="_blank" rel="noreferrer" title={t(locale, "openObservationSource")}>
             <Icon name="external" />
           </a>
         </div>
@@ -102,6 +109,7 @@ function UserHistory({ userKey }: { userKey: string }) {
 function Dashboard() {
   const { users: observedUsers, loading: usersLoading } = useUsers();
   const { settings, settingsReady, setSettings, setSetting } = useObserverSettings();
+  const locale = resolveUiLocale(settings.uiLocale);
   const users = settingsReady
     ? observedUsers.filter((user) =>
       user.key !== settings.viewerHandle && isDisplayedUser(user),
@@ -109,6 +117,12 @@ function Dashboard() {
     : [];
   const loading = usersLoading || !settingsReady;
   const hasConsent = settings.consentVersion >= CURRENT_CONSENT_VERSION;
+  const filters = filterOptions(locale);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    document.title = t(locale, "dashboardTitle");
+  }, [locale]);
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("recent");
   const [query, setQuery] = useState("");
@@ -152,13 +166,13 @@ function Dashboard() {
     const payload = await exportDatabase(settings.viewerHandle);
     const stamp = new Date().toISOString().slice(0, 10);
     downloadFile(`not-brother-${stamp}.json`, JSON.stringify(payload, null, 2), "application/json");
-    setNotice(t("exportJsonSuccess"));
+    setNotice(t(locale, "exportJsonSuccess"));
   }
 
   function exportCsv(): void {
     const stamp = new Date().toISOString().slice(0, 10);
     downloadFile(`not-brother-${stamp}.csv`, `\uFEFF${usersToCsv(users, locale)}`, "text/csv;charset=utf-8");
-    setNotice(t("exportCsvSuccess"));
+    setNotice(t(locale, "exportCsvSuccess"));
   }
 
   async function importJson(event: ChangeEvent<HTMLInputElement>): Promise<void> {
@@ -170,24 +184,24 @@ function Dashboard() {
       await importDatabase(payload);
       if (settings.viewerHandle) await deleteUserRecord(settings.viewerHandle);
       await notifyDataChanged();
-      setNotice(t("importSuccess", { count: payload.users.length }));
+      setNotice(t(locale, "importSuccess", { count: payload.users.length }));
     } catch {
-      setNotice(t("importFailed"));
+      setNotice(t(locale, "importFailed"));
     }
   }
 
   async function clearEverything(): Promise<void> {
-    if (!window.confirm(t("clearConfirm"))) return;
+    if (!window.confirm(t(locale, "clearConfirm"))) return;
     await clearDatabase();
     await notifyDataChanged();
-    setNotice(t("clearSuccess"));
+    setNotice(t(locale, "clearSuccess"));
   }
 
   async function deleteOne(user: UserRecord): Promise<void> {
-    if (!window.confirm(t("deleteConfirm", { handle: user.handle }))) return;
+    if (!window.confirm(t(locale, "deleteConfirm", { handle: user.handle }))) return;
     await deleteUserRecord(user.key);
     await notifyDataChanged();
-    setNotice(t("deleteSuccess", { handle: user.handle }));
+    setNotice(t(locale, "deleteSuccess", { handle: user.handle }));
   }
 
   async function acknowledgeChange(userKey: string): Promise<void> {
@@ -200,7 +214,7 @@ function Dashboard() {
       consentVersion: CURRENT_CONSENT_VERSION,
       observerEnabled: true,
     });
-    setNotice(t("observerStarted"));
+    setNotice(t(locale, "observerStarted"));
   }
 
   return (
@@ -209,52 +223,52 @@ function Dashboard() {
         <Brand locale={locale} />
         <div className="dashboard-header__tools">
           <span className={`observer-state${settings.observerEnabled ? " is-on" : ""}`}>
-            <i />{t(settings.observerEnabled ? "observerRunning" : "observerPaused")}
+            <i />{t(locale, settings.observerEnabled ? "observerRunning" : "observerPaused")}
           </span>
-          <button className="icon-button" title={t("importJson")} aria-label={t("importJson")} onClick={() => importInput.current?.click()}><Icon name="upload" /></button>
+          <button className="icon-button" title={t(locale, "importJson")} aria-label={t(locale, "importJson")} onClick={() => importInput.current?.click()}><Icon name="upload" /></button>
           <input ref={importInput} className="visually-hidden" type="file" accept="application/json,.json" onChange={(event) => void importJson(event)} />
-          <button className="icon-button" title={t("exportJson")} aria-label={t("exportJson")} onClick={() => void exportJson()}><Icon name="download" /></button>
+          <button className="icon-button" title={t(locale, "exportJson")} aria-label={t(locale, "exportJson")} onClick={() => void exportJson()}><Icon name="download" /></button>
         </div>
       </header>
 
       <section className="hero">
         <div className="hero__copy">
-          <p className="eyebrow">{t("fieldbookEyebrow")}</p>
-          <h1>{t("heroTitleBefore")}<br /><em>{t("heroTitleAfter")}</em></h1>
+          <p className="eyebrow">{t(locale, "fieldbookEyebrow")}</p>
+          <h1>{t(locale, "heroTitleBefore")}<br /><em>{t(locale, "heroTitleAfter")}</em></h1>
         </div>
         <div className="hero__note">
-          <span>{t("productRuleLabel")}</span>
-          <p>{t("productRuleBody")}</p>
+          <span>{t(locale, "productRuleLabel")}</span>
+          <p>{t(locale, "productRuleBody")}</p>
         </div>
       </section>
 
       {settingsReady && !hasConsent ? (
         <section className="dashboard-consent" aria-labelledby="dashboard-consent-title">
           <div>
-            <span>{t(isWelcome ? "installComplete" : "consentRequired")}</span>
+            <span>{t(locale, isWelcome ? "installComplete" : "consentRequired")}</span>
             <h2 id="dashboard-consent-title">
-              {t(isWelcome ? "welcomeTitle" : "notStartedTitle")}
+              {t(locale, isWelcome ? "welcomeTitle" : "notStartedTitle")}
             </h2>
-            <p>{t("dashboardConsentBody")}</p>
+            <p>{t(locale, "dashboardConsentBody")}</p>
           </div>
           <button type="button" onClick={() => void enableObserver()}>
-            {t("agreeStart")}
+            {t(locale, "agreeStart")}
             <Icon name="chevron" />
           </button>
         </section>
       ) : null}
 
-      <section className="stats-strip" aria-label={t("archiveStatsAria")}>
-        <article><span>OBSERVED</span><strong>{loading ? "—" : users.length.toLocaleString(locale)}</strong><small>{t("statObserved")}</small></article>
-        <article className="tone-following"><span>ONE-WAY</span><strong>{countFor(users, "following_only")}</strong><small>{t("statFollowingOnly")}</small></article>
-        <article className="tone-blocked"><span>BLOCKED BY</span><strong>{countFor(users, "blocked_by")}</strong><small>{t("statBlockedBy")}</small></article>
-        <article className="tone-changed"><span>CHANGED</span><strong>{countFor(users, "changed")}</strong><small>{t("statChanged")}</small></article>
+      <section className="stats-strip" aria-label={t(locale, "archiveStatsAria")}>
+        <article><span>OBSERVED</span><strong>{loading ? "—" : users.length.toLocaleString(locale)}</strong><small>{t(locale, "statObserved")}</small></article>
+        <article className="tone-following"><span>ONE-WAY</span><strong>{countFor(users, "following_only")}</strong><small>{t(locale, "statFollowingOnly")}</small></article>
+        <article className="tone-blocked"><span>BLOCKED BY</span><strong>{countFor(users, "blocked_by")}</strong><small>{t(locale, "statBlockedBy")}</small></article>
+        <article className="tone-changed"><span>CHANGED</span><strong>{countFor(users, "changed")}</strong><small>{t(locale, "statChanged")}</small></article>
       </section>
 
       <div className="fieldbook-layout">
         <aside className="filter-rail">
-          <div className="filter-rail__heading"><span>INDEX</span><strong>{t("relationshipIndex")}</strong></div>
-          <nav aria-label={t("relationshipFilterAria")}>
+          <div className="filter-rail__heading"><span>INDEX</span><strong>{t(locale, "relationshipIndex")}</strong></div>
+          <nav aria-label={t(locale, "relationshipFilterAria")}>
             {filters.map((item, index) => (
               <button className={filter === item.key ? "is-active" : ""} key={item.key} onClick={() => setFilter(item.key)}>
                 <span>{String(index + 1).padStart(2, "0")}</span>
@@ -264,9 +278,15 @@ function Dashboard() {
             ))}
           </nav>
           <div className="local-settings">
-            <span>{t("localControls")}</span>
-            <label><input type="checkbox" disabled={!settingsReady || !hasConsent} checked={settings.observerEnabled} onChange={(event) => void setSetting("observerEnabled", event.target.checked)} /><i />{t("annotateAndCollect")}</label>
-            <label><input type="checkbox" checked={settings.showBadges} onChange={(event) => void setSetting("showBadges", event.target.checked)} /><i />{t("showPageBadges")}</label>
+            <span>{t(locale, "localControls")}</span>
+            <label><input type="checkbox" disabled={!settingsReady || !hasConsent} checked={settings.observerEnabled} onChange={(event) => void setSetting("observerEnabled", event.target.checked)} /><i />{t(locale, "annotateAndCollect")}</label>
+            <label><input type="checkbox" checked={settings.showBadges} onChange={(event) => void setSetting("showBadges", event.target.checked)} /><i />{t(locale, "showPageBadges")}</label>
+            <LanguageSwitch
+              disabled={!settingsReady}
+              locale={locale}
+              value={settings.uiLocale}
+              onChange={(uiLocale) => void setSetting("uiLocale", uiLocale)}
+            />
           </div>
         </aside>
 
@@ -274,32 +294,32 @@ function Dashboard() {
           <div className="records-toolbar">
             <label className="search-box">
               <Icon name="search" />
-              <input ref={searchInput} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("searchPlaceholder")} />
+              <input ref={searchInput} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t(locale, "searchPlaceholder")} />
               <kbd>⌘ K</kbd>
             </label>
-            <label className="sort-box">{t("sortLabel")}
+            <label className="sort-box">{t(locale, "sortLabel")}
               <select value={sort} onChange={(event) => setSort(event.target.value as Sort)}>
-                <option value="recent">{t("sortRecent")}</option>
-                <option value="handle">{t("sortHandle")}</option>
-                <option value="observations">{t("sortObservations")}</option>
+                <option value="recent">{t(locale, "sortRecent")}</option>
+                <option value="handle">{t(locale, "sortHandle")}</option>
+                <option value="observations">{t(locale, "sortObservations")}</option>
               </select>
               <Icon name="chevron" />
             </label>
             <div className="export-menu">
               <button onClick={exportCsv}><Icon name="download" />CSV</button>
               <button onClick={() => void exportJson()}><Icon name="archive" />JSON</button>
-              <button className="danger-text" title={t("clearLocalData")} onClick={() => void clearEverything()}><Icon name="trash" /></button>
+              <button className="danger-text" title={t(locale, "clearLocalData")} onClick={() => void clearEverything()}><Icon name="trash" /></button>
             </div>
           </div>
 
           <div className="records-meta">
-            <p>{t("matchingRecords", { count: visibleUsers.length })}</p>
-            <p>{t("recentlyRefreshed")} <span>{users[0] ? relativeTime(users[0].lastSeenAt, locale) : t("neverObserved")}</span></p>
+            <p>{t(locale, "matchingRecords", { count: visibleUsers.length })}</p>
+            <p>{t(locale, "recentlyRefreshed")} <span>{users[0] ? relativeTime(users[0].lastSeenAt, locale) : t(locale, "neverObserved")}</span></p>
           </div>
 
           <div className="record-list">
             {!loading && visibleUsers.length === 0 ? (
-              <div className="dashboard-empty"><Icon name="eye" /><h2>{t("emptyDashboardTitle")}</h2><p>{t("emptyDashboardBody")}</p></div>
+              <div className="dashboard-empty"><Icon name="eye" /><h2>{t(locale, "emptyDashboardTitle")}</h2><p>{t(locale, "emptyDashboardBody")}</p></div>
             ) : null}
             {visibleUsers.map((user, index) => {
               const display = displayRelationship(user);
@@ -324,14 +344,14 @@ function Dashboard() {
                   </div>
                   <div className="user-record__observation">
                     <span><Icon name="clock" />{relativeTime(user.lastSeenAt, locale)}</span>
-                    <small>{t("observationCount", { count: user.observationCount, source: sourceTypeLabel(locale, user.lastSourceType) })}</small>
+                    <small>{t(locale, "observationCount", { count: user.observationCount, source: sourceTypeLabel(locale, user.lastSourceType) })}</small>
                   </div>
                   <div className="user-record__actions">
-                    {user.hasChanged ? <button title={t("acknowledgeChangeTitle")} aria-label={t("acknowledgeChangeAria")} onClick={() => void acknowledgeChange(user.key)}><Icon name="check" /></button> : null}
-                    <button title={t("viewHistoryTitle")} aria-label={t("viewHistoryAria")} className={expanded ? "is-active" : ""} onClick={() => setExpandedUser(expanded ? null : user.key)}><Icon name="history" /></button>
-                    <button title={t("deleteRecordTitle")} aria-label={t("deleteRecordAria")} onClick={() => void deleteOne(user)}><Icon name="trash" /></button>
+                    {user.hasChanged ? <button title={t(locale, "acknowledgeChangeTitle")} aria-label={t(locale, "acknowledgeChangeAria")} onClick={() => void acknowledgeChange(user.key)}><Icon name="check" /></button> : null}
+                    <button title={t(locale, "viewHistoryTitle")} aria-label={t(locale, "viewHistoryAria")} className={expanded ? "is-active" : ""} onClick={() => setExpandedUser(expanded ? null : user.key)}><Icon name="history" /></button>
+                    <button title={t(locale, "deleteRecordTitle")} aria-label={t(locale, "deleteRecordAria")} onClick={() => void deleteOne(user)}><Icon name="trash" /></button>
                   </div>
-                  {expanded ? <div className="user-record__history"><UserHistory userKey={user.key} /></div> : null}
+                  {expanded ? <div className="user-record__history"><UserHistory userKey={user.key} locale={locale} /></div> : null}
                 </article>
               );
             })}
@@ -342,17 +362,17 @@ function Dashboard() {
       {notice ? <button className="toast" onClick={() => setNotice(null)}>{notice}<span>×</span></button> : null}
       <footer className="dashboard-footer">
         <Brand compact locale={locale} />
-        <p>{t("localOnlyFooter")}</p>
+        <p>{t(locale, "localOnlyFooter")}</p>
         <a
-          aria-label={t("sendFeedbackAria")}
+          aria-label={t(locale, "sendFeedbackAria")}
           className="dashboard-footer__feedback"
           href={PROJECT_FEEDBACK_URL}
           rel="noreferrer"
           target="_blank"
         >
-          {t("sendFeedback")}
+          {t(locale, "sendFeedback")}
         </a>
-        <p>{t("brandName")} {extensionVersion}</p>
+        <p>{t(locale, "brandName")} {extensionVersion}</p>
       </footer>
     </main>
   );

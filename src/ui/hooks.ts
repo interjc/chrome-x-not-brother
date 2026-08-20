@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { ObserverSettings, UserRecord } from "../domain/types";
 import { db } from "../storage/database";
 import {
+  coerceSettings,
   DEFAULT_SETTINGS,
   getSettings,
   SETTINGS_KEY,
@@ -52,7 +53,7 @@ export function useObserverSettings(): {
       const saved = changes[SETTINGS_KEY].newValue as
         | Partial<ObserverSettings>
         | undefined;
-      setSettings({ ...DEFAULT_SETTINGS, ...saved });
+      setSettings(coerceSettings(saved));
       setSettingsReady(true);
     };
 

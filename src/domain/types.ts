@@ -87,12 +87,16 @@ export interface UserRecord {
   latestEvidence: EvidenceType[];
 }
 
+export const UI_LOCALE_PREFERENCES = ["auto", "en", "ja", "zh-CN"] as const;
+export type UiLocalePreference = (typeof UI_LOCALE_PREFERENCES)[number];
+
 export interface ObserverSettings {
   consentVersion: number;
   observerEnabled: boolean;
   showBadges: boolean;
   dockCollapsed: boolean;
   viewerHandle: string | null;
+  uiLocale: UiLocalePreference;
 }
 
 export interface ObservationSummary {

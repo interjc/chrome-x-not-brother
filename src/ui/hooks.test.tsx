@@ -11,6 +11,7 @@ const initialSettings: ObserverSettings = {
   showBadges: true,
   dockCollapsed: false,
   viewerHandle: null,
+  uiLocale: "auto",
 };
 
 function SettingsProbe({

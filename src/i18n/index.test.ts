@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   getDocumentLocale,
   normalizeLocale,
+  resolveUiLocale,
   relationshipPresentation,
   sourceTypeLabel,
   translate,
@@ -18,6 +19,16 @@ describe("runtime internationalization", () => {
   it("uses the X document language ahead of the extension UI locale", () => {
     document.documentElement.lang = "ja-JP";
     expect(getDocumentLocale(document)).toBe("ja");
+  });
+
+  it("resolves a stored UI language preference, defaulting to the browser", () => {
+    expect(resolveUiLocale("ja")).toBe("ja");
+    expect(resolveUiLocale("zh-CN")).toBe("zh-CN");
+    expect(resolveUiLocale("en")).toBe("en");
+    vi.stubGlobal("chrome", { i18n: { getUILanguage: () => "ja-JP" } });
+    expect(resolveUiLocale("auto")).toBe("ja");
+    expect(resolveUiLocale(undefined)).toBe("ja");
+    vi.unstubAllGlobals();
   });
 
   it("substitutes values and localizes domain presentation", () => {
@@ -50,6 +61,15 @@ describe("runtime internationalization", () => {
     expect(translate("zh-CN", "dockCollapseAria")).toContain("悬浮球");
     expect(translate("en", "dockExpandAria")).toContain("Expand");
     expect(translate("ja", "dockCollapseAria")).toContain("フローティング");
+  });
+
+  it("localizes the extension language switcher", () => {
+    expect(translate("zh-CN", "languageFollowBrowser")).toContain("浏览器");
+    expect(translate("en", "languageFollowBrowser")).toContain("browser");
+    expect(translate("ja", "languageFollowBrowser")).toContain("ブラウザー");
+    expect(translate("en", "languageEnglish")).toBe("English");
+    expect(translate("ja", "languageJapanese")).toBe("日本語");
+    expect(translate("zh-CN", "languageChinese")).toBe("简体中文");
   });
 
   it("localizes the GitHub Issues feedback link", () => {

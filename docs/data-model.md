@@ -2,7 +2,7 @@
 
 数据库名：`not-brother-v1`，Dexie schema version：1。
 
-`chrome.storage.local` 另外保存观察设置、同意版本、观察 dock 的 `dockCollapsed` 展示偏好和仅用于排除本人的 `viewerHandle`；这些字段不属于关系数据库。旧设置没有 `dockCollapsed` 时默认展开，不需要数据库迁移。
+`chrome.storage.local` 另外保存观察设置、同意版本、观察 dock 的 `dockCollapsed` 展示偏好、插件界面语言 `uiLocale`，以及仅用于排除本人的 `viewerHandle`；这些字段不属于关系数据库。旧设置没有 `dockCollapsed` 时默认展开，没有 `uiLocale` 时默认 `auto`（跟随浏览器语言），不需要数据库迁移。
 
 从 0.4.0 起，`unknown` 只是 adapter/domain 的内部结果，不是数据库状态。content script 不发送它，service worker 和 repository 也会防御性拒绝；扩展启动和安装时清理旧版本遗留的 unknown users 与 observations。
 

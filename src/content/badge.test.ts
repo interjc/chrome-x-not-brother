@@ -14,7 +14,7 @@ describe("relationship badge", () => {
     expect(anchor.querySelectorAll("[data-xro-badge]")).toHaveLength(1);
     expect(anchor.textContent).toContain("关系变化");
     expect(anchor.innerHTML).not.toContain("script");
-    expect(anchor.querySelector("a + [data-xro-badge]")).not.toBeNull();
+    expect(anchor.querySelector("[data-xro-badge] + a")).not.toBeNull();
   });
 
   it("places a related-user badge under the avatar", () => {
@@ -57,7 +57,7 @@ describe("relationship badge", () => {
     expect(anchor.querySelector("time + [data-xro-badge]")).toBeNull();
   });
 
-  it("keeps a reply-thread badge beside the display name instead of creating a second row", () => {
+  it("places a reply-thread badge immediately before the visible @handle", () => {
     const anchor = document.createElement("div");
     anchor.innerHTML = `
       <div class="identity-column">
@@ -70,14 +70,77 @@ describe("relationship badge", () => {
 
     setRelationshipBadge(anchor, "blocked_by", "Shiori_1001_", "zh-CN");
 
-    const row = anchor.querySelector<HTMLElement>("[data-xro-badge-row]");
-    expect(row?.classList.contains("xro-name-badge-row")).toBe(true);
-    expect(row?.querySelector("a + [data-xro-badge='blocked_by']")).not.toBeNull();
-    expect(anchor.querySelector(".metadata-row [data-xro-badge]")).toBeNull();
+    const handle = anchor.querySelector(".metadata-row a");
+    expect(handle?.previousElementSibling?.getAttribute("data-xro-badge")).toBe("blocked_by");
+    expect(anchor.querySelector(".identity-column [data-xro-badge]")).toBeNull();
+    expect(anchor.querySelector("time + [data-xro-badge]")).toBeNull();
 
     removeRelationshipBadge(anchor);
+    expect(anchor.querySelector("[data-xro-badge]")).toBeNull();
     expect(anchor.querySelector("[data-xro-badge-row]")).toBeNull();
     expect(anchor.querySelector(".xro-name-badge-row")).toBeNull();
+  });
+
+  it("places a space-separated name-row badge before the handle, not after the timestamp", () => {
+    const anchor = document.createElement("div");
+    anchor.setAttribute("data-testid", "User-Name");
+    anchor.innerHTML = `
+      <div class="row" style="display:flex; justify-content:space-between">
+        <a href="/Lee"><span>李四</span></a>
+        <div class="meta">
+          <a href="/Lee"><span>@Lee</span></a>
+          <span>·</span>
+          <a href="/Lee/status/1"><time>19小时</time></a>
+        </div>
+      </div>
+    `;
+
+    setRelationshipBadge(anchor, "mutual", "Lee", "zh-CN");
+
+    const handle = anchor.querySelector(".meta a[href='/Lee']");
+    expect(handle?.previousElementSibling?.getAttribute("data-xro-badge")).toBe("mutual");
+    expect(anchor.querySelector("time + [data-xro-badge]")).toBeNull();
+    expect(anchor.querySelector(".row")?.classList.contains("xro-name-badge-row")).toBe(false);
+  });
+
+  it("relocates a badge that was previously inserted after the timestamp", () => {
+    const anchor = document.createElement("div");
+    anchor.innerHTML = `
+      <a href="/Alice"><span>Alice</span></a>
+      <a href="/Alice"><span>@Alice</span></a>
+      <a href="/Alice/status/1"><time>2h</time></a>
+    `;
+    const stale = document.createElement("span");
+    stale.setAttribute("data-xro-badge", "mutual");
+    stale.className = "xro-badge xro-badge--mutual";
+    stale.textContent = "互关";
+    anchor.querySelector("time")?.parentElement?.insertAdjacentElement("afterend", stale);
+
+    setRelationshipBadge(anchor, "mutual", "Alice", "zh-CN");
+
+    expect(anchor.querySelectorAll("[data-xro-badge]")).toHaveLength(1);
+    const handle = [...anchor.querySelectorAll("a[href='/Alice']")]
+      .find((link) => link.textContent?.includes("@Alice"));
+    expect(handle?.previousElementSibling?.getAttribute("data-xro-badge")).toBe("mutual");
+    expect(anchor.querySelector("a[href='/Alice/status/1'] + [data-xro-badge]")).toBeNull();
+  });
+
+  it("inserts before a handle nested inside a wrapping status permalink", () => {
+    const anchor = document.createElement("div");
+    anchor.innerHTML = `
+      <a href="/Alice/status/123">
+        <span>Alice Example</span>
+        <span>@Alice</span>
+        <time>2h</time>
+      </a>
+    `;
+
+    setRelationshipBadge(anchor, "mutual", "Alice", "zh-CN");
+
+    const handle = [...anchor.querySelectorAll("span")]
+      .find((element) => element.textContent === "@Alice");
+    expect(handle?.previousElementSibling?.getAttribute("data-xro-badge")).toBe("mutual");
+    expect(anchor.querySelector("time + [data-xro-badge]")).toBeNull();
   });
 
   it("adds and removes a strong identity mark for blocked-by", () => {

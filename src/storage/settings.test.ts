@@ -31,6 +31,7 @@ describe("observer settings", () => {
     expect(DEFAULT_SETTINGS.consentVersion).toBe(0);
     expect(DEFAULT_SETTINGS.observerEnabled).toBe(false);
     expect(DEFAULT_SETTINGS.dockCollapsed).toBe(false);
+    expect(DEFAULT_SETTINGS.uiLocale).toBe("auto");
   });
 
   it("persists affirmative consent and observation atomically", async () => {
@@ -58,6 +59,24 @@ describe("observer settings", () => {
 
     expect(settings.dockCollapsed).toBe(true);
     expect(await getSettings()).toEqual(settings);
+  });
+
+  it("defaults missing UI language preference to follow the browser", async () => {
+    storage.set(SETTINGS_KEY, { consentVersion: 1, observerEnabled: true });
+
+    expect(await getSettings()).toMatchObject({
+      consentVersion: 1,
+      observerEnabled: true,
+      uiLocale: "auto",
+    });
+  });
+
+  it("persists a manual UI language and rejects unknown values", async () => {
+    const settings = await updateSettings({ uiLocale: "ja" });
+    expect(settings.uiLocale).toBe("ja");
+
+    storage.set(SETTINGS_KEY, { ...settings, uiLocale: "fr" });
+    expect(await getSettings()).toMatchObject({ uiLocale: "auto" });
   });
 
   it("reports an invalidated extension context without dereferencing storage.local", async () => {
