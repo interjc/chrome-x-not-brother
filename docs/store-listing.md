@@ -28,6 +28,12 @@ Not Brother is an independent extension and is not affiliated with, endorsed by,
 
 Source code is available at https://github.com/interjc/chrome-x-not-brother. Report problems and ask for support on the repository Issues page.
 
+### Version 0.4.9 release notes
+
+- Adds a language switcher in the Side Panel and Fieldbook. It defaults to the browser language; choosing English, Japanese, or Simplified Chinese also updates relationship badges and the observer dock on X.
+- Avoids labeling photo-viewer conversation cards as blocked-you while the right-hand list is still scrolling.
+- Places relationship badges immediately before the visible @handle and evens out the spacing around the tag.
+
 ### Version 0.4.8 release notes
 
 - Identifies Home timeline authors from status permalinks, avatars, and cleaned handle text so known local records can annotate cards without a hover card.
@@ -73,6 +79,12 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 不是兄弟是独立开发的扩展，与 X Corp. 不存在隶属、认可或赞助关系。
 
 源码位于 https://github.com/interjc/chrome-x-not-brother。问题反馈与支持请使用仓库的 Issues 页面。
+
+### 0.4.9 更新说明
+
+- Side Panel 和关系档案库可手工切换界面语言，默认跟随浏览器；选中英语、日语或简体中文后，X 页面上的关系徽标和观察 dock 也会一起切换。
+- 打开图片查看器并滑动右侧列表时，不再把尚未稳定的会话卡片误标成“拉黑了你”。
+- 关系徽标统一放在可见 @handle 之前，并调整标签左右空隙。
 
 ### 0.4.8 更新说明
 
@@ -120,6 +132,12 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 兄貴じゃないは独立した拡張機能であり、X Corp. との提携、承認、スポンサー関係はありません。
 
 ソースコードは https://github.com/interjc/chrome-x-not-brother で公開しています。不具合報告とサポートはリポジトリの Issues ページをご利用ください。
+
+### 0.4.9 更新内容
+
+- サイドパネルと関係アーカイブで表示言語を切り替えられます。初期値はブラウザー言語で、英語・日本語・簡体字中国語を選ぶと X 上の関係バッジと観察ドックも切り替わります。
+- 画像ビューア右側のリストをスクロール中に、未確定の会話カードを「ブロックされた」と誤表示しなくなりました。
+- 関係バッジを見える @handle の直前に揃え、左右の余白を調整しました。
 
 ### 0.4.8 更新内容
 
