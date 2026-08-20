@@ -48,8 +48,8 @@ npm run skills:validate
 4. 打开 X 首页，确认自己关注的作者在无需悬停时出现单向关注或互关徽标；完全没有载入关系字段的卡片不得出现“未知”徽标，也不得进入最近观察。
 5. 打开自己的 following 页面，验证可见 UserCell 的 following 证据。
 6. 打开自己的 followers 页面，验证 follows-you 证据。
-7. 分别把 Chrome UI 设为英语、日语和简体中文，验证 Side Panel、管理页、首次披露、工具栏 title、时间与确认对话框自动切换；未支持语言应完整回退英语。打开 Side Panel 确认语言选择器默认是“跟随浏览器语言”，再分别选日语和简体中文，确认面板文案、`document.documentElement.lang` 和已打开档案库即时切换，X 页面徽标与 dock 仍跟随 X 语言。
-8. 把 X 语言设成与 Chrome 不同的支持语言，验证 X 页面徽标和观察 dock 跟随 X 而不是 Chrome。
+7. 分别把 Chrome UI 设为英语、日语和简体中文，验证 Side Panel、管理页、首次披露、工具栏 title、时间与确认对话框自动切换；未支持语言应完整回退英语。打开 Side Panel 确认语言选择器默认是“跟随浏览器语言”，再分别选日语和英语，确认面板文案、`document.documentElement.lang`、已打开档案库，以及当前 X 页面上的关系徽标和观察 dock 都即时切换；选回“跟随浏览器语言”后，页面标签重新跟随 X 语言。
+8. 语言选择保持“跟随浏览器语言”时，把 X 语言设成与 Chrome 不同的支持语言，验证 X 页面徽标和观察 dock 跟随 X 而不是 Chrome。
 9. 主动打开一个明确显示 blocked notice 的测试资料，验证本地化的“拉黑了你”。
 10. 打开帖子详情/评论线程，验证带明确 blocked-by 平台提示的 `User-Name` 作者被标注。
 11. 找到一个评论作者的回复、转发、点赞都不可操作、而同页其他帖子三项正常的场景，验证 `@handle` 前面出现红色 `! 拉黑了你` 增强徽标并写入档案，同时 `@handle` 与日期仍保持 X 原生排列。

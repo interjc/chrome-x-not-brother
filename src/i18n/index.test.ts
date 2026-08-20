@@ -28,6 +28,8 @@ describe("runtime internationalization", () => {
     vi.stubGlobal("chrome", { i18n: { getUILanguage: () => "ja-JP" } });
     expect(resolveUiLocale("auto")).toBe("ja");
     expect(resolveUiLocale(undefined)).toBe("ja");
+    expect(resolveUiLocale("auto", "en")).toBe("en");
+    expect(resolveUiLocale("zh-CN", "en")).toBe("zh-CN");
     vi.unstubAllGlobals();
   });
 

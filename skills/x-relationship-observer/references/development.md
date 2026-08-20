@@ -34,7 +34,7 @@ Python is managed through pyenv. The repository currently has no Python runtime 
 3. Run `npm run check`.
 4. Run `npm run build && npm run validate:dist`.
 5. Manually exercise English, Japanese, and Simplified Chinese fixtures or live pages when selectors change.
-6. When UI copy changes, update all three runtime catalogs. When manifest metadata changes, also update `public/_locales/en`, `ja`, and `zh_CN`; verify extension pages default to the Chrome UI language, honor a stored `uiLocale` override from the language switcher, and keep injected X UI following the page language.
+6. When UI copy changes, update all three runtime catalogs. When manifest metadata changes, also update `public/_locales/en`, `ja`, and `zh_CN`; verify extension pages default to the Chrome UI language, honor a stored `uiLocale` override from the language switcher, and keep injected X badges/dock on that override (or the page language when `auto`).
 
 Side Panel interaction changes require both pure filter-model tests and a rendered React component test covering pressed state, filtered/empty lists, viewer exclusion, and the exact user-gesture X profile link.
 

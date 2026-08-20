@@ -34,7 +34,7 @@ Treat `viewerHandle` as exclusion-only data. Verify scan, database cleanup, summ
 
 Treat `dockCollapsed` as a presentation-only `chrome.storage.local` preference. Older partial settings must default to the expanded panel, and panel/bubble changes must retain keyboard access, status indication, X-theme parity, and narrow-screen safe margins.
 
-Treat `uiLocale` as a presentation-only `chrome.storage.local` preference. Missing or unknown values default to `auto` (Chrome UI language). A manual English, Japanese, or Simplified Chinese choice updates already-open Side Panel and dashboard pages and the toolbar title; it must not change X-injected badge or dock language, and it must not increment consent.
+Treat `uiLocale` as a presentation-only `chrome.storage.local` preference. Missing or unknown values default to `auto` (Chrome UI language for extension pages, X page language for injected badges and dock). A manual English, Japanese, or Simplified Chinese choice updates already-open Side Panel and dashboard pages, the toolbar title, and X-injected badges and dock; it must not increment consent.
 
 Repository startup and install cleanup must purge legacy unknown users and observations. Import, export, summaries, content messages, and background writes must all keep the same filter.
 

@@ -66,7 +66,7 @@ flowchart LR
 
 - `public/_locales/{en,ja,zh_CN}/messages.json` 提供 Chrome 解析的扩展名称、说明和工具栏默认标题；Manifest 使用 `__MSG_*__` 并以 `en` 为 `default_locale`。
 - `src/i18n/index.ts` 是运行时 UI 的类型化三语词库，集中提供语言归一化、占位符替换、关系展示和来源名称。
-- Side Panel、dashboard 与 service worker 默认通过 `chrome.i18n.getUILanguage()` 选择语言；`uiLocale` 不是 `auto` 时覆盖为用户在插件面板选择的语言。content script 优先读取 X 文档的 `lang`。
+- Side Panel、dashboard 与 service worker 默认通过 `chrome.i18n.getUILanguage()` 选择语言；`uiLocale` 不是 `auto` 时覆盖为用户在插件面板选择的语言。content script 在 `auto` 时读取 X 文档的 `lang`，手工选择后关系徽标和观察 dock 也改用该语言。
 - `zh-*` 归一化为 `zh-CN`，`ja-*` 归一化为 `ja`，其余未支持语言归一化为 `en`。界面语言偏好只存在 `chrome.storage.local`，不存进用户数据库，也不改变关系事实。
 
 ## 构建

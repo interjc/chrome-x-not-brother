@@ -65,7 +65,7 @@ content script 在页面右下角插入一个不可与 X 原生控件混淆的�
 
 ## 语言与排版
 
-Side Panel、Relationship Fieldbook、工具栏提示默认跟随 Chrome UI 语言，也可在插件面板手工切换并记住；Manifest 元数据仍由 Chrome `_locales` 解析。X 页面用户名徽标与观察 dock 跟随 `document.documentElement.lang`，因此用户把 X 设成与 Chrome 不同的语言时，注入内容仍与页面一致。支持简体中文、英语和日语，其他语言使用英语兜底。
+Side Panel、Relationship Fieldbook、工具栏提示默认跟随 Chrome UI 语言，也可在插件面板手工切换并记住；Manifest 元数据仍由 Chrome `_locales` 解析。语言选择为“跟随浏览器”时，X 页面用户名徽标与观察 dock 跟随 `document.documentElement.lang`；手工选中英语、日语或简体中文后，页面标签和 dock 也改用该语言。支持简体中文、英语和日语，其他语言使用英语兜底。
 
 翻译不仅覆盖正文，也覆盖首次同意、确认对话框、按钮 tooltip、ARIA label、空状态、相对时间、来源类型、CSV 关系标签和 blocked-by 徽标。所有语言复用相同关系色、信息层级和交互，不因语言改变功能集合。详细规则见 [国际化设计](localization.md)。
 

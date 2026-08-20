@@ -18,7 +18,7 @@ import type {
   ObserverSettings,
   UserRecord,
 } from "../domain/types";
-import { getDocumentLocale } from "../i18n";
+import { getDocumentLocale, resolveUiLocale, type AppLocale } from "../i18n";
 import {
   CURRENT_CONSENT_VERSION,
   getSettings,
@@ -142,15 +142,19 @@ function syncPageTheme(): void {
   document.documentElement.dataset.xroTheme = luminance < 128 ? "dark" : "light";
 }
 
+function pageUiLocale(settings: ObserverSettings | null = latestSettings): AppLocale {
+  return resolveUiLocale(settings?.uiLocale, getDocumentLocale(document));
+}
+
 async function openSidePanel(): Promise<void> {
   try {
     const response = (await chrome.runtime.sendMessage({
       type: "sidepanel:open",
     })) as OpenSidePanelResponse;
-    if (!response.ok) showObserverPanelOpenHint(document);
+    if (!response.ok) showObserverPanelOpenHint(document, pageUiLocale());
   } catch (error) {
     if (isExtensionContextInvalidated(error)) stopContentScript();
-    else showObserverPanelOpenHint(document);
+    else showObserverPanelOpenHint(document, pageUiLocale());
   }
 }
 
@@ -161,7 +165,7 @@ function renderPanel(settings: ObserverSettings): void {
       ? settings.observerEnabled ? "active" : "paused"
       : "needs-consent",
     summary: latestSummary,
-    locale: getDocumentLocale(document),
+    locale: pageUiLocale(settings),
     collapsed: settings.dockCollapsed,
     version: chrome.runtime.getManifest().version,
   }, () => void openSidePanel(), (collapsed) => void setPanelCollapsed(collapsed));
@@ -217,7 +221,7 @@ function bestObservations(candidates: ExtractedCandidate[]): ObservationDraft[] 
 }
 
 function annotate(candidates: ExtractedCandidate[]): void {
-  const locale = getDocumentLocale(document);
+  const locale = pageUiLocale();
   for (const candidate of candidates) {
     const stored = recordCache.get(candidate.observation.userKey);
     const relationship = candidateDisplayRelationship(

@@ -510,11 +510,12 @@ export function getExtensionLocale(): AppLocale {
 
 export function resolveUiLocale(
   preference: UiLocalePreference | null | undefined,
+  autoLocale: AppLocale = getExtensionLocale(),
 ): AppLocale {
   if (preference === "en" || preference === "ja" || preference === "zh-CN") {
     return preference;
   }
-  return getExtensionLocale();
+  return autoLocale;
 }
 
 export function getDocumentLocale(doc: Document): AppLocale {

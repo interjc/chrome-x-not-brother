@@ -148,11 +148,14 @@ export function renderObserverPanel(
   return root;
 }
 
-export function showObserverPanelOpenHint(doc: Document): void {
+export function showObserverPanelOpenHint(
+  doc: Document,
+  locale: AppLocale = getDocumentLocale(doc),
+): void {
   const button = doc.querySelector<HTMLButtonElement>(
     `#${ROOT_ID} .xro-observer-panel__action`,
   );
-  if (button) button.textContent = translate(getDocumentLocale(doc), "dockToolbarHint");
+  if (button) button.textContent = translate(locale, "dockToolbarHint");
 }
 
 export function removeObserverPanel(doc: Document): void {
