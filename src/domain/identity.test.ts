@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  handleAvatarUrl,
   isProfileImageUrl,
   isUsableDisplayName,
   normalizeProfileImageUrl,
   preferAvatarUrl,
   preferDisplayName,
+  profileUrlForHandle,
   visibleDisplayName,
 } from "./identity";
 
@@ -35,5 +37,11 @@ describe("identity presentation", () => {
     expect(preferAvatarUrl("https://example.com/cat.jpg", normal)).toBe(
       "https://pbs.twimg.com/profile_images/1/abc_x96.jpg",
     );
+  });
+
+  it("builds a handle avatar and profile URL from the screen name", () => {
+    expect(handleAvatarUrl("OpenAIDevs")).toBe("https://unavatar.io/x/OpenAIDevs");
+    expect(profileUrlForHandle("OpenAIDevs")).toBe("https://x.com/OpenAIDevs");
+    expect(handleAvatarUrl(" name/with?x ")).toBe("https://unavatar.io/x/name%2Fwith%3Fx");
   });
 });

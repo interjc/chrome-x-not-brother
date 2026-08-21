@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { isProfileImageUrl, visibleDisplayName } from "../../domain/identity";
+import { useEffect, useState } from "react";
+import { handleAvatarUrl, isProfileImageUrl, visibleDisplayName } from "../../domain/identity";
 
 export function Avatar({
   avatarUrl,
@@ -10,21 +10,38 @@ export function Avatar({
   displayName: string | null;
   handle: string;
 }) {
-  const [failed, setFailed] = useState(false);
+  const constructed = handleAvatarUrl(handle);
+  const stored = isProfileImageUrl(avatarUrl) ? avatarUrl : null;
+  const [mode, setMode] = useState<"constructed" | "stored" | "fallback">("constructed");
+
+  useEffect(() => {
+    setMode("constructed");
+  }, [handle, stored]);
+
   const letter = [...visibleDisplayName(displayName, handle).replace(/^@/, "") || handle][0]
     ?.toUpperCase() ?? "?";
-  if (!isProfileImageUrl(avatarUrl) || failed) {
+
+  if (mode === "fallback") {
     return <span className="avatar avatar--fallback">{letter}</span>;
   }
+
+  const src = mode === "constructed" ? constructed : stored;
+  if (!src) {
+    return <span className="avatar avatar--fallback">{letter}</span>;
+  }
+
   return (
     <img
       alt=""
       className="avatar"
       height="42"
       loading="lazy"
-      onError={() => setFailed(true)}
+      onError={() => {
+        if (mode === "constructed" && stored) setMode("stored");
+        else setMode("fallback");
+      }}
       referrerPolicy="no-referrer"
-      src={avatarUrl}
+      src={src}
       width="42"
     />
   );

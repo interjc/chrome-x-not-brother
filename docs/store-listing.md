@@ -28,6 +28,12 @@ Not Brother is an independent extension and is not affiliated with, endorsed by,
 
 Source code is available at https://github.com/interjc/chrome-x-not-brother. Report problems and ask for support on the repository Issues page.
 
+### Version 0.4.10 release notes
+
+- In post details, keeps X's display name and @handle on one line and puts the relationship badge on the next line, with 1–2px between the left accent and the name.
+- Shows Side Panel and Fieldbook avatars from the account handle so each photo matches that user.
+- Opens the matching X profile from a Fieldbook avatar, display name, or @handle click. The Side Panel row still opens the same profile. 
+
 ### Version 0.4.9 release notes
 
 - Adds a language switcher in the Side Panel and Fieldbook. It defaults to the browser language; choosing English, Japanese, or Simplified Chinese also updates relationship badges and the observer dock on X.
@@ -79,6 +85,12 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 不是兄弟是独立开发的扩展，与 X Corp. 不存在隶属、认可或赞助关系。
 
 源码位于 https://github.com/interjc/chrome-x-not-brother。问题反馈与支持请使用仓库的 Issues 页面。
+
+### 0.4.10 更新说明
+
+- 帖子详情把 X 原有的显示名和 @handle 放在一行，关系标签单独在下一行；左边线与名字只留 1–2px。
+- 侧栏和档案库按 handle 显示对应账号头像，避免串用其他账号的图片。
+- 档案库点击头像、显示名或 @handle 会打开该账号 X 主页；侧栏整行同样打开资料。 
 
 ### 0.4.9 更新说明
 
@@ -132,6 +144,12 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 兄貴じゃないは独立した拡張機能であり、X Corp. との提携、承認、スポンサー関係はありません。
 
 ソースコードは https://github.com/interjc/chrome-x-not-brother で公開しています。不具合報告とサポートはリポジトリの Issues ページをご利用ください。
+
+### 0.4.10 更新内容
+
+- 投稿詳細では X 本来の表示名と @handle を 1 行にまとめ、関係バッジは次の行に置きます。左のアクセントと名前の間隔は 1–2px です。
+- サイドパネルと関係アーカイブのアバターをハンドルから表示し、別アカウントの画像を使いません。
+- アーカイブでアバター・表示名・@handle をクリックするとその X プロフィールを開きます。サイドパネルの行も同じです。 
 
 ### 0.4.9 更新内容
 
@@ -213,7 +231,7 @@ Dashboard 字段可能调整，提交时以实际界面为准。当前代码应�
 | Personal communications | No | 不读取私信或帖子正文。 |
 | Location, financial, health information | No | 功能不读取这些类别。 |
 | Data sale or advertising | No | 不出售数据，也不用于广告、信用或画像。 |
-| Data transfer | No developer/third-party transfer | 观察数据留在扩展本地存储；头像视图可能直接请求已有 X CDN URL。 |
+| Data transfer | No developer/third-party transfer | 观察数据留在扩展本地存储；侧栏/档案库展示头像时浏览器可能请求 unavatar.io/x/{handle}，失败后再请求已保存的 X CDN URL。 |
 
 ## Reviewer notes
 

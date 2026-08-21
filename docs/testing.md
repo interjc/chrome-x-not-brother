@@ -24,8 +24,9 @@ npm run skills:validate
 - 只有转发不可用、互动控件缺失（即使同页有正常对照）、空 testid 壳、滚动 `pointer-events: none`、`aria-hidden` 虚拟单元格、图片浮层借用背后时间线、三项受限但缺少同层对照、正常浮窗含计数时不误判 blocked-by；
 - 已确认的本地 blocked-by 可回标当前证据不足的同 handle 卡片；
 - 同 handle 完整浮窗可用 follow/unfollow 与 `userFollowIndicator` 补全普通关系，不匹配浮窗不会污染其他作者；
-- 评论线程的徽标固定插在可见 `@handle` 之前，不得出现在时间戳之后；没有可见 handle 时才跟在显示名称后面；移除徽标时也清理局部横排类，不改变 `@handle` 与日期结构；
+- 评论线程的徽标固定插在可见 `@handle` 之前，不得出现在时间戳之后；没有可见 handle 时才跟在显示名称后面；帖子详情等不含时间戳的 `User-Name` 应把 X 原有显示名和 `@handle` 放在一行，关系标签单独在下一行，左边线与显示名之间只留 1–2px；移除徽标时也清理局部横排/堆叠类，不改变已含时间祖先的 `@handle` 与日期结构；
 - 相关用户 / UserCell 的徽标放在头像正下方，不插入显示名称行；
+- Side Panel 最近观察整行打开该账号 X 资料；档案库的头像、显示名和 @handle 也打开同一资料；头像按 handle 请求公开图片，失败后再用已保存的 X CDN URL；
 - 可见且已启用页面每 2 秒兜底复扫，隐藏页暂停，恢复可见/焦点时立即复扫，重复 start 不产生多个计时器且 stop 清理监听；
 - observation 签名只在对应用户确认持久化后提交；未确认发送保持可重试，已确认的相同证据保持去重；
 - service worker 把数据变化广播到有 content script 的标签页并忽略无接收端标签页；档案页变更会使已打开 X 页清除本地关系缓存；

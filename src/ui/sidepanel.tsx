@@ -5,7 +5,7 @@ import "./styles.css";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { PROJECT_FEEDBACK_URL } from "../domain/project";
-import { visibleDisplayName } from "../domain/identity";
+import { profileUrlForHandle, visibleDisplayName } from "../domain/identity";
 import { displayRelationship, isDisplayedUser } from "../domain/relationships";
 import {
   resolveUiLocale,
@@ -185,7 +185,7 @@ export function SidePanel() {
             <a
               aria-label={t("openProfileAria", { handle: user.handle })}
               className="recent-user"
-              href={`https://x.com/${encodeURIComponent(user.handle)}`}
+              href={profileUrlForHandle(user.handle)}
               key={user.key}
               rel="noreferrer"
               target="_blank"

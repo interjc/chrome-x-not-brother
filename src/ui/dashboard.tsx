@@ -6,7 +6,7 @@ import type { CSSProperties, ChangeEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { PROJECT_FEEDBACK_URL } from "../domain/project";
-import { visibleDisplayName } from "../domain/identity";
+import { profileUrlForHandle, visibleDisplayName } from "../domain/identity";
 import { displayRelationship, isDisplayedUser } from "../domain/relationships";
 import { parseDatabaseExport, usersToCsv } from "../domain/export";
 import type { ObservationRecord, RelationshipKind, UserRecord } from "../domain/types";
@@ -331,11 +331,19 @@ function Dashboard() {
                   style={{ "--row-index": Math.min(index, 12) } as CSSProperties}
                 >
                   <div className="user-record__number">{String(index + 1).padStart(3, "0")}</div>
-                  <Avatar avatarUrl={user.avatarUrl} displayName={user.displayName} handle={user.handle} />
-                  <div className="user-record__identity">
-                    <strong>{visibleDisplayName(user.displayName, user.handle)}</strong>
-                    <a href={user.profileUrl} target="_blank" rel="noreferrer">@{user.handle}<Icon name="external" /></a>
-                  </div>
+                  <a
+                    aria-label={t(locale, "openProfileAria", { handle: user.handle })}
+                    className="user-record__person"
+                    href={profileUrlForHandle(user.handle)}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    <Avatar avatarUrl={user.avatarUrl} displayName={user.displayName} handle={user.handle} />
+                    <span className="user-record__identity">
+                      <strong>{visibleDisplayName(user.displayName, user.handle)}</strong>
+                      <span translate="no">@{user.handle}<Icon name="external" /></span>
+                    </span>
+                  </a>
                   <div className="user-record__relationship">
                     <RelationshipPill relationship={display} locale={locale} />
                     {user.hasChanged && user.previousRelationship ? (

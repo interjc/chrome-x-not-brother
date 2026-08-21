@@ -141,7 +141,7 @@ Dashboard 的 Additional fields 填这些公开 HTTPS 地址：
 - web browsing activity（仅限扩展功能所需的 `x.com` 来源 URL）；
 - 数据用途仅为扩展的单一用户可见功能；
 - 不出售、不用于广告、信用评估或与单一用途无关的用途；
-- 不传输给开发者或第三方；头像显示可能由浏览器直接请求现有 X CDN URL；
+- 不传输观察记录给开发者或第三方；侧栏/档案库展示头像时浏览器可能请求 `unavatar.io/x/{handle}`，失败后再请求已保存的 X CDN URL；
 - 遵守 Limited Use 要求。
 
 不要为了减少申报项目而漏报。Dashboard 选项和商店说明、扩展首次同意界面、[隐私政策](../terms/privacy.md) 必须相互一致。

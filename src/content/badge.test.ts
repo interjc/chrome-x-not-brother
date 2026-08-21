@@ -101,6 +101,52 @@ describe("relationship badge", () => {
     expect(handle?.previousElementSibling?.getAttribute("data-xro-badge")).toBe("mutual");
     expect(anchor.querySelector("time + [data-xro-badge]")).toBeNull();
     expect(anchor.querySelector(".row")?.classList.contains("xro-name-badge-row")).toBe(false);
+    expect(anchor.classList.contains("xro-name-badge-row")).toBe(false);
+    expect(anchor.classList.contains("xro-name-badge-stack")).toBe(false);
+  });
+
+  it("keeps overlay X identity on one row and puts the badge on the next line", () => {
+    const anchor = document.createElement("div");
+    anchor.setAttribute("data-testid", "User-Name");
+    anchor.innerHTML = `
+      <div class="name-line">
+        <a href="/thsottiaux"><span>Tibo</span></a>
+      </div>
+      <div class="handle-line">
+        <a href="/thsottiaux"><span>@thsottiaux</span></a>
+      </div>
+    `;
+
+    setRelationshipBadge(anchor, "following_only", "thsottiaux", "zh-CN");
+
+    expect(anchor.lastElementChild?.getAttribute("data-xro-badge")).toBe("following_only");
+    expect(anchor.querySelector(".handle-line [data-xro-badge]")).toBeNull();
+    expect(anchor.querySelector(".name-line [data-xro-badge]")).toBeNull();
+    expect(anchor.classList.contains("xro-name-badge-stack")).toBe(true);
+    expect(anchor.classList.contains("xro-name-badge-row")).toBe(false);
+    expect(anchor.classList.contains("xro-identity-mark--following_only")).toBe(true);
+  });
+
+  it("flattens a nested overlay name/handle column and keeps timestamps outside", () => {
+    const root = document.createElement("div");
+    root.innerHTML = `
+      <div data-testid="User-Name">
+        <div class="stack">
+          <div class="name-line"><a href="/Alice"><span>Alice</span></a></div>
+          <div class="handle-line"><a href="/Alice"><span>@Alice</span></a></div>
+        </div>
+      </div>
+      <a href="/Alice/status/1"><time>2h</time></a>
+    `;
+    const named = root.querySelector<HTMLElement>("[data-testid='User-Name']");
+    setRelationshipBadge(named ?? root, "following_only", "Alice", "zh-CN");
+
+    expect(named?.lastElementChild?.getAttribute("data-xro-badge")).toBe("following_only");
+    expect(named?.querySelector(".handle-line [data-xro-badge]")).toBeNull();
+    expect(named?.classList.contains("xro-name-badge-stack")).toBe(true);
+    expect(root.querySelector(".stack")?.classList.contains("xro-name-badge-row")).toBe(true);
+    expect(root.querySelector("time")?.closest(".xro-name-badge-row")).toBeNull();
+    expect(root.querySelector("time")?.closest(".xro-name-badge-stack")).toBeNull();
   });
 
   it("relocates a badge that was previously inserted after the timestamp", () => {

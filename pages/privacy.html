@@ -23,7 +23,7 @@
       <p>Source / 源码：<a href="https://github.com/interjc/chrome-x-not-brother">github.com/interjc/chrome-x-not-brother</a></p>
       <p>Contact / 联系：<a href="https://github.com/interjc/chrome-x-not-brother/issues">GitHub Issues</a></p>
       <p>Terms of use / 使用条款：<a href="terms.html">terms.html</a></p>
-      <p>Effective date / 生效日期：2026-08-18</p>
+      <p>Effective date / 生效日期：2026-08-21</p>
     </div>
     <p>Do not paste passwords, cookies, export backups, or other people’s account data into Issues. 请不要在 Issues 中粘贴密码、Cookie、导出备份或其他人的账号资料。</p>
 
@@ -53,7 +53,7 @@
         <li>同意版本、观察开关、徽标开关、dock 收起偏好和 viewerHandle 保存在 chrome.storage.local；</li>
         <li>没有服务器、账号系统、遥测或云同步。数据不会发送给开发者或第三方。</li>
       </ul>
-      <p>头像仍通过页面上已有的 X CDN URL 展示。打开扩展管理页时，浏览器可能直接请求该图片。</p>
+      <p>侧栏和档案库展示头像时，按 handle 请求公开头像图片（https://unavatar.io/x/{handle}）；若失败再回退到观察时保存的 X CDN URL。这只用于显示，观察记录仍只保存在本地。</p>
 
       <h3>权限</h3>
       <ul>
@@ -98,7 +98,7 @@
         <li>consent version, observer state, badge preference, dock-collapsed preference, and viewerHandle stay in chrome.storage.local;</li>
         <li>there is no server, account system, telemetry, or cloud sync. Observation data is not sent to the developer or third parties.</li>
       </ul>
-      <p>Avatars are shown from existing X CDN URLs. Opening an extension page may cause the browser to request that image directly.</p>
+      <p>Side Panel and Fieldbook display avatars by requesting a public image for that handle (https://unavatar.io/x/{handle}), then falling back to a stored X CDN URL if needed. That request is only for display; observation records stay local.</p>
 
       <h3>Permissions</h3>
       <ul>

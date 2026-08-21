@@ -5,6 +5,8 @@ import { USER_NAME_SELECTOR } from "./x-adapter";
 const BADGE_ATTRIBUTE = "data-xro-badge";
 const BADGE_ROW_ATTRIBUTE = "data-xro-badge-row";
 const BADGE_ROW_CLASS = "xro-name-badge-row";
+const BADGE_STACK_ATTRIBUTE = "data-xro-badge-stack";
+const BADGE_STACK_CLASS = "xro-name-badge-stack";
 const IDENTITY_ATTRIBUTE = "data-xro-relationship";
 const IDENTITY_CLASSES = [
   "xro-identity-mark",
@@ -15,6 +17,8 @@ const USER_CARD_SELECTOR = '[data-testid="UserCell"], [data-testid="HoverCard"]'
 const AVATAR_IDENTITY_SELECTOR =
   '[data-testid="Tweet-User-Avatar"], [data-testid="UserAvatar-Container"], [data-testid^="UserAvatar-Container-"]';
 const FORMAT_CHARS = /[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g;
+
+type BadgePosition = "beforebegin" | "afterend" | "beforeend";
 
 function isAvatarIdentity(element: Element): boolean {
   if (element.closest(AVATAR_IDENTITY_SELECTOR)) return true;
@@ -94,10 +98,25 @@ function identityInRoot(root: HTMLElement, handle: string): HTMLElement | null {
   return displayNamePlacementHost(root, handle) ?? handlePlacementHost(root, handle);
 }
 
+function namedRoot(from: HTMLElement): HTMLElement | null {
+  if (from.matches(USER_NAME_SELECTOR)) return from;
+  return from.closest<HTMLElement>(USER_NAME_SELECTOR) ??
+    from.querySelector<HTMLElement>(USER_NAME_SELECTOR);
+}
+
+function overlayNameCluster(from: HTMLElement, handle: string): HTMLElement | null {
+  const named = namedRoot(from);
+  if (!named || containsTime(named)) return null;
+  const handleHost = handlePlacementHost(named, handle);
+  const displayHost = displayNamePlacementHost(named, handle);
+  if (!handleHost || !displayHost) return null;
+  return named;
+}
+
 function tweetPlacement(
   anchor: HTMLElement,
   handle: string,
-): { host: HTMLElement; position: "beforebegin" | "afterend" } | null {
+): { host: HTMLElement; position: BadgePosition } | null {
   const roots: HTMLElement[] = [anchor];
   const card = userCardFrom(anchor);
   const named = (card ?? anchor).matches(USER_NAME_SELECTOR)
@@ -105,6 +124,10 @@ function tweetPlacement(
     : (card ?? anchor).querySelector<HTMLElement>(USER_NAME_SELECTOR);
   if (named && named !== anchor) roots.push(named);
   if (card && card !== anchor) roots.push(card);
+  for (const root of roots) {
+    const overlay = overlayNameCluster(root, handle);
+    if (overlay) return { host: overlay, position: "beforeend" };
+  }
   for (const root of roots) {
     const handleHost = handlePlacementHost(root, handle);
     if (handleHost) return { host: handleHost, position: "beforebegin" };
@@ -122,11 +145,22 @@ function tweetPlacement(
 function badgeIsPlaced(
   badge: HTMLElement,
   host: HTMLElement,
-  position: "beforebegin" | "afterend",
+  position: BadgePosition,
 ): boolean {
-  return position === "beforebegin"
-    ? badge.nextElementSibling === host
-    : host.nextElementSibling === badge;
+  if (position === "beforebegin") return badge.nextElementSibling === host;
+  if (position === "beforeend") {
+    return badge.parentElement === host && host.lastElementChild === badge;
+  }
+  return host.nextElementSibling === badge;
+}
+
+function placeBadge(
+  host: HTMLElement,
+  position: BadgePosition,
+  badge: HTMLElement,
+): void {
+  if (position === "beforeend") host.append(badge);
+  else host.insertAdjacentElement(position, badge);
 }
 
 function identityElement(anchor: HTMLElement, handle: string): HTMLElement | null {
@@ -184,21 +218,63 @@ function markBadgeRow(row: HTMLElement): void {
   row.classList.add(BADGE_ROW_CLASS);
 }
 
-function markTightBadgeRow(parent: HTMLElement | null): void {
+function markBadgeStack(stack: HTMLElement): void {
+  stack.setAttribute(BADGE_STACK_ATTRIBUTE, "");
+  stack.classList.add(BADGE_STACK_CLASS);
+}
+
+function containsTime(element: HTMLElement): boolean {
+  return element.querySelector("time") !== null;
+}
+
+function innermostNameHandleCluster(named: HTMLElement, handle: string): HTMLElement | null {
+  const handleHost = handlePlacementHost(named, handle);
+  const displayHost = displayNamePlacementHost(named, handle);
+  if (!handleHost || !displayHost) return null;
+  let current: HTMLElement | null = handleHost.parentElement;
+  while (current) {
+    if (!named.contains(current) && current !== named) break;
+    if (current.contains(displayHost) && !containsTime(current)) return current;
+    if (current === named) break;
+    current = current.parentElement;
+  }
+  return named;
+}
+
+function markOverlayIdentity(named: HTMLElement, handle: string): void {
+  markBadgeStack(named);
+  const cluster = innermostNameHandleCluster(named, handle);
+  if (cluster && cluster !== named) markBadgeRow(cluster);
+}
+
+function markIdentityLayout(parent: HTMLElement | null, handle: string): void {
   if (!parent) return;
-  if (parent.matches(USER_NAME_SELECTOR)) return;
-  if (parent.querySelector("time")) return;
+  const overlay = overlayNameCluster(parent, handle);
+  if (overlay) {
+    markOverlayIdentity(overlay, handle);
+    return;
+  }
+  if (parent.matches(USER_NAME_SELECTOR) || containsTime(parent)) return;
   markBadgeRow(parent);
 }
 
-function clearBadgeRows(anchor: HTMLElement): void {
-  const rows = anchor.matches(`[${BADGE_ROW_ATTRIBUTE}]`)
-    ? [anchor, ...anchor.querySelectorAll<HTMLElement>(`[${BADGE_ROW_ATTRIBUTE}]`)]
-    : [...anchor.querySelectorAll<HTMLElement>(`[${BADGE_ROW_ATTRIBUTE}]`)];
-  for (const row of rows) {
-    row.removeAttribute(BADGE_ROW_ATTRIBUTE);
-    row.classList.remove(BADGE_ROW_CLASS);
+function clearMarked(
+  root: ParentNode,
+  attribute: string,
+  className: string,
+): void {
+  const matches = root instanceof HTMLElement && root.matches(`[${attribute}]`)
+    ? [root, ...root.querySelectorAll<HTMLElement>(`[${attribute}]`)]
+    : [...root.querySelectorAll<HTMLElement>(`[${attribute}]`)];
+  for (const element of matches) {
+    element.removeAttribute(attribute);
+    element.classList.remove(className);
   }
+}
+
+function clearBadgeRows(anchor: ParentNode): void {
+  clearMarked(anchor, BADGE_ROW_ATTRIBUTE, BADGE_ROW_CLASS);
+  clearMarked(anchor, BADGE_STACK_ATTRIBUTE, BADGE_STACK_CLASS);
 }
 
 function clearIdentityMark(anchor: HTMLElement): void {
@@ -262,13 +338,13 @@ export function setRelationshipBadge(
       clearBadgeRows(anchor);
     }
     if (placement) {
-      placement.host.insertAdjacentElement(placement.position, badge);
-      markTightBadgeRow(badge.parentElement);
+      placeBadge(placement.host, placement.position, badge);
+      markIdentityLayout(badge.parentElement, handle);
     } else if (!isAvatarIdentity(anchor)) {
       anchor.append(badge);
     }
   } else if (!card && badge.parentElement) {
-    markTightBadgeRow(badge.parentElement);
+    markIdentityLayout(badge.parentElement, handle);
   }
 }
 
@@ -278,13 +354,7 @@ export function removeRelationshipBadges(root: ParentNode = document): void {
     ? [root, ...root.querySelectorAll<HTMLElement>(`[${IDENTITY_ATTRIBUTE}]`)]
     : [...root.querySelectorAll<HTMLElement>(`[${IDENTITY_ATTRIBUTE}]`)];
   for (const identity of marked) clearIdentityMark(identity);
-  if (root instanceof HTMLElement) clearBadgeRows(root);
-  else {
-    for (const row of root.querySelectorAll<HTMLElement>(`[${BADGE_ROW_ATTRIBUTE}]`)) {
-      row.removeAttribute(BADGE_ROW_ATTRIBUTE);
-      row.classList.remove(BADGE_ROW_CLASS);
-    }
-  }
+  clearBadgeRows(root);
   clearUserCardStacks(root);
 }
 

@@ -13,7 +13,7 @@
   letter-spacing: 0.02em;
   line-height: 14px;
   margin-inline: 0 8px;
-  padding: 0 5px;
+  padding: 1px 7px;
   pointer-events: none;
   vertical-align: 1px;
   white-space: nowrap;
@@ -21,14 +21,39 @@
 
 .xro-name-badge-row {
   align-items: center !important;
+  column-gap: 6px;
   display: flex !important;
   flex-direction: row !important;
   flex-wrap: nowrap !important;
+  justify-content: flex-start !important;
   min-width: 0;
 }
 
-.xro-name-badge-row > a {
+.xro-name-badge-row > * {
+  flex: 0 1 auto !important;
   min-width: 0;
+  width: auto !important;
+}
+
+.xro-name-badge-stack {
+  align-items: center;
+  column-gap: 8px;
+  display: grid !important;
+  grid-template-columns: max-content max-content minmax(0, 1fr);
+  justify-items: start;
+  min-width: 0;
+  row-gap: 4px;
+}
+
+.xro-name-badge-stack > :not([data-xro-badge]) {
+  min-width: 0;
+  width: auto !important;
+}
+
+.xro-name-badge-stack > [data-xro-badge] {
+  grid-column: 1 / -1;
+  margin: 0 !important;
+  width: max-content !important;
 }
 
 .xro-user-card-avatar-stack {
@@ -62,17 +87,37 @@
 .xro-identity-mark {
   border-radius: 4px;
   isolation: isolate;
+  padding-inline-start: 5px !important;
+  position: relative;
+}
+
+.xro-identity-mark--following_only,
+.xro-identity-mark--blocked_by {
+  box-shadow: none;
 }
 
 .xro-identity-mark--following_only {
   background: linear-gradient(90deg, rgb(241 184 75 / 0.13), transparent 88%);
-  box-shadow: inset 3px 0 #d59420;
 }
 
 .xro-identity-mark--blocked_by {
   background: linear-gradient(90deg, rgb(228 109 95 / 0.2), transparent 92%);
-  box-shadow: inset 4px 0 #d84e41;
 }
+
+.xro-identity-mark--following_only::before,
+.xro-identity-mark--blocked_by::before {
+  border-radius: 2px;
+  bottom: 2px;
+  content: "";
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 2px;
+  width: 3px;
+}
+
+.xro-identity-mark--following_only::before { background: #d59420; }
+.xro-identity-mark--blocked_by::before { background: #d84e41; width: 4px; }
 
 .xro-badge--following_only,
 .xro-badge--unfollowed_you {
@@ -80,6 +125,7 @@
   box-shadow: 2px 2px 0 rgb(100 70 15 / 0.18);
   font-size: 10px;
   line-height: 16px;
+  padding-inline: 7px 8px;
 }
 
 .xro-badge--blocked_by,

@@ -45,3 +45,11 @@ export function preferDisplayName(
 export function preferAvatarUrl(incoming: string | null, existing: string | null): string | null {
   return normalizeProfileImageUrl(incoming) ?? normalizeProfileImageUrl(existing);
 }
+
+export function handleAvatarUrl(handle: string): string {
+  return `https://unavatar.io/x/${encodeURIComponent(handle.trim())}`;
+}
+
+export function profileUrlForHandle(handle: string): string {
+  return `https://x.com/${encodeURIComponent(handle.trim())}`;
+}
