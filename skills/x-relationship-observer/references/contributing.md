@@ -4,7 +4,7 @@ Source, issues, and releases live at `https://github.com/interjc/chrome-x-not-br
 
 ## Product boundary
 
-Preserve the two product responsibilities: annotate relationship evidence already visible on `x.com`, and store those observations in the extension's local database. Reject automatic scrolling, profile traversal or prefetch, private X API calls, and clicks on Follow, Unfollow, Block, Mute, or other account-action controls. A standard X profile link may open only from an explicit user gesture.
+Preserve the default product responsibilities: annotate relationship evidence already visible on `x.com`, and store those observations in the extension's local database. Optional timeline hiding is off by default and display-only. Reject automatic scrolling, profile traversal or prefetch, private X API calls, and clicks on Follow, Unfollow, Block, Mute, or other account-action controls. A standard X profile link may open only from an explicit user gesture.
 
 Treat missing evidence as internal `unknown`. Never badge, persist, import, export, or count it, and never let `unknown` erase a known relationship.
 

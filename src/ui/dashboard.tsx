@@ -31,6 +31,7 @@ import { Brand } from "./components/Brand";
 import { Icon } from "./components/Icon";
 import { LanguageSwitch } from "./components/LanguageSwitch";
 import { RelationshipPill } from "./components/RelationshipPill";
+import { TimelineFilterSettings } from "./components/TimelineFilterSettings";
 import { absoluteTime, downloadFile, relativeTime } from "./format";
 import { useObserverSettings, useUsers } from "./hooks";
 import { CURRENT_CONSENT_VERSION } from "../storage/settings";
@@ -281,6 +282,12 @@ function Dashboard() {
             <span>{t(locale, "localControls")}</span>
             <label><input type="checkbox" disabled={!settingsReady || !hasConsent} checked={settings.observerEnabled} onChange={(event) => void setSetting("observerEnabled", event.target.checked)} /><i />{t(locale, "annotateAndCollect")}</label>
             <label><input type="checkbox" checked={settings.showBadges} onChange={(event) => void setSetting("showBadges", event.target.checked)} /><i />{t(locale, "showPageBadges")}</label>
+            <TimelineFilterSettings
+              disabled={!settingsReady}
+              locale={locale}
+              onChange={(key, value) => void setSetting(key, value)}
+              settings={settings}
+            />
             <LanguageSwitch
               disabled={!settingsReady}
               locale={locale}

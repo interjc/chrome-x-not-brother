@@ -22,7 +22,8 @@ Python is managed through pyenv. The repository currently has no Python runtime 
 - `src/domain/`: types, relationship resolution, data merge semantics, derived unfollowed-you/you-unfollowed/blocked-you presentation, mutual-always-mutual display, none-for-both-unfollowed, import, and export.
 - `src/i18n/`: type-checked English, Japanese, and Simplified Chinese runtime catalogs, locale resolution, relationship labels, and source labels.
 - `src/storage/`: IndexedDB access and local settings.
-- `src/ui/`: side panel, its pure filter model, user-gesture profile links, dashboard, shared components, presentation, and a shared storage-change-aware settings hook.
+- `src/ui/`: side panel, its pure filter model, user-gesture profile links, dashboard, Options page, shared components, presentation, and a shared storage-change-aware settings hook.
+- `src/content/timeline-hide.ts`: opt-in Home/search/notification hiding of muted or known blocked-by tweet cells.
 - `public/`: manifest, `_locales` Manifest catalogs, extension HTML shells, content CSS, and icons.
 - `assets/branding/`: ImageGen source art used to derive Chrome icon sizes.
 - `scripts/`: deterministic build, validation, and packaging.

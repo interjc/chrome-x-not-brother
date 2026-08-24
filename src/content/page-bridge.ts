@@ -5,11 +5,14 @@ import {
   PAGE_STORE_MESSAGE_SOURCE,
   readPageUserRelationships,
   type PageStoreResultMessage,
+  type PageStoreUpdatedMessage,
   type PageUserRelationship,
 } from "./page-store";
 
 const HOOK_FLAG = "__notBrotherHarvestedGraphql";
 const harvested = new Map<string, PageUserRelationship>();
+const UPDATE_NOTIFY_MS = 32;
+let notifyTimer = 0;
 
 function publishUsers(requestId: string): void {
   const users = Object.fromEntries(
@@ -40,6 +43,25 @@ function isGraphqlUrl(url: string | null): boolean {
 
 function ingestGraphqlBody(body: unknown): void {
   harvestUsersFromPayload(body, harvested);
+  scheduleHideSignal();
+}
+
+function scheduleHideSignal(): void {
+  if (notifyTimer) return;
+  notifyTimer = window.setTimeout(() => {
+    notifyTimer = 0;
+    const users: Record<string, PageUserRelationship> = {};
+    for (const [key, user] of harvested) {
+      if (user.muting === true || user.blockedBy === true) users[key] = user;
+    }
+    if (Object.keys(users).length === 0) return;
+    const message: PageStoreUpdatedMessage = {
+      source: PAGE_STORE_MESSAGE_SOURCE,
+      type: "updated",
+      users,
+    };
+    window.postMessage(message, window.location.origin);
+  }, UPDATE_NOTIFY_MS);
 }
 
 function hookNetwork(): void {

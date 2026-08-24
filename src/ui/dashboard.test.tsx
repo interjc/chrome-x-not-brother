@@ -11,6 +11,9 @@ const testState = vi.hoisted(() => ({
     dockCollapsed: false,
     viewerHandle: "viewer",
     uiLocale: "zh-CN",
+    hideMutedAccounts: false,
+    hideBlockedByAccounts: false,
+    sidePanelTab: "status",
   } as ObserverSettings,
 }));
 
@@ -84,6 +87,9 @@ describe("dashboard profile links", () => {
       dockCollapsed: false,
       viewerHandle: "viewer",
       uiLocale: "zh-CN",
+      hideMutedAccounts: false,
+      hideBlockedByAccounts: false,
+      sidePanelTab: "status",
     };
     vi.stubGlobal("chrome", {
       i18n: { getUILanguage: () => "zh-CN" },

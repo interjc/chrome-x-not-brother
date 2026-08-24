@@ -11,7 +11,7 @@
 5. 证据消失时返回内部 unknown，不得猜测 negative；unknown 不得进入徽标、数据库、导入导出或计数。
 6. 运行完整检查和手工验收。
 
-优先使用语义化 `data-testid`、标准个人资料 href 和明确可见文本。允许只读当前页已经载入的 UI store、tweet 祖先 fiber，以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`。评论区回复作者的关系字段经常不在 `entities.users` 里，而在 Tweet 组件 props 或 TweetDetail 响应中。禁止主动发起新的 X 请求、读取 Cookie，或把缺失实体猜成未关注。
+优先使用语义化 `data-testid`、标准个人资料 href 和明确可见文本。允许只读当前页已经载入的 UI store、tweet 祖先 fiber，以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`、`muting`。评论区回复作者的关系字段经常不在 `entities.users` 里，而在 Tweet 组件 props 或 TweetDetail 响应中。禁止主动发起新的 X 请求、读取 Cookie，或把缺失实体猜成未关注。可选时间线隐藏只改 `data-xro-hidden-tweet`，选择器变化时同步更新 `src/content/timeline-hide.ts`。
 
 实时识别采用事件与轮询混合机制。MutationObserver 负责新增/移除节点、关系文案和关键可访问性属性变化；可见且已启用的页面每 2 秒兜底复扫一次，页面恢复可见或重新获得焦点时立即复扫。轮询只查询当前 DOM，不滚动、不打开页面、不触发 X 控件。扫描必须保持 single-flight，MutationObserver、轮询、设置变化和 SPA URL 变化同时触发时只排队一次补扫；签名去重必须阻止相同结果重复写历史，但只能在 service worker 确认对应用户已持久化后提交，瞬时发送失败要留给后续复扫重试。
 
@@ -66,4 +66,4 @@ content script 必须把这种情况视为生命周期结束：捕获 promise re
 
 ## 文档同步
 
-行为或流程变化时同步维护 `docs/`、README 索引和 `skills/x-relationship-observer/references/` 对应工作流。
+行为或流程变化时同步维护 `docs/`（含 [文档索引](README.md)）和 `skills/x-relationship-observer/references/` 对应工作流。根目录 README 保持使用者视角。

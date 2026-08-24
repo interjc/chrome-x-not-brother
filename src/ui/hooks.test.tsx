@@ -12,6 +12,9 @@ const initialSettings: ObserverSettings = {
   dockCollapsed: false,
   viewerHandle: null,
   uiLocale: "auto",
+  hideMutedAccounts: false,
+  hideBlockedByAccounts: false,
+  sidePanelTab: "status",
 };
 
 function SettingsProbe({

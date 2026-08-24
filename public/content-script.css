@@ -359,6 +359,13 @@
 @media (prefers-reduced-motion: reduce) {
   .xro-observer-panel__dot { animation: none !important; }
   .xro-observer-panel__bubble { transition: none; }
+  [data-xro-hiding-tweet] {
+    display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    opacity: 0 !important;
+  }
 }
 
 @keyframes xro-badge-in {
@@ -371,6 +378,23 @@
 @media (max-width: 560px) {
   .xro-observer-panel:not(.xro-observer-panel--collapsed) { bottom: 10px; left: 10px; right: 10px; width: auto; }
   .xro-observer-panel--collapsed { bottom: 12px; left: auto; right: 12px; width: auto; }
+}
+
+[data-xro-hiding-tweet] {
+  min-height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+[data-xro-hidden-tweet] {
+  display: none !important;
+  height: 0 !important;
+  margin: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
 }
 
 @media print {

@@ -9,6 +9,9 @@ const defaultSettings: ObserverSettings = {
   dockCollapsed: false,
   viewerHandle: "viewer",
   uiLocale: "auto",
+  hideMutedAccounts: false,
+  hideBlockedByAccounts: false,
+  sidePanelTab: "status",
 };
 
 const testState = vi.hoisted(() => ({
@@ -21,6 +24,9 @@ const testState = vi.hoisted(() => ({
     dockCollapsed: false,
     viewerHandle: "viewer",
     uiLocale: "auto",
+    hideMutedAccounts: false,
+    hideBlockedByAccounts: false,
+    sidePanelTab: "status",
   } as ObserverSettings,
 }));
 
@@ -146,7 +152,27 @@ describe("SidePanel interactions", () => {
     expect(feedback?.textContent).toBe("Send feedback");
   });
 
-  it("defaults the language switcher to follow the browser language", () => {
+  it("keeps status as the user list and moves settings into the Options tab", async () => {
+    expect(document.getElementById("side-tab-status")?.getAttribute("aria-selected")).toBe("true");
+    expect(recentProfileLinks()).toHaveLength(3);
+    expect(document.querySelector(".language-switch")).toBeNull();
+    expect(document.querySelector(".timeline-filters")).toBeNull();
+
+    await act(async () => document.getElementById("side-tab-options")?.click());
+
+    expect(document.getElementById("side-tab-options")?.getAttribute("aria-selected")).toBe("true");
+    expect(recentProfileLinks()).toHaveLength(0);
+    const checkboxes = [...document.querySelectorAll<HTMLInputElement>(
+      ".timeline-filters input[type='checkbox']",
+    )];
+    expect(checkboxes).toHaveLength(2);
+    expect(checkboxes.every((input) => !input.checked)).toBe(true);
+    await act(async () => checkboxes[0]?.click());
+    expect(checkboxes[0]?.checked).toBe(true);
+  });
+
+  it("defaults the language switcher to follow the browser language", async () => {
+    await act(async () => document.getElementById("side-tab-options")?.click());
     const select = document.querySelector<HTMLSelectElement>(".language-switch select");
     expect(select?.value).toBe("auto");
     expect(select?.selectedOptions[0]?.textContent).toBe("Match browser language");
@@ -154,6 +180,7 @@ describe("SidePanel interactions", () => {
   });
 
   it("switches Side Panel copy when the user picks a language", async () => {
+    await act(async () => document.getElementById("side-tab-options")?.click());
     const select = document.querySelector<HTMLSelectElement>(".language-switch select");
     await act(async () => {
       select!.value = "zh-CN";
@@ -161,7 +188,8 @@ describe("SidePanel interactions", () => {
     });
     expect(document.documentElement.lang).toBe("zh-CN");
     expect(document.querySelector(".brand__copy strong")?.textContent).toBe("不是兄弟");
-    expect(document.querySelector(".section-heading h1")?.textContent).toBe("最近观察");
     expect(select?.selectedOptions[0]?.textContent).toBe("简体中文");
+    await act(async () => document.getElementById("side-tab-status")?.click());
+    expect(document.querySelector(".section-heading h1")?.textContent).toBe("最近观察");
   });
 });

@@ -16,6 +16,9 @@ const required = [
   "dashboard.html",
   "dashboard.js",
   "dashboard.css",
+  "options.html",
+  "options.js",
+  "options.css",
   "icons/icon-16.png",
   "icons/icon-32.png",
   "icons/icon-48.png",
@@ -129,6 +132,12 @@ if (
   manifest.background?.type !== "module"
 ) {
   throw new Error("Manifest must use the bundled module service worker");
+}
+if (
+  manifest.options_ui?.page !== "options.html" ||
+  manifest.options_ui?.open_in_tab !== false
+) {
+  throw new Error("Manifest must declare an Options page that can open the side panel tab");
 }
 
 const legalFiles = [

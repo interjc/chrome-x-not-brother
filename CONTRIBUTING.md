@@ -6,9 +6,9 @@ Not Brother is open source at [interjc/chrome-x-not-brother](https://github.com/
 - Full contribution guide (中文): [docs/contributing.md](docs/contributing.md)
 - Development setup: [docs/development.md](docs/development.md)
 
-这个扩展只做两件事：给已经出现在 `x.com` 上的用户标注可确认关系，并把观察结果保存在本机。不要添加自动滚动、资料遍历、X 私有接口或关注 / 取关 / 拉黑 / 静音等账号操作。
+这个扩展默认标注并收集 `x.com` 上已经出现的关系证据；可选时间线过滤默认关闭。不要添加自动滚动、资料遍历、X 私有接口或关注 / 取关 / 拉黑 / 静音等账号操作。
 
-The extension only annotates relationship evidence already visible on `x.com` and stores it locally. Do not add automatic scrolling, profile traversal, private X APIs, or Follow / Unfollow / Block / Mute actions.
+The extension annotates relationship evidence already visible on `x.com` and stores it locally. Optional timeline filters stay off by default. Do not add automatic scrolling, profile traversal, private X APIs, or Follow / Unfollow / Block / Mute actions.
 
 Before a pull request:
 

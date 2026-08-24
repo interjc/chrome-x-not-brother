@@ -49,6 +49,11 @@ const builds = [
     outfile: "dist/dashboard.js",
     format: "esm",
   },
+  {
+    entryPoints: ["src/ui/options.tsx"],
+    outfile: "dist/options.js",
+    format: "esm",
+  },
 ];
 
 const contexts = await Promise.all(

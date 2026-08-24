@@ -91,6 +91,7 @@ describe("page store relationships", () => {
         following: true,
         followsYou: false,
         blockedBy: false,
+        muting: null,
         displayName: "Alice Example",
         avatarUrl: "https://pbs.twimg.com/profile_images/1/alice_x96.jpg",
       }],
@@ -120,6 +121,7 @@ describe("page store relationships", () => {
                       followed_by: false,
                     },
                     blocked_by: true,
+                    muting: false,
                   },
                 },
               },
@@ -132,6 +134,41 @@ describe("page store relationships", () => {
     expect(readPageUserRelationships(doc).get("blocked")).toMatchObject({
       handle: "Blocked",
       blockedBy: true,
+      muting: false,
+    });
+  });
+
+  it("reads muting and merges it with later relationship-only entities", () => {
+    const doc = fixture("<div id='react-root'><div></div></div>");
+    const host = doc.querySelector("#react-root > div");
+    Object.defineProperty(host, "__reactProps$test", {
+      value: {
+        store: {
+          getState: () => ({
+            entities: {
+              users: {
+                entities: {
+                  "3": {
+                    legacy: { screen_name: "MutedPal", muting: true },
+                  },
+                  "4": {
+                    screen_name: "MutedPal",
+                    following: true,
+                    followed_by: true,
+                  },
+                },
+              },
+            },
+          }),
+        },
+      },
+    });
+
+    expect(readPageUserRelationships(doc).get("mutedpal")).toMatchObject({
+      handle: "MutedPal",
+      following: true,
+      followsYou: true,
+      muting: true,
     });
   });
 
@@ -176,6 +213,7 @@ describe("page store relationships", () => {
         following: false,
         followsYou: false,
         blockedBy: false,
+        muting: null,
         displayName: null,
         avatarUrl: null,
       }],
@@ -210,6 +248,7 @@ describe("page store relationships", () => {
         following: true,
         followsYou: null,
         blockedBy: null,
+        muting: null,
         displayName: null,
         avatarUrl: null,
       }],
@@ -241,6 +280,7 @@ describe("page store relationships", () => {
         following: true,
         followsYou: false,
         blockedBy: null,
+        muting: null,
         displayName: null,
         avatarUrl: null,
       }],

@@ -4,12 +4,13 @@
 
 This repository builds **Not Brother**, a Chrome Manifest V3 extension that observes relationship evidence already visible while the user browses `x.com`.
 
-The extension has exactly two product responsibilities:
+The extension has two default product responsibilities, plus one opt-in display filter:
 
 1. annotate visible X users with a relationship badge;
-2. collect the observed relationship evidence in the extension's local database.
+2. collect the observed relationship evidence in the extension's local database;
+3. optionally hide Home/search/notification posts from muted accounts or from accounts already known to have blocked the viewer.
 
-Do not add code that automatically scrolls X, opens profiles, calls private X endpoints, or clicks Follow, Unfollow, Block, Mute, or any other X account-action control. X account mutations are outside the product boundary.
+Do not add code that automatically scrolls X, opens profiles, calls private X endpoints, or clicks Follow, Unfollow, Block, Mute, or any other X account-action control. X account mutations are outside the product boundary. Timeline hiding is CSS/DOM display only, off by default, and must stay behind the Options page and in-panel settings.
 
 A standard X profile link in extension UI may open only from an explicit user click or keyboard activation. Never pre-open, prefetch, traverse, or batch-navigate profile pages.
 
@@ -54,7 +55,7 @@ Use `npm run package` only when preparing a loadable release archive.
 ## Architecture rules
 
 - Keep X DOM selectors and localized text matching inside `src/content/x-adapter.ts`.
-- Read already-loaded `following` / `followed_by` / `blocked_by` for visible authors from the current page UI store, tweet fibers, and GraphQL responses the page itself already completed via `src/content/page-store.ts`. Do not send new GraphQL requests or treat a missing store entity as not-following.
+- Read already-loaded `following` / `followed_by` / `blocked_by` / `muting` for visible authors from the current page UI store, tweet fibers, and GraphQL responses the page itself already completed via `src/content/page-store.ts`. Do not send new GraphQL requests or treat a missing store entity as not-following. Do not persist a mute list; `muting` is ephemeral display evidence.
 - Treat missing relationship evidence as the internal `unknown` result; never badge, persist, import, export, or count it, and never infer a negative relationship from an unrelated timeline card.
 - Treat explicit `following=false` and `followsYou=false` as stored `none`: it may replace a visible known state so stale badges disappear, and `follows_you_only → none` displays unfollowed-you. Do not seed a new user from `none`. Other neither-following transitions must not badge, count, or become a reviewable change. Blocked-by still wins and displays.
 - Store extension data through the background service worker. Content scripts must not use the page origin's IndexedDB.
@@ -71,10 +72,12 @@ Use `npm run package` only when preparing a loadable release archive.
 - Use a fully loaded visible hover card only for the matching handle. Its stable follow/unfollow control and `userFollowIndicator` may supplement the underlying card's ordinary relationship facts; never leak one hover card's facts to another author.
 - Query the local archive for handles already visible on the page. A known stored relationship may annotate a card whose current DOM has no fresh evidence; this is not an unknown badge.
 - Preserve toolbar state, first-install guidance, the X-page observer dock and its persistent panel/floating-ball preference, and light/dark theme parity.
-- Preserve the hybrid page monitor: semantic DOM mutations plus a 2-second fallback rescan only while the consented observer page is visible, immediate focus/visibility recovery, single-flight processing, signature deduplication only after confirmed persistence so transient failures retry, and complete timer/listener teardown on extension-context invalidation.
+- Preserve the hybrid page monitor: semantic DOM mutations plus a 2-second fallback rescan only while the consented page is visible and either the observer or an optional timeline filter is on, immediate focus/visibility recovery, single-flight processing, signature deduplication only after confirmed persistence so transient failures retry, and complete timer/listener teardown on extension-context invalidation.
 - Preserve cross-tab cache invalidation through service-worker `data:changed` broadcasts. Do not add the `tabs` permission; tabs without a content-script receiver are expected, and intentional archive deletion must not clear observation signatures and immediately reinsert unchanged evidence.
-- Keep extension pages subscribed to `chrome.storage.onChanged` through the shared settings hook so viewer exclusion, observer controls, and the UI language preference remain consistent across an already-open Side Panel, dashboard, and X tabs.
+- Keep the Side Panel split into Status (observation overview and user list) and Options (language, page badges, timeline filters). Persist `sidePanelTab`. Chrome's action context-menu Options entry must open that Options tab via `options_ui`, without adding extra permissions.
+- Keep extension pages subscribed to `chrome.storage.onChanged` through the shared settings hook so viewer exclusion, observer controls, optional timeline filters, the side-panel tab, and the UI language preference remain consistent across an already-open Side Panel, dashboard, Options page, and X tabs.
+- Keep `hideMutedAccounts` and `hideBlockedByAccounts` default false. When enabled after consent, hide tweet cells on Home, search, notifications, and post threads; never hide profile pages, hover cards, or following/followers lists. Do not click X controls or call mute/block APIs. Accounts already in the local list hide immediately; a newly detected muted or blocked-by author collapses with a short motion, unless the user prefers reduced motion.
 
 ## Documentation
 
-Update the relevant file under `docs/` and the matching project skill reference under `skills/x-relationship-observer/references/` when behavior or workflow changes. Keep the documentation index in `README.md` accurate.
+Update the relevant file under `docs/` and the matching project skill reference under `skills/x-relationship-observer/references/` when behavior or workflow changes. Keep the documentation index in `docs/README.md` accurate. Keep the root `README.md` written for people who install and use the extension.

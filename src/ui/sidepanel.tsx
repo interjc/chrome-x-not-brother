@@ -16,7 +16,7 @@ import {
 import { Avatar } from "./components/Avatar";
 import { Brand } from "./components/Brand";
 import { Icon } from "./components/Icon";
-import { LanguageSwitch } from "./components/LanguageSwitch";
+import { OptionsPanel } from "./components/OptionsPanel";
 import { RelationshipPill } from "./components/RelationshipPill";
 import { relativeTime } from "./format";
 import { useObserverSettings, useUsers } from "./hooks";
@@ -27,6 +27,7 @@ import {
   type SidePanelFilter,
 } from "./sidepanel-model";
 import { CURRENT_CONSENT_VERSION } from "../storage/settings";
+import type { SidePanelTab } from "../domain/types";
 
 export function SidePanel() {
   const [filter, setFilter] = useState<SidePanelFilter>("all");
@@ -36,10 +37,11 @@ export function SidePanel() {
   const t = (key: MessageKey, values?: Record<string, string | number>) =>
     translate(locale, key, values);
 
+  const tab = settings.sidePanelTab;
   useEffect(() => {
     document.documentElement.lang = locale;
-    document.title = translate(locale, "brandName");
-  }, [locale]);
+    document.title = translate(locale, tab === "options" ? "optionsTitle" : "brandName");
+  }, [locale, tab]);
   const users = settingsReady
     ? observedUsers.filter((user) =>
       user.key !== settings.viewerHandle && isDisplayedUser(user),
@@ -61,6 +63,10 @@ export function SidePanel() {
     setFilter((current) => toggleSidePanelFilter(current, next));
   }
 
+  function selectTab(next: SidePanelTab): void {
+    void setSetting("sidePanelTab", next);
+  }
+
   return (
     <main className="app app--sidepanel">
       <header className="side-header">
@@ -77,15 +83,52 @@ export function SidePanel() {
           <span>{t(settings.observerEnabled ? "observing" : "paused")}</span>
         </button>
       </header>
-      <div className="side-toolbar">
-        <LanguageSwitch
-          disabled={!settingsReady}
-          locale={locale}
-          value={settings.uiLocale}
-          onChange={(uiLocale) => void setSetting("uiLocale", uiLocale)}
-        />
+      <div className="side-tabs" role="tablist" aria-label={t("sideTablistAria")}>
+        <button
+          aria-controls="side-panel-status"
+          aria-selected={tab === "status"}
+          className={`side-tab${tab === "status" ? " is-active" : ""}`}
+          id="side-tab-status"
+          onClick={() => selectTab("status")}
+          role="tab"
+          type="button"
+        >
+          {t("sideTabStatus")}
+        </button>
+        <button
+          aria-controls="side-panel-options"
+          aria-selected={tab === "options"}
+          className={`side-tab${tab === "options" ? " is-active" : ""}`}
+          id="side-tab-options"
+          onClick={() => selectTab("options")}
+          role="tab"
+          type="button"
+        >
+          {t("sideTabOptions")}
+        </button>
       </div>
 
+      {tab === "options" ? (
+        <div
+          aria-labelledby="side-tab-options"
+          className="side-tab-panel"
+          id="side-panel-options"
+          role="tabpanel"
+        >
+          <OptionsPanel
+            locale={locale}
+            onChange={(key, value) => void setSetting(key, value)}
+            settings={settings}
+            settingsReady={settingsReady}
+          />
+        </div>
+      ) : (
+        <div
+          aria-labelledby="side-tab-status"
+          className="side-tab-panel"
+          id="side-panel-status"
+          role="tabpanel"
+        >
       {settingsReady && !hasConsent ? (
         <section className="consent-card" aria-labelledby="consent-title">
           <p className="eyebrow">{t("consentEyebrow")}</p>
@@ -203,6 +246,8 @@ export function SidePanel() {
           ))}
         </div>
       </section>
+        </div>
+      )}
 
       <footer className="side-footer">
         <button

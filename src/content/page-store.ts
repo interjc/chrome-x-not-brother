@@ -17,6 +17,7 @@ export interface PageUserRelationship {
   following: boolean | null;
   followsYou: boolean | null;
   blockedBy: boolean | null;
+  muting: boolean | null;
   displayName: string | null;
   avatarUrl: string | null;
 }
@@ -31,6 +32,12 @@ export interface PageStoreResultMessage {
   source: typeof PAGE_STORE_MESSAGE_SOURCE;
   type: "result";
   requestId: string;
+  users: Record<string, PageUserRelationship>;
+}
+
+export interface PageStoreUpdatedMessage {
+  source: typeof PAGE_STORE_MESSAGE_SOURCE;
+  type: "updated";
   users: Record<string, PageUserRelationship>;
 }
 
@@ -77,10 +84,19 @@ function normalizeHandle(value: unknown): string | null {
   return RESERVED_PATHS.has(match[1].toLowerCase()) ? null : match[1];
 }
 
-function completeness(user: PageUserRelationship): number {
-  return Number(user.following !== null) +
-    Number(user.followsYou !== null) +
-    Number(user.blockedBy !== null);
+function mergePageUsers(
+  existing: PageUserRelationship,
+  incoming: PageUserRelationship,
+): PageUserRelationship {
+  return {
+    handle: incoming.handle || existing.handle,
+    following: incoming.following ?? existing.following,
+    followsYou: incoming.followsYou ?? existing.followsYou,
+    blockedBy: incoming.blockedBy ?? existing.blockedBy,
+    muting: incoming.muting ?? existing.muting,
+    displayName: incoming.displayName ?? existing.displayName,
+    avatarUrl: incoming.avatarUrl ?? existing.avatarUrl,
+  };
 }
 
 function pageUserFromUnknown(value: unknown): PageUserRelationship | null {
@@ -111,7 +127,17 @@ function pageUserFromUnknown(value: unknown): PageUserRelationship | null {
     legacy.blocked_by,
     perspectives.blocked_by,
   );
-  if (following === null && followsYou === null && blockedBy === null) return null;
+  const muting = booleanField(
+    value.muting,
+    legacy.muting,
+    perspectives.muting,
+  );
+  if (
+    following === null &&
+    followsYou === null &&
+    blockedBy === null &&
+    muting === null
+  ) return null;
   const displayName = stringField(value.name, legacy.name);
   const avatarUrl = normalizeProfileImageUrl(
     stringField(
@@ -126,6 +152,7 @@ function pageUserFromUnknown(value: unknown): PageUserRelationship | null {
     following,
     followsYou,
     blockedBy,
+    muting,
     displayName: displayName && isUsableDisplayName(displayName, handle) ? displayName : null,
     avatarUrl,
   };
@@ -138,7 +165,7 @@ function rememberUser(
   if (!user) return;
   const key = user.handle.toLowerCase();
   const existing = users.get(key);
-  if (!existing || completeness(user) > completeness(existing)) users.set(key, user);
+  users.set(key, existing ? mergePageUsers(existing, user) : user);
 }
 
 function usersFromBag(bag: unknown, users: Map<string, PageUserRelationship>): void {
@@ -365,11 +392,26 @@ export function applyPageStoreRelationships(
   }
 }
 
+export function pageUsersFromRecord(
+  users: Record<string, PageUserRelationship>,
+): Map<string, PageUserRelationship> {
+  const map = new Map<string, PageUserRelationship>();
+  for (const user of Object.values(users)) rememberUser(map, user);
+  return map;
+}
+
 export function isPageStoreResultMessage(value: unknown): value is PageStoreResultMessage {
   if (!isRecord(value)) return false;
   return value.source === PAGE_STORE_MESSAGE_SOURCE &&
     value.type === "result" &&
     typeof value.requestId === "string" &&
+    isRecord(value.users);
+}
+
+export function isPageStoreUpdatedMessage(value: unknown): value is PageStoreUpdatedMessage {
+  if (!isRecord(value)) return false;
+  return value.source === PAGE_STORE_MESSAGE_SOURCE &&
+    value.type === "updated" &&
     isRecord(value.users);
 }
 
@@ -409,11 +451,7 @@ function requestPageStoreFromBridge(
       }
       targetWindow.clearTimeout(timer);
       targetWindow.removeEventListener("message", onMessage);
-      const users = new Map<string, PageUserRelationship>();
-      for (const user of Object.values(event.data.users)) {
-        rememberUser(users, user);
-      }
-      resolve(users);
+      resolve(pageUsersFromRecord(event.data.users));
     }
 
     targetWindow.addEventListener("message", onMessage);

@@ -32,6 +32,9 @@ describe("observer settings", () => {
     expect(DEFAULT_SETTINGS.observerEnabled).toBe(false);
     expect(DEFAULT_SETTINGS.dockCollapsed).toBe(false);
     expect(DEFAULT_SETTINGS.uiLocale).toBe("auto");
+    expect(DEFAULT_SETTINGS.hideMutedAccounts).toBe(false);
+    expect(DEFAULT_SETTINGS.hideBlockedByAccounts).toBe(false);
+    expect(DEFAULT_SETTINGS.sidePanelTab).toBe("status");
   });
 
   it("persists affirmative consent and observation atomically", async () => {
@@ -77,6 +80,26 @@ describe("observer settings", () => {
 
     storage.set(SETTINGS_KEY, { ...settings, uiLocale: "fr" });
     expect(await getSettings()).toMatchObject({ uiLocale: "auto" });
+  });
+
+  it("persists optional timeline filters without turning them on for older settings", async () => {
+    const settings = await updateSettings({ hideMutedAccounts: true });
+    expect(settings.hideMutedAccounts).toBe(true);
+    expect(settings.hideBlockedByAccounts).toBe(false);
+
+    storage.set(SETTINGS_KEY, { consentVersion: 1, observerEnabled: true });
+    expect(await getSettings()).toMatchObject({
+      hideMutedAccounts: false,
+      hideBlockedByAccounts: false,
+    });
+  });
+
+  it("persists the side panel tab and rejects unknown values", async () => {
+    const settings = await updateSettings({ sidePanelTab: "options" });
+    expect(settings.sidePanelTab).toBe("options");
+
+    storage.set(SETTINGS_KEY, { ...settings, sidePanelTab: "archive" });
+    expect(await getSettings()).toMatchObject({ sidePanelTab: "status" });
   });
 
   it("reports an invalidated extension context without dereferencing storage.local", async () => {

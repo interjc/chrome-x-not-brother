@@ -74,6 +74,21 @@ describe("runtime internationalization", () => {
     expect(translate("zh-CN", "languageChinese")).toBe("简体中文");
   });
 
+  it("localizes side panel status and options tabs", () => {
+    expect(translate("zh-CN", "sideTabStatus")).toBe("状态");
+    expect(translate("en", "sideTabOptions")).toBe("Options");
+    expect(translate("ja", "sideTabOptions")).toBe("オプション");
+  });
+
+  it("localizes optional timeline filter settings", () => {
+    expect(translate("zh-CN", "hideMutedAccountsLabel")).toContain("静音");
+    expect(translate("en", "hideMutedAccountsLabel")).toContain("muted");
+    expect(translate("ja", "hideMutedAccountsLabel")).toContain("ミュート");
+    expect(translate("zh-CN", "hideBlockedByAccountsLabel")).toContain("拉黑");
+    expect(translate("en", "hideBlockedByAccountsDescription")).toContain("not a complete list");
+    expect(translate("ja", "optionsIntro")).toContain("オフ");
+  });
+
   it("localizes the GitHub Issues feedback link", () => {
     expect(translate("zh-CN", "sendFeedback")).toBe("发送反馈");
     expect(translate("en", "sendFeedbackAria")).toContain("GitHub Issues");

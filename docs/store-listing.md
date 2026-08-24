@@ -28,6 +28,26 @@ Not Brother is an independent extension and is not affiliated with, endorsed by,
 
 Source code is available at https://github.com/interjc/chrome-x-not-brother. Report problems and ask for support on the repository Issues page.
 
+### Version 0.5.3 release notes
+
+- Also hides muted and blocked-you posts inside post threads and reply conversations, not only Home, search, and notifications.
+
+### Version 0.5.2 release notes
+
+- Hides muted or blocked-by posts as soon as they are detected. Accounts already in the local list disappear immediately; newly detected accounts collapse with a short animation.
+
+### Version 0.5.1 release notes
+
+- Splits the Side Panel into Status (relationship overview and recent accounts) and Options (language, badges, timeline filters).
+- Right-click the toolbar icon and choose Options to open the Side Panel directly on the Options tab.
+
+### Version 0.5.0 release notes
+
+- Adds a Chrome Options page (right-click the toolbar icon → Options) for optional timeline filters. Both filters stay off until you turn them on.
+- Optionally hide muted accounts on Home, search, and notifications even if you follow each other. Profile and post pages stay visible so you can unmute.
+- Optionally hide posts from accounts the extension already knows blocked you, on Home, search, and notifications. This is not a complete block list.
+- The same filters appear in the Side Panel and Relationship Fieldbook. They only change what this browser shows; they do not mute, block, or notify anyone.
+
 ### Version 0.4.10 release notes
 
 - In post details, keeps X's display name and @handle on one line and puts the relationship badge on the next line, with 1–2px between the left accent and the name.
@@ -85,6 +105,26 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 不是兄弟是独立开发的扩展，与 X Corp. 不存在隶属、认可或赞助关系。
 
 源码位于 https://github.com/interjc/chrome-x-not-brother。问题反馈与支持请使用仓库的 Issues 页面。
+
+### 0.5.3 更新说明
+
+- 静音和「拉黑了你」的隐藏也作用于帖子详情和评论区，不再只覆盖首页、搜索和通知。
+
+### 0.5.2 更新说明
+
+- 一检测到静音或拉黑了你的帖子就隐藏。本地名单里已有的账号立刻消失；第一次检测到的账号会先收起再隐藏。
+
+### 0.5.1 更新说明
+
+- 侧栏分为「状态」（关系概览和最近账号）和「选项」（界面语言、徽标、时间线过滤）。
+- 右键工具栏图标选择「选项」，会直接打开侧栏的选项标签。
+
+### 0.5.0 更新说明
+
+- 新增 Chrome 选项页（右键工具栏图标 → 选项），提供可选的时间线过滤。两项默认关闭，只有你打开后才生效。
+- 可选彻底隐藏已静音账号：即使互关，也从首页时间线、搜索和通知中隐藏其帖子。个人主页和帖子详情仍可打开，方便取消静音。
+- 可选隐藏扩展已经确认拉黑了你的账号的帖子（首页、搜索、通知）。这不是完整拉黑名单。
+- Side Panel 和关系档案库也提供同样的开关。只改变当前浏览器的显示，不会替你静音、拉黑或通知任何人。
 
 ### 0.4.10 更新说明
 
@@ -144,6 +184,26 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 兄貴じゃないは独立した拡張機能であり、X Corp. との提携、承認、スポンサー関係はありません。
 
 ソースコードは https://github.com/interjc/chrome-x-not-brother で公開しています。不具合報告とサポートはリポジトリの Issues ページをご利用ください。
+
+### 0.5.3 更新内容
+
+- ミュートおよび「ブロックされた」投稿の非表示を、投稿詳細とスレッドにも適用します。ホーム・検索・通知だけではありません。
+
+### 0.5.2 更新内容
+
+- ミュートまたはブロックされた投稿を検出次第非表示にします。ローカル一覧にあるアカウントはすぐに消え、初めて検出したアカウントは短いアニメーションで収納されます。
+
+### 0.5.1 更新内容
+
+- サイドパネルを「ステータス」（関係の概要と最近のアカウント）と「オプション」（言語、バッジ、タイムラインフィルター）に分割しました。
+- ツールバーアイコンを右クリックして「オプション」を選ぶと、サイドパネルのオプションタブが直接開きます。
+
+### 0.5.0 更新内容
+
+- Chrome のオプションページ（ツールバーアイコンを右クリック → オプション）を追加し、任意のタイムラインフィルターを用意しました。どちらも初期状態ではオフです。
+- ミュートしたアカウントを、相互フォローでもホーム・検索・通知から完全に隠せます。プロフィールと投稿詳細は表示されるので、ミュート解除できます。
+- 拡張機能がすでに「ブロックされた」と確認したアカウントの投稿を、ホーム・検索・通知から隠せます。全員のリストではありません。
+- 同じスイッチはサイドパネルと関係アーカイブにもあります。このブラウザーの表示だけが変わり、ミュート・ブロック・通知は行いません。
 
 ### 0.4.10 更新内容
 
@@ -212,7 +272,7 @@ Not Brother runs only while the user actively browses x.com. It reads account na
 
 ### `storage`
 
-The extension uses `chrome.storage.local` to save the user's consent version, observer on/off state, page-badge preference, observer-panel minimized preference, and signed-in X handle used only to exclude the viewer from observations. Relationship records remain in the extension origin's local IndexedDB. No setting or observation is sent to the developer.
+The extension uses `chrome.storage.local` to save the user's consent version, observer on/off state, page-badge preference, observer-panel minimized preference, optional timeline-filter preferences, and signed-in X handle used only to exclude the viewer from observations. Relationship records remain in the extension origin's local IndexedDB. No setting or observation is sent to the developer.
 
 ### `sidePanel`
 

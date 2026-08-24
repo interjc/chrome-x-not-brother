@@ -15,7 +15,7 @@ flowchart LR
     D --> F["Relationship Fieldbook"]
     D --> H["本地关系概览"]
     H --> B
-    G["chrome.storage.local<br/>同意版本、观察器与 dock 设置"] --> B
+    G["chrome.storage.local<br/>同意、观察器、dock 与时间线过滤"] --> B
     G --> E
     G --> F
 ```
@@ -35,7 +35,8 @@ flowchart LR
 - 将完整加载的可见浮窗按 handle 精确配给底层作者卡片，并用 `*-follow`、`*-unfollow` 和 `userFollowIndicator` 补充普通关系事实；
 - 从首页时间线的 status permalink、作者头像和去掉格式字符的 `@handle` 识别作者身份；没有关注控件时仍输出内部 unknown，供本地档案回标，不把它当成未关注；
 - 通过 `users:lookup` 批量读取可见 handle 的本地已知关系，使已确认账号在证据浮层关闭后继续回标；
-- 读取 X 已经为当前页面载入的 UI store、tweet fiber（含祖先组件）以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`，以及已有的 `name` / `profile_image_url_https`，给首页和评论区没有关注控件的卡片补全关系，并补全 DOM 抽坏的显示名和头像；不发起新的 GraphQL 或 REST 请求；
+- 读取 X 已经为当前页面载入的 UI store、tweet fiber（含祖先组件）以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`、`muting`，以及已有的 `name` / `profile_image_url_https`，给首页和评论区没有关注控件的卡片补全关系，并补全 DOM 抽坏的显示名和头像；不发起新的 GraphQL 或 REST 请求；
+- 同意后若打开可选时间线过滤，用已载入的 `muting`、现场/本地 `blocked_by` 隐藏首页、搜索、通知和帖子详情/评论区里对应帖子单元格；页面 GraphQL 一返回静音/拉黑信号就立即隐藏。本地名单已有的账号立刻消失，第一次检测到的账号带短收起动画。不隐藏个人主页、浮窗或关注列表，也不把静音列表写入数据库；
 - 页面主世界 `page-bridge.js` 只把上述已载入字段回传给隔离世界的观察器；DOM 证据优先，store / 已完成响应只填充内部 unknown；
 - 识别当前登录 handle 并在扫描阶段排除本人；
 - 插入观察状态/概览 dock；其本地 `dockCollapsed` 设置控制完整面板或状态悬浮球，用户手势可恢复面板或通过 service worker 打开当前标签页的 Side Panel；
@@ -60,7 +61,7 @@ flowchart LR
 
 - 与 service worker 同属扩展 origin，可以安全访问扩展 IndexedDB；
 - Dexie `liveQuery` 驱动 UI 数据更新；
-- Side Panel 提供概览、键盘可达的本地分类筛选、界面语言选择和用户手势 Profile 链接，筛选不写数据库也不预取资料；dashboard 提供完整本地数据管理。两者通过共享 hook 订阅 `chrome.storage.onChanged`，已打开页面会即时接收 viewer handle、观察器、徽标和界面语言设置变化。
+- Side Panel 用状态/选项两个标签分页：状态页是概览、分类筛选和用户列表；选项页是界面语言、页面徽标和时间线过滤。筛选不写数据库也不预取资料。Chrome 工具栏右键「选项」通过 `options_ui` 把 `sidePanelTab` 设为 options 并打开侧栏。dashboard 仍提供完整本地数据管理。扩展页通过共享 hook 订阅 `chrome.storage.onChanged`。
 
 ### Internationalization
 

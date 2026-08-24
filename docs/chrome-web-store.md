@@ -96,7 +96,7 @@ npm run package
 | 权限/访问 | Dashboard 中的说明 |
 | --- | --- |
 | `https://x.com/*` | 在用户主动浏览 X 时，读取当前页面已经显示的账号身份和关系提示，以注入本地关系徽标并形成观察记录。 |
-| `storage` | 在 `chrome.storage.local` 保存同意状态、观察器开关、徽标开关、dock 收起偏好和用于排除本人的当前 handle。 |
+| `storage` | 在 `chrome.storage.local` 保存同意状态、观察器开关、徽标开关、dock 收起偏好、可选时间线过滤和用于排除本人的当前 handle。 |
 | `sidePanel` | 在 Chrome 原生侧栏中显示本地关系概览和首次使用披露。 |
 
 ### 商店链接

@@ -40,6 +40,7 @@
 
 - 主动滚动完整 following/followers 列表；
 - 后台打开或遍历用户资料；
-- 自动关注、取关、拉黑、静音或隐藏 X 内容；
-- 主动调用 X API、私有 GraphQL 或拦截网络响应；当前页 UI store 里已经载入、且对应可见账号的关系字段除外；
+- 自动关注、取关、拉黑或静音；
+- 默认隐藏 X 内容（0.5.0 起可用选项页手动打开时间线过滤，仍不点击 X 控件）；
+- 主动调用 X API、私有 GraphQL 或拦截网络响应；当前页 UI store 里已经载入、且对应可见账号的 `following` / `followed_by` / `blocked_by` / `muting` 字段除外；
 - Chrome Built-in AI 内容标签。

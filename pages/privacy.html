@@ -50,7 +50,7 @@
       <h3>保存位置</h3>
       <ul>
         <li>用户与观察记录保存在扩展 origin 的 IndexedDB；</li>
-        <li>同意版本、观察开关、徽标开关、dock 收起偏好和 viewerHandle 保存在 chrome.storage.local；</li>
+        <li>同意版本、观察开关、徽标开关、dock 收起偏好、可选时间线过滤和 viewerHandle 保存在 chrome.storage.local；</li>
         <li>没有服务器、账号系统、遥测或云同步。数据不会发送给开发者或第三方。</li>
       </ul>
       <p>侧栏和档案库展示头像时，按 handle 请求公开头像图片（https://unavatar.io/x/{handle}）；若失败再回退到观察时保存的 X CDN URL。这只用于显示，观察记录仍只保存在本地。</p>
@@ -64,7 +64,7 @@
       <p>扩展不申请 tabs、scripting、cookies、webRequest 或全站访问权限。</p>
 
       <h3>你的控制</h3>
-      <p>你可以随时暂停观察、隐藏页面徽标、收起或展开观察 dock、导出 JSON/CSV、删除单个用户及其历史、清空全部本地档案，或卸载扩展以删除其 origin 数据。</p>
+      <p>你可以随时暂停观察、隐藏页面徽标、打开或关闭可选时间线过滤、收起或展开观察 dock、导出 JSON/CSV、删除单个用户及其历史、清空全部本地档案，或卸载扩展以删除其 origin 数据。时间线过滤只改变当前浏览器的显示，不保存静音名单，也不对 X 执行静音或拉黑。</p>
 
       <h3>政策更新</h3>
       <p>政策变化会写进本页并更新日期。实质的数据处理变化还会通过扩展内披露重新征求同意。</p>
@@ -95,7 +95,7 @@
       <h3>Where it is stored</h3>
       <ul>
         <li>Users and observations stay in IndexedDB under the extension origin;</li>
-        <li>consent version, observer state, badge preference, dock-collapsed preference, and viewerHandle stay in chrome.storage.local;</li>
+        <li>consent version, observer state, badge preference, dock-collapsed preference, optional timeline filters, and viewerHandle stay in chrome.storage.local;</li>
         <li>there is no server, account system, telemetry, or cloud sync. Observation data is not sent to the developer or third parties.</li>
       </ul>
       <p>Side Panel and Fieldbook display avatars by requesting a public image for that handle (https://unavatar.io/x/{handle}), then falling back to a stored X CDN URL if needed. That request is only for display; observation records stay local.</p>
@@ -109,7 +109,7 @@
       <p>The extension does not request tabs, scripting, cookies, webRequest, or all-sites access.</p>
 
       <h3>Your controls</h3>
-      <p>You can pause observation, hide page badges, collapse or expand the observer dock, export JSON or CSV, delete one local record, clear the archive, or uninstall the extension to delete its origin data.</p>
+      <p>You can pause observation, hide page badges, turn optional timeline filters on or off, collapse or expand the observer dock, export JSON or CSV, delete one local record, clear the archive, or uninstall the extension to delete its origin data. Timeline filters only change what this browser shows; they do not save a mute list or mute/block anyone on X.</p>
 
       <h3>Changes</h3>
       <p>Updates are published on this page with a new effective date. Material data-handling changes also require in-extension disclosure and a new consent.</p>

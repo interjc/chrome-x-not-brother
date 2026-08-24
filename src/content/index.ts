@@ -50,8 +50,17 @@ import {
 } from "./process-scheduler";
 import {
   applyPageStoreRelationships,
+  isPageStoreUpdatedMessage,
   loadPageUserRelationships,
+  mergePageUserMaps,
+  pageUsersFromRecord,
+  type PageUserRelationship,
 } from "./page-store";
+import {
+  applyTimelineHiding,
+  clearTimelineHiding,
+  createMuteMemory,
+} from "./timeline-hide";
 import {
   scanXDocument,
   type ExtractedCandidate,
@@ -59,9 +68,12 @@ import {
 } from "./x-adapter";
 
 const PROCESS_DELAY_MS = 180;
+const HIDE_DELAY_MS = 0;
 const observationSignatures = createObservationSignatureTracker();
 const recordCache = new Map<string, UserRecord>();
 const requestedUserKeys = new Set<string>();
+const muteMemory = createMuteMemory();
+let latestPageUsers = new Map<string, PageUserRelationship>();
 let currentUrl = location.href;
 let latestSettings: ObserverSettings | null = null;
 let latestSummary: ObservationSummary | null = null;
@@ -72,20 +84,32 @@ let heartbeatId: number | null = null;
 let observer: MutationObserver | null = null;
 let periodicRescan: PeriodicRescanController | null = null;
 let processScheduler: ProcessScheduler | null = null;
+let hideScheduler: ProcessScheduler | null = null;
 let extensionListenersRegistered = false;
+let pageStoreListenerRegistered = false;
 
 function handleStorageChanged(
   changes: Record<string, chrome.storage.StorageChange>,
   areaName: string,
 ): void {
-  if (areaName === "local" && changes[SETTINGS_KEY]) scheduleProcess();
+  if (areaName === "local" && changes[SETTINGS_KEY]) {
+    scheduleHide();
+    scheduleProcess();
+  }
+}
+
+function timelineHidingEnabled(settings: ObserverSettings | null): boolean {
+  return Boolean(settings?.hideMutedAccounts || settings?.hideBlockedByAccounts);
 }
 
 function handleRuntimeMessage(message: RuntimeMessage): false {
   if (message.type === "data:changed") {
     recordCache.clear();
     requestedUserKeys.clear();
-    if (latestSettings?.observerEnabled) scheduleProcess();
+    if (latestSettings?.observerEnabled || timelineHidingEnabled(latestSettings)) {
+      scheduleHide();
+      scheduleProcess();
+    }
     if (latestSettings) void refreshSummary();
   }
   return false;
@@ -99,18 +123,69 @@ function removeExtensionListeners(): void {
   chrome.runtime.onMessage.removeListener(handleRuntimeMessage);
 }
 
+function rememberPageUsers(users: Map<string, PageUserRelationship>): void {
+  latestPageUsers = mergePageUserMaps(latestPageUsers, users);
+  for (const user of users.values()) {
+    muteMemory.remember(user.handle.toLowerCase(), user.muting);
+  }
+}
+
+function applyHideNow(): void {
+  if (stopped) return;
+  const settings = latestSettings;
+  if (!settings) return;
+  if (
+    settings.consentVersion < CURRENT_CONSENT_VERSION ||
+    !timelineHidingEnabled(settings)
+  ) {
+    clearTimelineHiding(document);
+    return;
+  }
+  const viewerHandle = viewerHandleFromDocument(document);
+  const viewerKey = viewerHandle?.toLowerCase() ?? settings.viewerHandle;
+  const candidates = scanXDocument(document, location.href).filter(
+    (candidate) => candidate.observation.userKey !== viewerKey,
+  );
+  applyPageStoreRelationships(candidates, latestPageUsers);
+  applyTimelineHiding({
+    root: document,
+    candidates,
+    hideMutedAccounts: settings.hideMutedAccounts,
+    hideBlockedByAccounts: settings.hideBlockedByAccounts,
+    pageUsers: latestPageUsers,
+    records: recordCache,
+    muteMemory,
+  });
+}
+
+function handlePageStoreUpdated(event: MessageEvent): void {
+  if (event.source !== window) return;
+  if (!isPageStoreUpdatedMessage(event.data)) return;
+  rememberPageUsers(pageUsersFromRecord(event.data.users));
+  scheduleHide();
+}
+
 function stopContentScript(): void {
   if (stopped) return;
   stopped = true;
   processScheduler?.stop();
   processScheduler = null;
+  hideScheduler?.stop();
+  hideScheduler = null;
   if (heartbeatId !== null) window.clearInterval(heartbeatId);
   heartbeatId = null;
   periodicRescan?.stop();
   periodicRescan = null;
   observer?.disconnect();
+  if (pageStoreListenerRegistered) {
+    window.removeEventListener("message", handlePageStoreUpdated);
+    pageStoreListenerRegistered = false;
+  }
   removeExtensionListeners();
   removeRelationshipBadges();
+  clearTimelineHiding(document);
+  muteMemory.clear();
+  latestPageUsers = new Map();
   removeObserverPanel(document);
 }
 
@@ -273,11 +348,16 @@ async function processPage(): Promise<void> {
   if (stopped) return;
   latestSettings = settings;
   renderPanel(settings);
-  if (
-    settings.consentVersion < CURRENT_CONSENT_VERSION ||
-    !settings.observerEnabled
-  ) {
+  const hasConsent = settings.consentVersion >= CURRENT_CONSENT_VERSION;
+  const hidingEnabled = timelineHidingEnabled(settings);
+  if (!hasConsent) {
     removeRelationshipBadges();
+    clearTimelineHiding(document);
+    return;
+  }
+  if (!settings.observerEnabled && !hidingEnabled) {
+    removeRelationshipBadges();
+    clearTimelineHiding(document);
     return;
   }
 
@@ -289,17 +369,25 @@ async function processPage(): Promise<void> {
   const candidates = scanXDocument(document, location.href).filter(
     (candidate) => candidate.observation.userKey !== viewerKey,
   );
-  applyPageStoreRelationships(
-    candidates,
-    await loadPageUserRelationships(document, window),
-  );
+  const pageUsers = await loadPageUserRelationships(document, window);
+  rememberPageUsers(pageUsers);
+  applyPageStoreRelationships(candidates, latestPageUsers);
   if (stopped) return;
   const collectableCandidates = candidates.filter((item) =>
     isCollectableRelationship(item.observation.relationship),
   );
 
-  await hydrateRecordCache(candidates);
-  if (stopped) return;
+  if (settings.observerEnabled || hidingEnabled) {
+    await hydrateRecordCache(candidates);
+    if (stopped) return;
+  }
+
+  if (hidingEnabled) applyHideNow();
+
+  if (!settings.observerEnabled) {
+    removeRelationshipBadges();
+    return;
+  }
 
   if (settings.showBadges) annotate(candidates);
   else removeRelationshipBadges();
@@ -334,6 +422,10 @@ function scheduleProcess(): void {
   processScheduler?.request();
 }
 
+function scheduleHide(): void {
+  hideScheduler?.request();
+}
+
 function nodeIsInsideInjectedUi(node: Node): boolean {
   const element = node instanceof Element ? node : node.parentElement;
   return Boolean(element?.closest("[data-xro-badge], [data-xro-overlay]"));
@@ -346,6 +438,7 @@ observer = new MutationObserver((mutations) => {
   ) {
     return;
   }
+  scheduleHide();
   scheduleProcess();
 });
 
@@ -378,6 +471,7 @@ heartbeatId = window.setInterval(() => {
   }
   if (location.href === currentUrl) return;
   currentUrl = location.href;
+  scheduleHide();
   scheduleProcess();
 }, 800);
 
@@ -388,10 +482,18 @@ if (hasExtensionContext()) {
     task: processPage,
     onError: (error) => handleRuntimeError(error, "Could not process the current page"),
   });
+  hideScheduler = createProcessScheduler({
+    window,
+    delayMs: HIDE_DELAY_MS,
+    task: async () => applyHideNow(),
+    onError: (error) => handleRuntimeError(error, "Could not hide muted or blocked posts"),
+  });
 
   chrome.storage.onChanged.addListener(handleStorageChanged);
   chrome.runtime.onMessage.addListener(handleRuntimeMessage);
   extensionListenersRegistered = true;
+  window.addEventListener("message", handlePageStoreUpdated);
+  pageStoreListenerRegistered = true;
 
   periodicRescan = createPeriodicRescanController({
     document,
@@ -399,12 +501,16 @@ if (hasExtensionContext()) {
     shouldRescan: () => Boolean(
       latestSettings &&
       latestSettings.consentVersion >= CURRENT_CONSENT_VERSION &&
-      latestSettings.observerEnabled,
+      (latestSettings.observerEnabled || timelineHidingEnabled(latestSettings)),
     ),
-    onRescan: scheduleProcess,
+    onRescan: () => {
+      scheduleHide();
+      scheduleProcess();
+    },
   });
   periodicRescan.start();
 
+  scheduleHide();
   scheduleProcess();
 } else {
   stopContentScript();

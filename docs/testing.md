@@ -34,7 +34,8 @@ npm run skills:validate
 - 已打开扩展页面通过共享 settings hook 接收其他上下文的 viewer handle、观察器和界面语言设置变化，并在卸载时移除监听；
 - 观察器总数为零时，dock 与 Side Panel 三语空状态把悬停说成补充路径；首条观察后 dock 恢复可见证据说明；
 - 首页时间线可从 `/handle/status/:id`、头像链接或带双向隔离符的 `@handle` 识别作者，证据不足时保持 unknown 且不把引用帖回退成外层作者；
-- 当前页 UI store、tweet 祖先 fiber，以及页面已完成的 TweetDetail 等 GraphQL 响应中的 `following` / `followed_by` / `blocked_by` 可把首页和评论区 unknown 卡片提升为已知关系；store 里已有查看者时仍要继续读回复作者；缺少完整布尔值不得编造；DOM 已可收集证据时 store 不得覆盖；
+- 当前页 UI store、tweet 祖先 fiber，以及页面已完成的 TweetDetail 等 GraphQL 响应中的 `following` / `followed_by` / `blocked_by` / `muting` 可把首页和评论区 unknown 卡片提升为已知关系，并供可选时间线过滤使用；store 里已有查看者时仍要继续读回复作者；缺少完整布尔值不得编造；DOM 已可收集证据时 store 不得覆盖；
+- 可选时间线过滤默认关闭；打开后互关静音账号和本地已知 blocked-by 账号的首页帖子单元格被隐藏，个人主页/浮窗/UserCell 不隐藏；关闭过滤后单元格恢复；
 - CSV escaping 与 JSON schema validation；
 - Manifest 文件、最小权限和所需 build artifacts；
 - `en`、`ja`、`zh_CN` Manifest catalog、语言归一化、翻译占位符、关系与来源名称。
@@ -73,6 +74,7 @@ npm run skills:validate
 28. 在 DevTools 中观察一分钟：快速滚动、悬停、切换 X 内页时不得出现并发异常；同一关系和来源不得每 2 秒增加 observationCount，扩展重新加载失效后不再保留轮询或 focus/visibility 监听。
 29. 同时打开两个 X 标签页：在标签 A 识别新关系后，标签 B 最迟约 2 秒回标；在档案页确认变化或删除记录后，标签 B 的缓存结果及时更新。普通非 X 标签没有接收端时不得产生未捕获错误，也不得要求新增 `tabs` 权限。
 30. 在 Side Panel 和关系档案库页脚点击“发送反馈”，确认新标签页打开 `https://github.com/interjc/chrome-x-not-brother/issues`，且没有因此申请额外权限或发送本地观察数据。
+31. 侧栏默认在状态标签显示用户列表；切换到选项后出现语言、徽标和时间线过滤，状态列表被收起。右键工具栏图标选择 **选项**，确认侧栏打开并停在选项标签；两个时间线过滤默认关闭。打开“彻底隐藏已静音账号”后，首页互关但仍被静音的帖子消失，对方主页仍可打开；打开“隐藏拉黑了我的账号”后，本地已记录 blocked-by 的首页帖子以及帖子详情/评论区里该作者的回复都会消失。档案里已有的账号应立刻消失；第一次检测到的账号会先收起再隐藏。档案库的同一开关即时同步。
 
 ## 边界检查
 

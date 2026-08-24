@@ -1,6 +1,8 @@
 import {
+  SIDE_PANEL_TABS,
   UI_LOCALE_PREFERENCES,
   type ObserverSettings,
+  type SidePanelTab,
   type UiLocalePreference,
 } from "../domain/types";
 
@@ -14,6 +16,9 @@ export const DEFAULT_SETTINGS: ObserverSettings = {
   dockCollapsed: false,
   viewerHandle: null,
   uiLocale: "auto",
+  hideMutedAccounts: false,
+  hideBlockedByAccounts: false,
+  sidePanelTab: "status",
 };
 
 export function uiLocalePreference(value: unknown): UiLocalePreference {
@@ -21,6 +26,13 @@ export function uiLocalePreference(value: unknown): UiLocalePreference {
     (UI_LOCALE_PREFERENCES as readonly string[]).includes(value)
     ? value as UiLocalePreference
     : DEFAULT_SETTINGS.uiLocale;
+}
+
+export function sidePanelTabPreference(value: unknown): SidePanelTab {
+  return typeof value === "string" &&
+    (SIDE_PANEL_TABS as readonly string[]).includes(value)
+    ? value as SidePanelTab
+    : DEFAULT_SETTINGS.sidePanelTab;
 }
 
 export function coerceSettings(
@@ -33,6 +45,10 @@ export function coerceSettings(
     dockCollapsed: saved?.dockCollapsed ?? DEFAULT_SETTINGS.dockCollapsed,
     viewerHandle: saved?.viewerHandle ?? DEFAULT_SETTINGS.viewerHandle,
     uiLocale: uiLocalePreference(saved?.uiLocale),
+    hideMutedAccounts: saved?.hideMutedAccounts ?? DEFAULT_SETTINGS.hideMutedAccounts,
+    hideBlockedByAccounts:
+      saved?.hideBlockedByAccounts ?? DEFAULT_SETTINGS.hideBlockedByAccounts,
+    sidePanelTab: sidePanelTabPreference(saved?.sidePanelTab),
   };
 }
 

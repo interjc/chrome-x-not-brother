@@ -1,109 +1,137 @@
-# Not Brother / 不是兄弟
+# 不是兄弟 / Not Brother
 
-Not Brother（中文名：不是兄弟；日文名：兄貴じゃない）是一个本地优先的开源 Chrome Manifest V3 扩展。源码在 [interjc/chrome-x-not-brother](https://github.com/interjc/chrome-x-not-brother)；问题、建议和支持请到 [GitHub Issues](https://github.com/interjc/chrome-x-not-brother/issues)。它在你正常浏览 `x.com` 时完成两件事：
+Not Brother（中文名：不是兄弟；日文名：兄貴じゃない）是一款面向 X 的 Chrome 扩展。你正常浏览 `x.com` 时，它会在已经出现的账号旁边标出关系，并把观察记录保存在当前 Chrome 配置里，方便以后发现互关、取关或拉黑变化。
 
-1. 给页面中已经出现的用户标注可确认的关系状态；
-2. 把观察结果和关系变化历史收集到扩展自己的本地数据库。
+数据只留在本机，不会上传。它不会替你关注、取关、拉黑或静音，也不会自动滚动或打开别人的资料。
 
-它不会自动滚动、遍历账号、调用 X 私有接口，也不会点击关注、取关、拉黑或静音按钮。
+## 核心功能
 
-## 当前范围
+- **关系标注**：互关、我单向关注、TA 关注了我、TA 拉黑了我，以及可识别的关系变化。
+- **本地档案**：在侧栏和完整档案库里查看、筛选、搜索曾经出现过的账号。
+- **可选时间线过滤**：彻底隐藏已静音账号（即使互关），以及隐藏已经确认拉黑了你的账号。这两项默认关闭。
+- **中英日界面**：跟随浏览器语言，也可在选项里固定为简体中文、英语或日语。
 
-- 关系标注：互关、我单向关注、TA 关注了我、TA 拉黑了我。只要当前已是互关，徽标就显示“互关”。我单向关注默认显示“单向关注”；只有跟历史比对发现对方曾经关注我、现在不关注了（互关变我单向，或对方原先关注我现在取关）才显示“对方取关”。你单方面取关显示“你已取关”，对方拉黑显示“对方拉黑”。其他双方都已取消关注时不显示徽标，证据不足时不显示也不收集“未知”。
-- 被动观察：首页时间线、帖子详情/评论线程、搜索、通知、用户列表和个人资料等已渲染页面；首页会读取 X 已为可见作者载入的关系字段，不必先悬停。
-- 多语言证据：英语、日语、简体中文，并兼容部分繁体中文提示。
-- 多语言界面：插件清单、Side Panel、关系档案库、X 页面徽标、观察 dock、工具栏提示和导出标签支持中英日三语自动切换；其他语言回退英语。
-- 本地档案：用户当前状态、上一次状态、首次与最后出现时间、来源和观察历史。
-- 查看界面：Chrome Side Panel 概览及独立 Relationship Fieldbook 管理页；侧栏分类数字可筛选最近用户，点击用户可由明确手势在新标签页打开其 X 资料。
-- 页面状态：X 页面右下角显示观察状态与本地概览；零记录时提示没有徽标可悬停作者作补充，可点 `×` 收为带状态点的 NB 悬浮球、点击恢复或打开 Side Panel；工具栏 icon 用 `ON` / `!` 显示运行状态。
-- 主题与品牌：扩展页和注入 UI 支持浅色/暗黑模式，使用 ImageGen 生成的 NB 变形标志。
-- 数据管理：搜索、筛选、排序、变化确认、JSON/CSV 导出、JSON 合并导入和本地清空。
-- 评论区识别：除明确平台提示外，当同一评论的回复、转发、点赞全部不可用且同页其他帖子正常，或已完整加载的作者浮窗缺少全部关注/粉丝计数时，标记并收集“拉黑了我”；本地已知记录会在以后再次遇到该 ID 时回标。
-- 浮窗关系补全：已经显示且加载完成的同 handle 作者浮窗可用 X 的关注/取关控件和 `userFollowIndicator` 补全互关、我单向关注或 TA 关注了我；不会把一个浮窗的证据套给其他评论作者。
-- 实时与健壮性：DOM 新增、关系文案和关键属性变化会触发合并扫描；观察器运行且页面可见时每 2 秒兜底复扫，恢复焦点时立即检查，隐藏页暂停轮询，重复结果不会反复写入历史；已经打开的 Side Panel 与档案页也会即时同步本人账号和观察设置。
-- 隐私门槛：首次安装默认不观察，只有用户确认本地数据披露后才开始。
-- 首版不包含 X API 与 Chrome Built-in AI；AI 只作为后续可选内容标签能力。
+## 安装
 
-## 开始开发
+### Chrome 网上应用店
 
-Node.js 通过 nvm 管理。仓库固定使用 `.nvmrc` 中的 Node `24.19.0`：
+打开 [不是兄弟 · Chrome 网上应用店](https://chromewebstore.google.com/detail/dioanbgbpklflgochbljdehpjidckgfd)，点击「添加至 Chrome」。
+
+### 从源码加载
+
+适合开发者，或商店版本尚未更新到你需要的提交时：
+
+1. 安装 [Chrome](https://www.google.com/chrome/) 116 或更高版本，以及 [nvm](https://github.com/nvm-sh/nvm)。
+2. 克隆仓库并构建：
+
+```bash
+git clone https://github.com/interjc/chrome-x-not-brother.git
+cd chrome-x-not-brother
+source "$HOME/.nvm/nvm.sh"
+nvm use
+npm install
+npm run build
+```
+
+3. 打开 `chrome://extensions`，打开右上角 **开发者模式**。
+4. 点击 **加载已解压的扩展程序**，选择仓库里的 `dist/` 目录。
+
+重新构建后，先在扩展卡片上点「重新加载」，再刷新已经打开的 X 标签页。
+
+## 使用
+
+安装后第一次打开侧栏，会先看到数据说明。只有你点「同意并开始」后，扩展才会标注页面并写入本地档案。之后可随时暂停。
+
+工具栏图标状态：
+
+- 酸性黄 `ON`：正在观察
+- 灰色 `!`：已暂停
+- 琥珀色 `!`：还没完成首次设置
+
+### 页面上的徽标
+
+正常浏览 X 即可。首页通常能直接读出关系；某条还没有徽标时，可以把鼠标停在作者头像或 ID 上，等 X 自己弹出关系浮窗。证据不足时不会显示「未知」，也不会为此存档。
+
+关系变化会尽量写清楚：对方取关、你已取关、对方拉黑。无法单方判断时显示「关系变化」。
+
+### 侧栏
+
+点击工具栏图标打开侧栏，顶部可以在 **状态** 和 **选项** 之间切换。
+
+- **状态**：观察概览、按关系筛选、最近账号。点击某一行会打开该账号的 X 主页。
+- **选项**：界面语言、是否显示页面徽标、时间线过滤。右键工具栏图标选择 **选项**，会直接打开这一页。
+
+X 页面右下角还有观察概览，可收成悬浮球。点「查看详情」同样打开侧栏。
+
+### 时间线过滤
+
+在侧栏 **选项** 里打开，默认都是关的：
+
+- **彻底隐藏已静音账号**：即使互关，也从首页、搜索、通知和帖子详情/评论区藏掉对方的帖子。对方主页仍可打开，方便取消静音。
+- **隐藏拉黑了我的账号**：藏掉扩展已经确认拉黑了你的账号。这不是完整名单，只作用于已经观察过的账号。
+
+已经在本地名单里的账号会立刻消失；第一次检测到的账号会先收起再隐藏。过滤只改变当前浏览器的显示。
+
+### 关系档案库
+
+侧栏底部可打开完整档案库：搜索、筛选、排序、确认变化、查看历史、导出 JSON/CSV、导入 JSON 备份、删除单条或清空全部本地数据。
+
+换电脑或清空数据前，请先导出 JSON。Chrome 不会在不同配置之间自动同步这份档案。
+
+## 隐私
+
+扩展只读取当前 `x.com` 页面上已经显示的账号名称、handle、头像和关系提示。不读私信、Cookie 或帖子正文，也不额外请求 X 接口。
+
+- [隐私政策](https://interjc.github.io/chrome-x-not-brother/privacy.html)
+- [使用条款](https://interjc.github.io/chrome-x-not-brother/terms.html)
+
+## 本地开发
+
+仓库用 nvm 固定 Node `.nvmrc`（当前是 `24.19.0`）：
 
 ```bash
 source "$HOME/.nvm/nvm.sh"
 nvm use
 npm install
+npm run dev
+```
+
+`npm run dev` 会监视源码并更新 `dist/`。在 `chrome://extensions` 重新加载扩展后，还要刷新已打开的 X 标签页。
+
+常用命令：
+
+```bash
+npm run check             # 类型检查 + 单元测试
+npm run build             # 生成 dist/
+npm run validate:dist     # 校验清单和权限
+npm run package           # 打出可加载的 ZIP
+```
+
+开发约定、目录说明和发布流程见 [docs/](docs/README.md)。给代理或自动化工具的仓库规则在 [AGENTS.md](AGENTS.md)。
+
+## 参与贡献
+
+欢迎到 [GitHub Issues](https://github.com/interjc/chrome-x-not-brother/issues) 反馈问题或建议。请不要在议题里粘贴密码、Cookie，或含真实关系数据的导出备份。
+
+提交代码前请阅读 [贡献指南](docs/contributing.md)，并在本地跑通：
+
+```bash
+source "$HOME/.nvm/nvm.sh"
+nvm use
 npm run check
 npm run build
 npm run validate:dist
+npm run skills:validate
 ```
 
-然后打开 `chrome://extensions`，启用 Developer mode，选择 **Load unpacked** 并加载仓库中的 `dist/`。每次重新构建并点击扩展的“重新加载”后，还要刷新已经打开的 X 标签页，让旧 content script 退出并注入新版本。
+不要添加自动滚动、遍历资料、调用 X 私有接口，或点击关注 / 取关 / 拉黑 / 静音等账号操作。
 
-更多步骤见 [开发指南](docs/development.md) 和 [使用指南](docs/usage.md)。代理或自动化工具还必须遵守 [AGENTS.md](AGENTS.md)。
+## 版权与作者
 
-## 项目结构
+[MIT License](LICENSE) © 2026 [Justin Chen](https://interjc.net)
 
-```text
-src/content/       X 页面证据提取与徽标注入
-src/background/    service worker 与持久化消息入口
-src/domain/        关系解析、合并语义、导入导出
-src/i18n/          中英日运行时词库、语言归一化与本地化展示
-src/storage/       IndexedDB 与扩展设置
-src/ui/            Side Panel 与完整管理页
-assets/branding/   ImageGen 品牌源图
-assets/store/      Chrome Web Store 图标、截图与宣传图
-pages/             GitHub Pages：公开隐私政策与使用条款
-public/            Manifest、HTML、内容样式与图标
-scripts/           构建、校验、打包
-skills/            项目级 Codex skill
-docs/              面向开发者和用户的文档
-terms/             公开隐私政策与使用条款
-CONTRIBUTING.md    开源贡献入口
-```
+- GitHub：[interjc/chrome-x-not-brother](https://github.com/interjc/chrome-x-not-brother)
+- X：[@interjc](https://x.com/interjc)
+- 个人主页：[interjc.net](https://interjc.net)
 
-## 文档索引
-
-| 文档 | 内容 |
-| --- | --- |
-| [可行性研究](docs/feasibility.md) | Chrome 能力、X 约束、风险和结论 |
-| [确认需求](docs/requirements.md) | grill-me 后确定的首版范围与验收标准 |
-| [产品与界面设计](docs/design.md) | 交互原则、标注语义和视觉语言 |
-| [国际化设计](docs/localization.md) | 中英日自动切换、词库边界、扩展语言与商店本地化 |
-| [技术架构](docs/architecture.md) | 运行时数据流、模块边界和安全约束 |
-| [数据模型](docs/data-model.md) | users、observations、合并和迁移规则 |
-| [开发指南](docs/development.md) | nvm、安装、构建、目录与日常流程 |
-| [测试指南](docs/testing.md) | 自动检查和 Chrome 手工验收清单 |
-| [维护指南](docs/maintenance.md) | X DOM 漂移、数据迁移与故障处置 |
-| [X 扩展实时观察调研](docs/x-extension-resilience-research.md) | 其他开源 X 扩展的 DOM 策略、可采用模式与本项目混合复扫设计 |
-| [使用指南](docs/usage.md) | 加载、标注、档案库、导入导出、清空与反馈 |
-| [贡献指南](docs/contributing.md) | 产品边界、Issue、开发环境、检查与 Pull request |
-| [隐私政策](terms/privacy.md) | 收集内容、保存位置、权限、删除方式和联系方式；公开页为 GitHub Pages |
-| [使用条款](terms/terms.md) | 独立软件声明、使用范围、识别限制与免责 |
-| [首次上架准备](docs/deploy.md) | 第一次发布：已完成项、截图做法、Dashboard 逐步操作 |
-| [发布指南](docs/release.md) | 版本、检查、打包、商店准备和回滚 |
-| [Chrome Web Store 上架](docs/chrome-web-store.md) | 开发者账号、文案、素材、隐私披露、审核、更新与回滚 |
-| [Chrome Web Store 三语文案](docs/store-listing.md) | 可粘贴的中英日名称、简介、详细说明、更新说明、权限理由与审核备注 |
-| [项目 skill](skills/x-relationship-observer/SKILL.md) | Codex 开发、维护、使用、发布工作流入口 |
-
-## 质量命令
-
-```bash
-npm run check             # TypeScript + unit tests
-npm run test:coverage     # coverage report
-npm run build             # production extension in dist/
-npm run validate:dist     # manifest, permissions, files
-npm run skills:validate   # project skill structure
-npm run package           # ZIP in artifacts/ and output/
-npm run version:bump -- patch   # 同步升版本并插入商店更新说明标题
-npm run release           # 完整本地发布构建；上传 output/not-brother-<version>.zip
-```
-
-## License
-
-[MIT](LICENSE)
-
-欢迎通过 [GitHub Issues](https://github.com/interjc/chrome-x-not-brother/issues) 反馈问题。代码贡献见 [贡献指南](docs/contributing.md)。
-
-## Author
-
-Justin Chen · [X](https://x.com/interjc) · [Profile](https://interjc.net)
+不是兄弟是独立扩展，与 X Corp. 没有隶属、认可或赞助关系。

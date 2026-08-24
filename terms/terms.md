@@ -19,7 +19,7 @@
 
 你可以安装、使用、暂停、导出、删除本地记录，并按 [MIT License](https://github.com/interjc/chrome-x-not-brother/blob/main/LICENSE) 查看和修改源码。
 
-扩展不会自动滚动或遍历资料页，不会调用 X API，也不会替你点击关注、取关、拉黑或静音。标准 X 资料链接只会在你明确点击或用键盘激活后打开。
+扩展不会自动滚动或遍历资料页，不会调用 X API，也不会替你点击关注、取关、拉黑或静音。可选时间线过滤只改变当前浏览器的显示。标准 X 资料链接只会在你明确点击或用键盘激活后打开。
 
 ### 识别限制
 
@@ -49,7 +49,7 @@ It is not affiliated with, endorsed by, or sponsored by X Corp. Your use of X re
 
 You may install, use, pause, export, and delete local records, and inspect or modify the source under the [MIT License](https://github.com/interjc/chrome-x-not-brother/blob/main/LICENSE).
 
-The extension does not auto-scroll, crawl profiles, call X APIs, or click follow, unfollow, block, or mute controls. A standard X profile link opens only after an explicit click or keyboard activation.
+The extension does not auto-scroll, crawl profiles, call X APIs, or click follow, unfollow, block, or mute controls. Optional timeline filters only change what this browser shows. A standard X profile link opens only after an explicit click or keyboard activation.
 
 ### Detection limits
 
