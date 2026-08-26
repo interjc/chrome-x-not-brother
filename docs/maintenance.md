@@ -21,7 +21,7 @@
 
 关系档案的确认、删除、导入和清空必须向 service worker 发送 `data:changed`，service worker 再用 `chrome.tabs.sendMessage` 尝试通知全部标签页；没有 content script 的标签页拒绝消息属于正常情况。content script 收到后无条件清除 record/requested cache，运行中才安排复扫。不要清空 observation signature，否则用户刚删除的当前可见记录可能被同一证据立即重新写回。
 
-帖子作者常使用 `data-testid="User-Name"`，列表/资料常使用 `UserName`，偶发 `User-Names`，三者都必须保留 fixture。首页时间线的显示名称经常链到 `/handle/status/:id`，`@handle` 可能被隐藏或带双向隔离符；handle 提取必须接受这类 profile 子路径、头像链接和去掉格式字符后的 `@handle`，才能把作者识别为可回标的可见 handle。不得把推文正文里的 @提及当成作者，也不得把引用帖缺失的 handle 回退成外层头像。显示名不得使用 `·` / `.` 等间隔符，头像必须配对同一 handle 的 profile 链接或 `UserAvatar-Container-*`，不得抓引用帖里的第一张 `profile_images`。相关用户等 UserCell 的关系徽标必须放在头像正下方，不得插进显示名称行或盖住关注按钮。帖子/评论徽标必须紧挨可见 `@handle` 之前，不得插到时间戳后面或被 space-between 挤到整行最右侧；没有可见 handle 时才跟在显示名称链接后，且不要用带 `<time>` 的 permalink。不含时间戳的帖子详情 `User-Name` 把 X 的显示名和 `@handle` 收成一行，关系标签单独放在下一行；已含时间的祖先不得改排版。左边线与显示名之间只留 1–2px。blocked-by 平台提示匹配必须排除 `tweetText`；不得把用户正文或泛化的 “This Post is unavailable” 当作拉黑证据。互动限制路径还必须确认回复、转发、点赞三种控件都已实际渲染，控件缺失不能等同于禁用。
+帖子作者常使用 `data-testid="User-Name"`，列表/资料常使用 `UserName`，偶发 `User-Names`，三者都必须保留 fixture。首页时间线的显示名称经常链到 `/handle/status/:id`，`@handle` 可能被隐藏或带双向隔离符；handle 提取必须接受这类 profile 子路径、头像链接和去掉格式字符后的 `@handle`，才能把作者识别为可回标的可见 handle。不得把推文正文里的 @提及当成作者，也不得把引用帖缺失的 handle 回退成外层头像。显示名不得使用 `·` / `.` 等间隔符，头像必须配对同一 handle 的 profile 链接或 `UserAvatar-Container-*`，不得抓引用帖里的第一张 `profile_images`。相关用户等 UserCell 的关系徽标必须放在头像正下方，不得插进显示名称行或盖住关注按钮。UserCell 上只有 Follow 按钮不得推断 `followsYou=false`；跟随列表主栏和资料主栏、或完整加载的同 handle 浮窗才可以。Who-to-follow / 跟隨誰建议卡保持 unknown，也不得用 page-store 填成 none。帖子/评论徽标必须紧挨可见 `@handle` 之前，不得插到时间戳后面或被 space-between 挤到整行最右侧；没有可见 handle 时才跟在显示名称链接后，且不要用带 `<time>` 的 permalink。不含时间戳的帖子详情 `User-Name` 把 X 的显示名和 `@handle` 收成一行，关系标签单独放在下一行；已含时间的祖先不得改排版。左边线与显示名之间只留 1–2px。blocked-by 平台提示匹配必须排除 `tweetText`；不得把用户正文或泛化的 “This Post is unavailable” 当作拉黑证据。互动限制路径还必须确认回复、转发、点赞三种控件都已实际渲染，控件缺失不能等同于禁用。
 
 评论区互动限制的结构规则必须同时覆盖 reply、retweet/unretweet、like/unlike。只有三组控件都已渲染成真实可交互节点、并以 `disabled` / `aria-disabled` / `inert` 明确禁用，且同一浮层或页面层存在三组均可操作的对照帖时，才生成 `blocked-interaction-restriction`。空的 testid 壳、滚动时的 `pointer-events: none`、`aria-hidden` 虚拟列表单元格，以及尚未画出的控件都只是内部 unknown。X 可能把 `data-testid` 放在按钮本身、把禁用状态放在更外层祖先，因此明确禁用检查必须遍历到评论 surface，但不得把 `pointer-events` 或祖先 `aria-hidden` 当成拉黑。`/status/:id/photo/:n` 仍按帖子详情处理；图片查看器右侧会话必须用同一 dialog / `#layers` 里的对照帖，不得借用背后时间线。
 
@@ -48,7 +48,7 @@ content script 必须把这种情况视为生命周期结束：捕获 promise re
 
 任何 schema 变化都必须使用新的 Dexie version 和迁移。不得在升级时静默清空数据库。破坏性迁移需要明确发布说明和用户备份步骤。
 
-“对方取关”“你已取关”“对方拉黑”是从前后基础关系动态推导的展示事件，不是新的数据库关系值。当前已是互关时直接显示“互关”。当前是我单向关注时默认显示“单向关注”；`mutual → following_only`、`follows_you_only → following_only` 与 `follows_you_only → none` 才显示对方取关。修改推导规则时覆盖这些转换、互关覆盖显示，以及互关双方同时取消关注（`none`）撤标且不进入概览的反例；保持 dock 只按 `hasChanged` 汇总，不要为展示标签增加 schema 字段。
+“对方取关”“你已取关”“对方拉黑”是从前后基础关系动态推导的展示事件，不是新的数据库关系值。当前已是互关时直接显示“互关”。当前是我单向关注时默认显示“单向关注”；只有 `mutual → following_only` 与 `follows_you_only → following_only` 才显示对方取关。`follows_you_only → none` 与其他双方无关一样撤标且不进入概览。修改推导规则时覆盖这些转换、互关覆盖显示，以及互关双方同时取消关注（`none`）撤标且不进入概览的反例；保持 dock 只按 `hasChanged` 汇总，不要为展示标签增加 schema 字段。
 
 如果读取的数据类型、用途、传输对象或保存位置发生实质变化，提高 `CURRENT_CONSENT_VERSION`，同步修改首次披露与隐私文档，并在新版本继续观察前重新取得用户同意。纯文案修正不得随意重置同意。
 

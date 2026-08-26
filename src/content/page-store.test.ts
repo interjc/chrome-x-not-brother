@@ -225,6 +225,32 @@ describe("page store relationships", () => {
     });
   });
 
+  it("does not fill Who to follow cards from store neither-following fields", () => {
+    const doc = fixture(`<div data-testid="SideNav_AccountSwitcher_Button"><span>@Viewer</span></div>
+      <aside aria-label="Who to follow">
+        <h2>Who to follow</h2>
+        <div data-testid="UserCell">
+          <div data-testid="UserName"><span>Alice Example</span><span>@Alice</span></div>
+          <button data-testid="123-follow">Follow</button>
+        </div>
+      </aside>`);
+    const candidates = scanXDocument(doc, "https://x.com/home", 100);
+    applyPageStoreRelationships(candidates, new Map([
+      ["alice", {
+        handle: "Alice",
+        following: false,
+        followsYou: false,
+        blockedBy: false,
+        muting: null,
+        displayName: null,
+        avatarUrl: null,
+      }],
+    ]));
+
+    expect(candidates[0]?.acceptPageStoreRelationship).toBe(false);
+    expect(candidates[0]?.observation.relationship).toBe("unknown");
+  });
+
   it("does not invent a relationship when the store omits followsYou", () => {
     const observation = {
       observation: {

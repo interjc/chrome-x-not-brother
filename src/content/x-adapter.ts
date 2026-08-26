@@ -13,6 +13,7 @@ import type {
 export interface ExtractedCandidate {
   observation: ObservationDraft;
   anchor: HTMLElement;
+  acceptPageStoreRelationship?: boolean;
 }
 
 const HANDLE_PATTERN = /^@?([A-Za-z0-9_]{1,15})$/;
@@ -76,6 +77,25 @@ const FOLLOWS_YOU_PATTERNS = [
   /关注了你/u,
   /正在关注你/u,
   /已關注你/u,
+];
+
+const SUGGESTION_HEADING_PATTERNS = [
+  /who to follow/i,
+  /you might like/i,
+  /similar accounts/i,
+  /suggested (?:accounts|users|for you)/i,
+  /跟隨誰/u,
+  /关注谁/u,
+  /關注誰/u,
+  /推荐关注/u,
+  /推薦關注/u,
+  /建议关注/u,
+  /建議關注/u,
+  /你可能[会會]喜欢/u,
+  /你可能[会會]喜歡/u,
+  /类似账号/u,
+  /類似帳號/u,
+  /おすすめ(?:の)?(?:ユーザー|アカウント)/u,
 ];
 
 function normalizedText(element: Element): string {
@@ -322,6 +342,51 @@ function relationshipSurfaceFor(
     area;
 }
 
+function suggestionHref(href: string | null): boolean {
+  if (!href) return false;
+  try {
+    const url = new URL(href, "https://x.com");
+    return url.pathname === "/i/connect_people" ||
+      url.pathname.startsWith("/i/connect_people/") ||
+      url.pathname === "/i/related_users" ||
+      url.pathname.startsWith("/i/related_users/");
+  } catch {
+    return false;
+  }
+}
+
+function recommendationChrome(element: Element): boolean {
+  const aria = element.getAttribute("aria-label") ?? "";
+  if (matchesAny(aria, SUGGESTION_HEADING_PATTERNS)) return true;
+  for (const link of element.querySelectorAll("a[href]")) {
+    if (suggestionHref(link.getAttribute("href"))) return true;
+  }
+  const clone = element.cloneNode(true) as Element;
+  for (const nested of clone.querySelectorAll(
+    '[data-testid="UserCell"], article, [data-testid="tweet"]',
+  )) {
+    nested.remove();
+  }
+  return matchesAny(normalizedText(clone), SUGGESTION_HEADING_PATTERNS);
+}
+
+function isSuggestionSurface(surface: Element): boolean {
+  const aside = surface.closest("aside");
+  if (aside && !aside.closest('[data-testid="primaryColumn"]')) return true;
+  const cell = surface.closest('[data-testid="cellInnerDiv"]');
+  return Boolean(cell && recommendationChrome(cell));
+}
+
+function shouldAssumeNotFollowedBy(
+  surface: Element,
+  sourceType: SourceType,
+  supplementalSurface: Element | null,
+): boolean {
+  if (supplementalSurface !== null) return true;
+  if (isSuggestionSurface(surface)) return false;
+  return sourceType === "following" || sourceType === "profile";
+}
+
 export function viewerHandleFromDocument(doc: Document): string | null {
   const accountSwitcher = doc.querySelector('[data-testid="SideNav_AccountSwitcher_Button"]');
   const fromSwitcher = accountSwitcher ? findHandle(accountSwitcher) : null;
@@ -392,12 +457,7 @@ function relationshipFacts(
   } else if (sourceType === "followers") {
     followsYou = true;
     evidence.push("viewer-followers-list");
-  } else if (
-    sourceType === "following" ||
-    sourceType === "profile" ||
-    surface.matches('[data-testid="UserCell"]') ||
-    supplementalSurface !== null
-  ) {
+  } else if (shouldAssumeNotFollowedBy(surface, sourceType, supplementalSurface)) {
     followsYou = false;
   }
 
@@ -572,6 +632,7 @@ export function scanXDocument(
         hoverCard,
       ),
       anchor: area,
+      acceptPageStoreRelationship: !isSuggestionSurface(surface),
     });
   };
 

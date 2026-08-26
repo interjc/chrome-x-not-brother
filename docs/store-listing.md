@@ -28,6 +28,10 @@ Not Brother is an independent extension and is not affiliated with, endorsed by,
 
 Source code is available at https://github.com/interjc/chrome-x-not-brother. Report problems and ask for support on the repository Issues page.
 
+### Version 0.5.4 release notes
+
+- Tightens "They unfollowed" so it only appears when history shows they used to follow you and you still follow them. Who to follow suggestions are no longer recorded as unfollows.
+
 ### Version 0.5.3 release notes
 
 - Also hides muted and blocked-you posts inside post threads and reply conversations, not only Home, search, and notifications.
@@ -105,6 +109,10 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 不是兄弟是独立开发的扩展，与 X Corp. 不存在隶属、认可或赞助关系。
 
 源码位于 https://github.com/interjc/chrome-x-not-brother。问题反馈与支持请使用仓库的 Issues 页面。
+
+### 0.5.4 更新说明
+
+- 收紧「对方取关」：只有历史确认对方曾经关注你、且你现在仍关注对方时才标记。不再把「跟随谁」建议卡记成取关。
 
 ### 0.5.3 更新说明
 
@@ -184,6 +192,10 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 兄貴じゃないは独立した拡張機能であり、X Corp. との提携、承認、スポンサー関係はありません。
 
 ソースコードは https://github.com/interjc/chrome-x-not-brother で公開しています。不具合報告とサポートはリポジトリの Issues ページをご利用ください。
+
+### 0.5.4 更新内容
+
+- 「相手が解除」の判定を厳しくしました。相手が以前あなたをフォローしていて、現在もあなたがフォローしている場合のみ表示します。「おすすめユーザー」カードを解除として記録しなくなりました。
 
 ### 0.5.3 更新内容
 

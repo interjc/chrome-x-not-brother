@@ -134,18 +134,18 @@ describe("mergeUserObservation", () => {
     expect(candidateDisplayRelationship("none", result.user)).toBeNull();
   });
 
-  it("shows 对方取关 when an account that only followed you unfollows", () => {
+  it("treats follows-you-only to neither-following as no relationship, not 对方取关", () => {
     const changed = mergeUserObservation(
       existing("follows_you_only"),
       observation("none", 2_000),
     ).user;
     expect(changed.currentRelationship).toBe("none");
-    expect(changed.hasChanged).toBe(true);
-    expect(relationshipChangeKind(changed)).toBe("unfollowed_you");
-    expect(displayRelationship(changed)).toBe("unfollowed_you");
-    expect(isDisplayedUser(changed)).toBe(true);
-    expect(candidateDisplayRelationship("none", existing("follows_you_only"))).toBe("unfollowed_you");
-    expect(candidateDisplayRelationship("unknown", changed)).toBe("unfollowed_you");
+    expect(changed.hasChanged).toBe(false);
+    expect(relationshipChangeKind(changed)).toBeNull();
+    expect(displayRelationship(changed)).toBe("unknown");
+    expect(isDisplayedUser(changed)).toBe(false);
+    expect(candidateDisplayRelationship("none", existing("follows_you_only"))).toBeNull();
+    expect(candidateDisplayRelationship("unknown", changed)).toBeNull();
   });
 
   it("persists none only when it replaces a visible relationship", () => {
@@ -182,7 +182,7 @@ describe("relationship change presentation", () => {
   it.each([
     ["mutual", "following_only", "unfollowed_you", "unfollowed_you"],
     ["follows_you_only", "following_only", "unfollowed_you", "unfollowed_you"],
-    ["follows_you_only", "none", "unfollowed_you", "unfollowed_you"],
+    ["follows_you_only", "none", null, "unknown"],
     ["mutual", "follows_you_only", "you_unfollowed", "you_unfollowed"],
     ["mutual", "blocked_by", "blocked_you", "blocked_you"],
     ["following_only", "blocked_by", "blocked_you", "blocked_you"],

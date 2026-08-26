@@ -376,6 +376,7 @@ export function applyPageStoreRelationships(
     if (pageUser) {
       candidate.observation = withPageStoreIdentity(candidate.observation, pageUser);
     }
+    if (candidate.acceptPageStoreRelationship === false) continue;
     if (isCollectableRelationship(candidate.observation.relationship)) continue;
     if (!pageUser) continue;
     const relationship = resolveRelationship({

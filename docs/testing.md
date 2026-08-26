@@ -19,7 +19,8 @@ npm run skills:validate
 - 当前登录用户排除、评论区明确 blocked-by、三项互动受限加同层基线、无计数浮窗独立证据、普通 unavailable 和用户正文防误判；
 - 工具栏 `ON` / `!` 三种状态，以及 X 页面观察 dock 的完整面板/悬浮球切换；
 - 已知关系变化；
-- `following_only → mutual` 与 `follows_you_only → mutual` 显示互关；首次或非取关历史的 `following_only` 显示单向关注；`mutual → following_only`、`follows_you_only → following_only` 与 `follows_you_only → none` 显示对方取关；`mutual → follows_you_only` 和已知正常关系 `→ blocked_by` 分别显示你已取关和对方拉黑；其他明确双方都已取消关注不显示徽标；双方同时变化保持通用 changed，确认后恢复基础关系；
+- `following_only → mutual` 与 `follows_you_only → mutual` 显示互关；首次或非取关历史的 `following_only` 显示单向关注；`mutual → following_only` 与 `follows_you_only → following_only` 显示对方取关；`follows_you_only → none` 与其他明确双方都已取消关注不显示徽标；`mutual → follows_you_only` 和已知正常关系 `→ blocked_by` 分别显示你已取关和对方拉黑；双方同时变化保持通用 changed，确认后恢复基础关系；
+- 「跟隨誰 / Who to follow」建议卡只有 Follow 按钮时保持 unknown，不得写成 none 或对方取关；有 Follows you 时仍可收集 follows-you-only；
 - unknown 不覆盖已知关系、不显示、不发送，旧 unknown 被清理；
 - 只有转发不可用、互动控件缺失（即使同页有正常对照）、空 testid 壳、滚动 `pointer-events: none`、`aria-hidden` 虚拟单元格、图片浮层借用背后时间线、三项受限但缺少同层对照、正常浮窗含计数时不误判 blocked-by；
 - 已确认的本地 blocked-by 可回标当前证据不足的同 handle 卡片；

@@ -56,13 +56,85 @@ describe("scanXDocument", () => {
     expect(candidate?.observation.relationship).toBe("following_only");
   });
 
-  it("reads explicit neither-following on a UserCell as none", () => {
+  it("reads explicit neither-following on the viewer's following list", () => {
+    const doc = fixture(`${accountSwitcher()}<div data-testid="primaryColumn">
+      <div data-testid="UserCell">
+        <div data-testid="UserName"><span>Alice Example</span><span>@Alice</span></div>
+        <button data-testid="123-follow">Follow</button>
+      </div>
+    </div>`);
+    const [candidate] = scanXDocument(doc, "https://x.com/Viewer/following", 100);
+    expect(candidate?.observation.relationship).toBe("none");
+  });
+
+  it("does not treat a Follow button on a search UserCell as neither-following", () => {
     const doc = fixture(`${accountSwitcher()}<div data-testid="UserCell">
       <div data-testid="UserName"><span>Alice Example</span><span>@Alice</span></div>
       <button data-testid="123-follow">Follow</button>
     </div>`);
     const [candidate] = scanXDocument(doc, "https://x.com/search?q=alice", 100);
-    expect(candidate?.observation.relationship).toBe("none");
+    expect(candidate?.observation.relationship).toBe("unknown");
+    expect(candidate?.observation.evidence).toEqual(["follow-control"]);
+  });
+
+  it("does not treat a Who to follow suggestion as unfollowed", () => {
+    const doc = fixture(`${accountSwitcher()}
+      <div data-testid="primaryColumn">
+        <div data-testid="cellInnerDiv">
+          <h2>跟隨誰</h2>
+          <div data-testid="UserCell">
+            <div data-testid="UserName"><span>Alice Example</span><span>@Alice</span></div>
+            <button data-testid="123-follow">跟隨</button>
+          </div>
+          <a href="/i/connect_people">顯示更多</a>
+        </div>
+      </div>`);
+    const [candidate] = scanXDocument(doc, "https://x.com/home", 100);
+    expect(candidate?.observation).toMatchObject({
+      handle: "Alice",
+      relationship: "unknown",
+      evidence: ["follow-control"],
+    });
+    expect(candidate?.acceptPageStoreRelationship).toBe(false);
+  });
+
+  it("still collects Follows you from a Who to follow card", () => {
+    const doc = fixture(`${accountSwitcher()}
+      <aside aria-label="Who to follow">
+        <h2>Who to follow</h2>
+        <div data-testid="UserCell">
+          <div data-testid="UserName"><span>Alice Example</span><span>@Alice</span></div>
+          <span>Follows you</span>
+          <button data-testid="123-follow">Follow</button>
+        </div>
+      </aside>`);
+    const [candidate] = scanXDocument(doc, "https://x.com/home", 100);
+    expect(candidate?.observation.relationship).toBe("follows_you_only");
+    expect(candidate?.acceptPageStoreRelationship).toBe(false);
+  });
+
+  it("does not use a following-page sidebar suggestion as neither-following", () => {
+    const doc = fixture(`${accountSwitcher()}
+      <div data-testid="primaryColumn">
+        <div data-testid="UserCell">
+          <div data-testid="UserName"><span>Mutual Pal</span><span>@MutualPal</span></div>
+          <span>Follows you</span>
+          <button data-testid="1-unfollow">Following</button>
+        </div>
+      </div>
+      <aside>
+        <h2>Who to follow</h2>
+        <div data-testid="UserCell">
+          <div data-testid="UserName"><span>Suggested</span><span>@Suggested</span></div>
+          <button data-testid="2-follow">Follow</button>
+        </div>
+      </aside>`);
+    const candidates = scanXDocument(doc, "https://x.com/Viewer/following", 100);
+    expect(candidates.find((item) => item.observation.handle === "MutualPal")?.observation.relationship)
+      .toBe("mutual");
+    const suggested = candidates.find((item) => item.observation.handle === "Suggested");
+    expect(suggested?.observation.relationship).toBe("unknown");
+    expect(suggested?.acceptPageStoreRelationship).toBe(false);
   });
 
   it("reads a Simplified Chinese follows-you-only relationship", () => {

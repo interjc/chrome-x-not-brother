@@ -26,7 +26,6 @@ export function relationshipChangeKind(
   if (current === "blocked_by" && previous !== "blocked_by") return "blocked_you";
   if (previous === "mutual" && current === "following_only") return "unfollowed_you";
   if (previous === "follows_you_only" && current === "following_only") return "unfollowed_you";
-  if (previous === "follows_you_only" && current === "none") return "unfollowed_you";
   if (previous === "mutual" && current === "follows_you_only") return "you_unfollowed";
   return null;
 }
@@ -88,9 +87,7 @@ export function candidateDisplayRelationship(
     }
     return relationship;
   }
-  if (relationship === "none" && stored?.currentRelationship === "follows_you_only") {
-    return "unfollowed_you";
-  }
+  if (relationship === "none") return null;
   if (stored) {
     const display = displayRelationship(stored);
     return display === "unknown" ? null : display;
@@ -153,10 +150,7 @@ export function mergeUserObservation(
   const nextRelationship = replaceCurrent
     ? observation.relationship
     : existing.currentRelationship;
-  const reviewableChange = stateChanged && (
-    nextRelationship !== "none" ||
-    existing.currentRelationship === "follows_you_only"
-  );
+  const reviewableChange = stateChanged && nextRelationship !== "none";
   const appendHistory =
     stateChanged ||
     observation.sourceUrl !== existing.lastSourceUrl ||

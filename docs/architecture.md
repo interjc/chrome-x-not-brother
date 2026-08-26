@@ -29,7 +29,8 @@ flowchart LR
 - MutationObserver 同时监听子树新增、关系文案和 `aria-disabled` / `disabled` / `data-testid` / `href` 等关键属性；观察器运行且标签页可见时，每 2 秒兜底复扫当前已渲染 DOM，恢复焦点或从后台返回时立即复扫；
 - 所有选择器、保留路径和本地化文案位于 `src/content/x-adapter.ts`；
 - 把同一 handle 的候选按证据强度合并；
-- 从本地用户记录的前后基础关系动态推导变化展示：当前已是互关则显示“互关”；当前是我单向关注则默认显示“单向关注”，只有历史比对证明对方曾经关注我、现在不关注才显示“对方取关”；其他单方可归因时显示“你已取关”或“对方拉黑”；其他明确双方都已取消关注则不显示徽标；无法单方归因的转换保留通用 changed，dock 继续按 `hasChanged` 汇总；
+- 从本地用户记录的前后基础关系动态推导变化展示：当前已是互关则显示“互关”；当前是我单向关注则默认显示“单向关注”，只有历史比对证明对方曾经关注我、现在我仍关注且对方不再关注才显示“对方取关”；其他单方可归因时显示“你已取关”或“对方拉黑”；明确双方都已取消关注（含 follows-you-only 变为 none）则不显示徽标；无法单方归因的转换保留通用 changed，dock 继续按 `hasChanged` 汇总；
+- Who-to-follow / 跟隨誰等建议模块的 UserCell 不得把缺少 “Follows you” 写成 `followsYou=false`；DOM 证据不足时保持 unknown，也不接受 page-store 把建议卡填成 none；
 - 将 unknown 保留为短暂内部结果，只用于移除过期徽标；不发送、不收集；
 - 在评论线程将三项互动均已渲染且明确禁用、并与同一浮层或页面层的正常对照组合，生成 `blocked-interaction-restriction`；空壳、滚动锁定和虚拟化隐藏单元格保持 unknown；图片查看器不得借用背后时间线当对照；将完整加载但缺少 following/follower 链接的已显示浮窗归一化为独立的 `blocked-profile-summary-restriction`；
 - 将完整加载的可见浮窗按 handle 精确配给底层作者卡片，并用 `*-follow`、`*-unfollow` 和 `userFollowIndicator` 补充普通关系事实；
