@@ -37,7 +37,7 @@ content script 会向 service worker 批量查询当前可见 handle 的本地�
 
 ## Side Panel
 
-侧栏用于首次显著披露与低干扰概览，并用 **状态 / 选项** 两个标签分页。状态页：未同意时显示数据用途、同意按钮和本地档案入口；同意后显示观察器运行状态、已观察账号总数、四个重要关系计数、待确认变化提示、最近账号，以及打开完整档案库。选项页集中放置界面语言、页面徽标和时间线过滤。Chrome 工具栏图标右键的“选项”打开侧栏并切到选项标签。四个计数是带 `aria-pressed` 的 editorial index 筛选按钮，变化提示筛选所有待确认事件；再次激活当前筛选返回全部。筛选态用酸性黄色底和标题变化表达，空分类有独立空状态。用户整行是键盘可达的 Profile 链接，以新标签页打开 X；这始终是用户手势导航，不是自动遍历。档案库里头像、显示名和 @handle 同属一条资料链接。侧栏和档案库按 handle 显示公开头像，避免错用其他账号的已保存图片。
+侧栏用于首次显著披露与低干扰概览，并用 **状态 / 选项** 两个标签分页。当前标签用酸性黄底和固定深墨绿字，未选中标签用软墨色字；深色主题不得把当前标签字色改成浅色。状态页：未同意时显示数据用途、同意按钮和本地档案入口；同意后显示观察器运行状态、已观察账号总数、四个重要关系计数、待确认变化提示、最近账号，以及打开完整档案库。选项页集中放置界面语言、页面徽标和时间线过滤。Chrome 工具栏图标右键的“选项”打开侧栏并切到选项标签。四个计数是带 `aria-pressed` 的 editorial index 筛选按钮，变化提示筛选所有待确认事件；再次激活当前筛选返回全部。筛选态用酸性黄色底和标题变化表达，空分类有独立空状态。用户整行是键盘可达的 Profile 链接，以新标签页打开 X；这始终是用户手势导航，不是自动遍历。档案库里头像、显示名和 @handle 同属一条资料链接。侧栏和档案库按 handle 显示公开头像，避免错用其他账号的已保存图片。
 
 最近观察、统计和完整档案均排除 `viewerHandle`。content script 发现当前登录 handle 后，由 service worker 删除已有的本人记录，避免旧版本数据继续出现。
 
@@ -61,7 +61,7 @@ content script 在页面右下角插入一个不可与 X 原生控件混淆的�
 
 最终源图由内置 ImageGen 以 `logo-brand` 用例生成。核心提示词：`single geometric NB monogram; N diagonal structurally cuts through B; warm paper-white glyph; small acid-lime negative-space accent; uniform #16221B square background; flat hard edges; no other text, shadow, gradient, 3D, mockup or watermark`。生成结果只做确定性的尺寸缩放，没有重绘字形。
 
-扩展页面遵循 `prefers-color-scheme`，在暖纸色与深墨绿色之间切换；X 页面 dock 根据宿主页面实际背景亮度选择主题，而不是假定系统主题与 X 主题一致。两种主题保留同一关系色语义，并尊重 `prefers-reduced-motion`。
+扩展页面遵循 `prefers-color-scheme`，在暖纸色与深墨绿色之间切换；X 页面 dock 根据宿主页面实际背景亮度选择主题，而不是假定系统主题与 X 主题一致。两种主题保留同一关系色语义，并尊重 `prefers-reduced-motion`。酸性黄底上的文字（侧栏当前标签、观察开关、主按钮、筛选激活态等）在浅色和深色主题都使用固定深墨绿 `#16221b`，不跟随正文 `--ink` 反转，避免浅字叠在黄绿底上看不清。
 
 ## 语言与排版
 
