@@ -13,6 +13,12 @@ export interface CompiledFilterRuleSet {
   match(candidate: FilterCandidate, at?: number): FilterRule | null;
 }
 
+export interface FilterRuleSetStatus {
+  applying: boolean;
+  ruleCount: number;
+  activeRuleCount: number;
+}
+
 function normalizedMatchText(value: string): string {
   return value.normalize("NFKC").slice(0, MAX_FILTER_MATCH_TEXT_LENGTH);
 }
@@ -64,5 +70,17 @@ export function compileFilterRuleSet(
       }
       return null;
     },
+  };
+}
+
+export function filterRuleSetStatus(
+  ruleSet: Pick<FilterRuleSet, "rules">,
+  applying: boolean,
+  now = Date.now(),
+): FilterRuleSetStatus {
+  return {
+    applying,
+    ruleCount: ruleSet.rules.length,
+    activeRuleCount: compileFilterRuleSet(ruleSet, now).activeRuleCount,
   };
 }

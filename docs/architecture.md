@@ -47,10 +47,10 @@ flowchart LR
 - 通过 `users:lookup` 批量读取可见 handle 的本地已知关系，使已确认账号在证据浮层关闭后继续回标；
 - 读取 X 已经为当前页面载入的 UI store、tweet fiber（含祖先组件）以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`、`muting`，以及已有的 `name` / `profile_image_url_https`，给首页和评论区没有关注控件的卡片补全关系，并补全 DOM 抽坏的显示名和头像；不发起新的 GraphQL 或 REST 请求；
 - 同意后若打开可选时间线过滤，用已载入的 `muting`、现场/本地 `blocked_by` 隐藏首页、搜索、通知和帖子详情/评论区里对应帖子单元格；页面 GraphQL 一返回静音/拉黑信号就立即隐藏。本地名单已有的账号立刻消失，第一次检测到的账号带短收起动画。不隐藏个人主页、浮窗或关注列表，也不把静音列表写入数据库；
-- `hideByFilterRules` 打开且同意版本有效时，通过 `filter-rules:get` 向 service worker 请求当前登录 X 账号命名空间下、已由 Zod 校验的规则快照，再用不依赖 Zod 的轻量匹配器预编译 handle 集合、contains 与正则。切换账号时丢弃上一账号的编译快照。候选帖正文选择器仍封装在 `x-adapter.ts`；正文只作为内存中的当前匹配输入，不写档案或消息。每次匹配重新检查到期时间，2 秒复扫负责在规则到期后恢复节点；规则存储变化通过 `chrome.storage.onChanged` 使快照失效并复扫；
+- `hideByFilterRules` 打开且同意版本有效时，通过 `filter-rules:get` 向 service worker 请求当前登录 X 账号命名空间下、已由 Zod 校验的规则快照，再用不依赖 Zod 的轻量匹配器预编译 handle 集合、contains 与正则。切换账号时丢弃上一账号的编译快照。候选帖正文选择器仍封装在 `x-adapter.ts`；正文只作为内存中的当前匹配输入，不写档案或消息。每次匹配重新检查到期时间，2 秒复扫负责在规则到期后恢复节点；规则存储变化通过 `chrome.storage.onChanged` 使快照失效并复扫。同意后可在 HoverCard 名字旁、帖子三个点菜单和帖子正文划词处用 `filter-rules:quick-add` 立即保存一条 handle 或 contains 规则；内容脚本不直接写规则文档，也不点击 X 的拉黑/静音；
 - 页面主世界 `page-bridge.js` 只把上述已载入字段回传给隔离世界的观察器；DOM 证据优先，store / 已完成响应只填充内部 unknown；
 - 识别当前登录 handle 并在扫描阶段排除本人；
-- 插入观察状态/概览 dock；可同步的 `dockCollapsed` 设置控制完整面板或状态悬浮球，用户手势可恢复面板或通过 service worker 打开当前标签页的 Side Panel；
+- 插入观察状态/概览 dock；可同步的 `dockCollapsed` 设置控制完整面板或状态悬浮球，用户手势可恢复面板或通过 service worker 打开当前标签页的 Side Panel；悬浮球贴右下角，显示期间用 adapter 中的 Chat/Grok 抽屉选择器把原生按钮上移，不向内侧挡住时间线；同意后展开 dock 显示当前命名空间黑名单的应用状态和条数，编辑入口打开档案库 `#filter-rules`，不把规则正文放进 dock；
 - 对已确认持久化的发送签名去重；消息失败或 service worker 未返回对应用户时不提交签名，后续复扫会重试；
 - 所有扫描经过 180ms 合并与 single-flight 串行门控：扫描期间的新触发只排队一次补扫，定期复扫不会并发执行或重复追加相同历史；隐藏标签页暂停定期复扫；扩展上下文终止时移除 DOM Observer、计时器及页面/Chrome 事件监听；
 - 不调用 `fetch`，不打开 URL，不点击页面控制。
@@ -66,7 +66,7 @@ flowchart LR
 - 清理 viewer 本人记录并向 content script 返回本地概览；
 - 把新观察以及档案页的确认、删除、导入、清空广播给所有已注入的 X content script，使其清除关系查询缓存并合并复扫；广播使用现有 `chrome.tabs` 消息能力，不申请 `tabs` 权限也不读取标签页内容；
 - 仅向 `x.com` content script 返回其请求 handle 的已知本地用户记录；
-- 仅在同意版本有效且 `hideByFilterRules` 已打开时，读取并 Zod 校验 local 规则文档，再向请求的 `x.com` content script 返回规则快照；校验库与 unsafe-regex 检查不进入每个 X 页面的 content bundle；
+- 仅在同意版本有效且 `hideByFilterRules` 已打开时，读取并 Zod 校验 local 规则文档，再向请求的 `x.com` content script 返回规则快照；另提供 `filter-rules:status`，只返回是否正在应用和规则条数，不含规则正文，供 dock 状态使用；`filter-rules:quick-add` 在同意后把一条 handle 或 contains 规则写入当前账号命名空间并立即保存，必要时打开总开关；校验库与 unsafe-regex 检查不进入每个 X 页面的 content bundle；
 - 使用 `contextMenus` 在 action 图标右键菜单提供当前同意版本的披露入口；点击手势立即打开 Side Panel，失败才打开本地 dashboard，完成同意后通过 sync 设置变化隐藏该项；
 - 处理用户主动打开完整管理页的请求。
 

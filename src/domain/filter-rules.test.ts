@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  appendQuickFilterRule,
   createEmptyFilterRuleSet,
   FilterRuleValidationError,
   MAX_FILTER_RULES_JSON_BYTES,
@@ -10,7 +11,7 @@ import {
   type FilterRule,
   type FilterRuleSet,
 } from "./filter-rules";
-import { compileFilterRuleSet } from "./filter-rule-matching";
+import { compileFilterRuleSet, filterRuleSetStatus } from "./filter-rule-matching";
 import { bundledDefaultFilterRuleSet } from "./filter-rules-default";
 
 function ruleSet(rules: FilterRule[]): FilterRuleSet {
@@ -83,6 +84,31 @@ describe("filter rule schema", () => {
       rules: [{ handles: ["alice"] }],
     });
   });
+
+  it("appends a one-handle rule and a content keyword without duplicating", () => {
+    const first = appendQuickFilterRule(ruleSet([]), "handle", "@Alice");
+    expect(first.added).toBe(true);
+    expect(first.ruleSet.rules).toMatchObject([
+      { type: "user_handles", handles: ["alice"], enabled: true, label: "@alice" },
+    ]);
+    expect(appendQuickFilterRule(first.ruleSet, "handle", "alice").added).toBe(false);
+
+    const disabled = parseFilterRuleSet({
+      ...first.ruleSet,
+      rules: first.ruleSet.rules.map((rule) => ({ ...rule, enabled: false })),
+    });
+    const revived = appendQuickFilterRule(disabled, "handle", "Alice");
+    expect(revived.added).toBe(true);
+    expect(revived.ruleSet.rules[0]?.enabled).toBe(true);
+
+    const keyword = appendQuickFilterRule(revived.ruleSet, "content", "  Giveaway  ");
+    expect(keyword.added).toBe(true);
+    expect(keyword.ruleSet.rules.at(-1)).toMatchObject({
+      type: "content",
+      match: { mode: "contains", value: "Giveaway", caseSensitive: false },
+    });
+    expect(appendQuickFilterRule(keyword.ruleSet, "content", "giveaway").added).toBe(false);
+  });
 });
 
 describe("filter rule matching", () => {
@@ -137,6 +163,11 @@ describe("filter rule matching", () => {
     const compiled = compileFilterRuleSet(rules, Date.parse("2025-01-01T00:00:00Z"));
     expect(compiled.activeRuleCount).toBe(0);
     expect(rules.rules).toHaveLength(2);
+    expect(filterRuleSetStatus(rules, true, Date.parse("2025-01-01T00:00:00Z"))).toEqual({
+      applying: true,
+      ruleCount: 2,
+      activeRuleCount: 0,
+    });
   });
 
   it("stops matching as soon as a compiled rule expires", () => {

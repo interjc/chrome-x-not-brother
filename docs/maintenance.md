@@ -15,7 +15,7 @@
 
 实时识别采用事件与轮询混合机制。MutationObserver 负责新增/移除节点、关系文案和关键可访问性属性变化；`tweetText` 与卡片媒体内部的变更忽略，因为它们是用户正文而不是作者身份或平台关系 chrome，避免主贴/跟帖堆满 @提及时把标签页扫卡。可见且已启用的页面每 2 秒兜底复扫一次，页面恢复可见或重新获得焦点时立即复扫，可选规则匹配也靠这次复扫看到已渲染完的正文。轮询只查询当前 DOM，不滚动、不打开页面、不触发 X 控件。扫描必须保持 single-flight，MutationObserver、轮询、设置变化和 SPA URL 变化同时触发时只排队一次补扫；签名去重必须阻止相同结果重复写历史，但只能在 service worker 确认对应用户已持久化后提交，瞬时发送失败要留给后续复扫重试。
 
-注入 dock 的 `data-xro-version` 是只读诊断标记。重新加载 unpacked 扩展后必须刷新已有 X 标签页；维护者可用该标记确认页面已经替换旧 content script，再进行真实页面验收。
+注入 dock 的 `data-xro-version` 是只读诊断标记。重新加载 unpacked 扩展后必须刷新已有 X 标签页；维护者可用该标记确认页面已经替换旧 content script，再进行真实页面验收。收起悬浮球时用 `GrokDrawer` / `DMDrawer` / `chat-drawer-root` 把 X 右下角按钮上移；这些选择器只放在 `x-adapter.ts`，漂移时只改 adapter 与 dock fixture。
 
 调整轮询时先测量可见 `User-Name` 数量、单次扫描耗时和一分钟内 observation 写入次数。不得在隐藏标签页维持兜底复扫；扩展上下文失效时必须移除 visibility/focus 监听并停止定时器。`style` 与 `class` 变化频率很高，不加入全局 attributeFilter，依靠 2 秒兜底覆盖。
 
@@ -25,7 +25,7 @@
 
 评论区互动限制的结构规则必须同时覆盖 reply、retweet/unretweet、like/unlike。只有三组控件都已渲染成真实可交互节点、并以 `disabled` / `aria-disabled` / `inert` 明确禁用，且同一浮层或页面层存在三组均可操作的对照帖时，才生成 `blocked-interaction-restriction`。空的 testid 壳、滚动时的 `pointer-events: none`、`aria-hidden` 虚拟列表单元格，以及尚未画出的控件都只是内部 unknown。X 可能把 `data-testid` 放在按钮本身、把禁用状态放在更外层祖先，因此明确禁用检查必须遍历到评论 surface，但不得把 `pointer-events` 或祖先 `aria-hidden` 当成拉黑。`/status/:id/photo/:n` 仍按帖子详情处理；图片查看器右侧会话必须用同一 dialog / `#layers` 里的对照帖，不得借用背后时间线。
 
-已显示的 `HoverCard` 在没有 progress/loading 状态且找不到该 handle 的 `/following`、`/followers`、`/verified_followers` 链接时，独立生成 `blocked-profile-summary-restriction`。保留正常浮窗含计数链接、仅禁用转发、没有同页基线和查看者全局受限等反例 fixture。已知记录由 `users:lookup` 回标，删除或导入数据后 `data:changed` 必须清空 content cache 并重新查询。
+已显示的 `HoverCard` 在没有 progress/loading 状态且找不到该 handle 的 `/following`、`/followers`、`/verified_followers` 链接时，独立生成 `blocked-profile-summary-restriction`。保留正常浮窗含计数链接、仅禁用转发、没有同页基线和查看者全局受限等反例 fixture。已知记录由 `users:lookup` 回标，删除或导入数据后 `data:changed` 必须清空 content cache 并重新查询。同意后的「不是兄弟！」快速加规则必须插在 `UserName` / `User-Name` 后面（没有名字簇时跟在非头像资料链接后），不得放在浮窗底部以免鼠标移出导致浮窗关闭。帖子右上角三个点使用 `data-testid="caret"`，展开后的菜单是 `data-testid="Dropdown"`；只在 `aria-expanded="true"` 且能读到该帖作者时注入菜单项，选择器只放在 `x-adapter.ts`。
 
 普通关系补全也可使用已完整加载的可见 `HoverCard`，但必须按规范化 handle 精确配对。`hidden`、`inert`、`aria-hidden`、`display:none`、`visibility:hidden` 或透明度为零的残留浮窗不得参与判断。优先使用稳定的 `*-follow`、`*-unfollow` 与 `userFollowIndicator`，不要只依赖本地化文案；保留互关、我单向关注、未支持语言 indicator、隐藏旧浮窗和跨 handle 不污染的 fixture。
 

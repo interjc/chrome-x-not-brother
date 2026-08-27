@@ -19,9 +19,16 @@ export interface ExtractedCandidate {
 const HANDLE_PATTERN = /^@?([A-Za-z0-9_]{1,15})$/;
 export const USER_NAME_SELECTOR =
   '[data-testid="UserName"], [data-testid="User-Name"], [data-testid="User-Names"]';
-const TWEET_SURFACE_SELECTOR = 'article[data-testid="tweet"], [data-testid="UserCell"]';
+export const X_CORNER_FAB_SELECTOR =
+  'div[data-testid="GrokDrawer"], div[data-testid="DMDrawer"], div[data-testid="chat-drawer-root"]';
+export const TWEET_SELECTOR = 'article[data-testid="tweet"]';
+export const TWEET_CARET_SELECTOR = '[data-testid="caret"]';
+export const DROPDOWN_SELECTOR = '[data-testid="Dropdown"]';
+const TWEET_SURFACE_SELECTOR = `${TWEET_SELECTOR}, [data-testid="UserCell"]`;
+export const HOVER_CARD_SELECTOR = '[data-testid="HoverCard"]';
+export const TWEET_TEXT_SELECTOR = '[data-testid="tweetText"]';
 export const USER_CONTENT_SELECTOR =
-  '[data-testid="tweetText"], [data-testid="card.layoutLarge.media"]';
+  `${TWEET_TEXT_SELECTOR}, [data-testid="card.layoutLarge.media"]`;
 const SUGGESTION_DIRECTORY_LINK_SELECTOR =
   'a[href*="/i/connect_people"], a[href*="/i/related_users"]';
 const SUGGESTION_CHROME_SKIP_SELECTOR =
@@ -181,7 +188,7 @@ function isSemanticallyVisible(element: HTMLElement): boolean {
 
 function visibleHoverCardsByHandle(doc: Document): Map<string, HTMLElement> {
   const cards = new Map<string, HTMLElement>();
-  for (const card of doc.querySelectorAll<HTMLElement>('[data-testid="HoverCard"]')) {
+  for (const card of doc.querySelectorAll<HTMLElement>(HOVER_CARD_SELECTOR)) {
     if (!isSemanticallyVisible(card)) continue;
     if (card.querySelector('[role="progressbar"], [data-testid="loadingSpinner"]')) continue;
     const handle = findHandle(card);
@@ -353,6 +360,29 @@ function firstDirect<T extends Element>(surface: Element, selector: string): T |
   return null;
 }
 
+export function handleFromHoverCard(card: Element): string | null {
+  return findHandle(card);
+}
+
+export function visibleHoverCards(doc: Document): Map<string, HTMLElement> {
+  return visibleHoverCardsByHandle(doc);
+}
+
+export function tweetTextRootFrom(node: Node | null): HTMLElement | null {
+  const element = node instanceof Element ? node : node?.parentElement ?? null;
+  return element?.closest<HTMLElement>(TWEET_TEXT_SELECTOR) ?? null;
+}
+
+export function hoverCardQuickRuleAnchor(card: HTMLElement): HTMLElement {
+  const name = card.querySelector<HTMLElement>(USER_NAME_SELECTOR);
+  if (name) return name;
+  for (const link of iterateOutsideUserContent<HTMLAnchorElement>(card, "a[href]")) {
+    if (link.querySelector("img") || link.closest(AVATAR_CONTAINER_SELECTOR)) continue;
+    if (handleFromHref(link.getAttribute("href"))) return link;
+  }
+  return card;
+}
+
 function findHandle(area: Element): string | null {
   for (const element of iterateOutsideUserContent<HTMLAnchorElement>(area, "a[href]")) {
     if (isInsideNestedSurface(element, area)) continue;
@@ -374,6 +404,33 @@ function authorHandleFromSurface(surface: Element): string | null {
   const time = firstDirect<HTMLTimeElement>(surface, "time");
   const timeLink = time?.closest("a[href]") ?? null;
   return handleFromHref(timeLink?.getAttribute("href") ?? null);
+}
+
+export function tweetAuthorHandle(tweet: Element): string | null {
+  return authorHandleFromSurface(tweet) ?? findHandle(tweet);
+}
+
+export function openTweetMoreMenu(doc: Document): {
+  menu: HTMLElement;
+  handle: string;
+} | null {
+  let handle: string | null = null;
+  for (const caret of doc.querySelectorAll<HTMLElement>(TWEET_CARET_SELECTOR)) {
+    if (caret.getAttribute("aria-expanded") !== "true") continue;
+    const tweet = caret.closest<HTMLElement>(TWEET_SELECTOR);
+    if (!tweet) continue;
+    handle = tweetAuthorHandle(tweet);
+    if (handle) break;
+  }
+  if (!handle) return null;
+  for (const dropdown of doc.querySelectorAll<HTMLElement>(DROPDOWN_SELECTOR)) {
+    if (!isSemanticallyVisible(dropdown)) continue;
+    const menu = dropdown.matches('[role="menu"]')
+      ? dropdown
+      : dropdown.querySelector<HTMLElement>('[role="menu"]') ?? dropdown;
+    return { menu, handle };
+  }
+  return null;
 }
 
 function identityAnchorFromSurface(surface: HTMLElement, handle: string): HTMLElement {

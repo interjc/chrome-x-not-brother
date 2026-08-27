@@ -202,3 +202,90 @@ export function importFilterRuleSet(
     rules: [...parsedCurrent.rules, ...appended],
   });
 }
+
+export type QuickFilterRuleKind = "handle" | "content";
+
+export interface QuickFilterRuleResult {
+  ruleSet: FilterRuleSet;
+  added: boolean;
+}
+
+function createFilterRuleId(used: Set<string>): string {
+  const random = globalThis.crypto?.randomUUID?.().replaceAll("-", "") ??
+    Math.random().toString(36).slice(2, 14);
+  return uniquifyRuleId(`rule-${random.slice(0, 24)}`, used);
+}
+
+function normalizeQuickHandle(value: string): string {
+  return value.replace(/^@/, "").trim().toLowerCase();
+}
+
+function normalizeQuickContent(value: string): string {
+  return value.normalize("NFKC").trim().slice(0, MAX_FILTER_PATTERN_LENGTH);
+}
+
+export function appendQuickFilterRule(
+  ruleSet: FilterRuleSet,
+  kind: QuickFilterRuleKind,
+  value: string,
+): QuickFilterRuleResult {
+  const parsed = parseFilterRuleSet(ruleSet);
+  if (kind === "handle") {
+    const handle = normalizeQuickHandle(value);
+    for (const [index, rule] of parsed.rules.entries()) {
+      if (rule.type !== "user_handles" || !rule.handles.includes(handle)) continue;
+      if (rule.enabled) return { ruleSet: parsed, added: false };
+      const rules = parsed.rules.slice();
+      rules[index] = { ...rule, enabled: true };
+      return { ruleSet: parseFilterRuleSet({ ...parsed, rules }), added: true };
+    }
+    const used = new Set(parsed.rules.map((rule) => rule.id));
+    return {
+      ruleSet: parseFilterRuleSet({
+        ...parsed,
+        rules: [
+          ...parsed.rules,
+          {
+            id: createFilterRuleId(used),
+            label: `@${handle}`,
+            enabled: true,
+            expiresAt: null,
+            type: "user_handles",
+            handles: [handle],
+          },
+        ],
+      }),
+      added: true,
+    };
+  }
+
+  const text = normalizeQuickContent(value);
+  const expected = text.toLowerCase();
+  for (const [index, rule] of parsed.rules.entries()) {
+    if (rule.type !== "content" || rule.match.mode !== "contains") continue;
+    if (rule.match.value.normalize("NFKC").trim().toLowerCase() !== expected) continue;
+    if (rule.enabled) return { ruleSet: parsed, added: false };
+    const rules = parsed.rules.slice();
+    rules[index] = { ...rule, enabled: true };
+    return { ruleSet: parseFilterRuleSet({ ...parsed, rules }), added: true };
+  }
+  const used = new Set(parsed.rules.map((rule) => rule.id));
+  const label = text.length <= 40 ? text : `${text.slice(0, 39)}…`;
+  return {
+    ruleSet: parseFilterRuleSet({
+      ...parsed,
+      rules: [
+        ...parsed.rules,
+        {
+          id: createFilterRuleId(used),
+          label,
+          enabled: true,
+          expiresAt: null,
+          type: "content",
+          match: { mode: "contains", value: text, caseSensitive: false },
+        },
+      ],
+    }),
+    added: true,
+  };
+}

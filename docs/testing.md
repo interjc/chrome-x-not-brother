@@ -17,7 +17,7 @@ npm run skills:validate
 - mutual、following-only、follows-you-only、blocked-by，以及内部 unknown 不进入收集；
 - `UserName` 与评论线程 `User-Name` 作者结构；
 - 当前登录用户排除、评论区明确 blocked-by、三项互动受限加同层基线、无计数浮窗独立证据、普通 unavailable 和用户正文防误判；
-- 工具栏 `ON` / `!` 三种状态，以及 X 页面观察 dock 的完整面板/悬浮球切换；
+- 工具栏 `ON` / `!` 三种状态，以及 X 页面观察 dock 的完整面板/悬浮球切换；同意后展开 dock 显示自定义黑名单应用状态与编辑入口，未同意或收起为球时不出现该行；
 - 已知关系变化；
 - `following_only → mutual` 与 `follows_you_only → mutual` 显示互关；首次或非取关历史的 `following_only` 显示单向关注；`mutual → following_only` 与 `follows_you_only → following_only` 显示对方取关；`follows_you_only → none` 与其他明确双方都已取消关注不显示徽标；`mutual → follows_you_only` 和已知正常关系 `→ blocked_by` 分别显示你已取关和对方拉黑；双方同时变化保持通用 changed，确认后恢复基础关系；
 - 「跟隨誰 / Who to follow」建议卡只有 Follow 按钮时保持 unknown，不得写成 none 或对方取关；有 Follows you 时仍可收集 follows-you-only；
@@ -37,6 +37,7 @@ npm run skills:validate
 - 未同意时，展开 dock 与收起悬浮球旁都有三语、键盘可达的显著披露入口；action 图标右键菜单项可打开 Side Panel、失败时回退 dashboard，完成同意后自动隐藏且不影响内建“选项”；
 - 首页时间线可从 `/handle/status/:id`、头像链接或带双向隔离符的 `@handle` 识别作者，证据不足时保持 unknown 且不把引用帖回退成外层作者；
 - 主贴和跟帖含大量正文 @提及的线程只识别作者，不把提及 handle 收成候选，平台拉黑提示仍排除 `tweetText`，扫描不得因克隆整篇帖子或遍历提及链接而退化；
+- 同意后 HoverCard 在名字旁出现「不是兄弟！」入口、帖子 `caret` 下拉最上方出现同一项、帖子正文划词出现「拉黑关键词」，点击立即保存对应规则且不把浮窗作者误当成正文提及；未同意、本人浮窗或本人帖子不出现该入口；
 - 当前页 UI store、tweet 祖先 fiber，以及页面已完成的 TweetDetail 等 GraphQL 响应中的 `following` / `followed_by` / `blocked_by` / `muting` 可把首页和评论区 unknown 卡片提升为已知关系，并供可选时间线过滤使用；store 里已有查看者时仍要继续读回复作者；缺少完整布尔值不得编造；DOM 已可收集证据时 store 不得覆盖；
 - 可选时间线过滤默认关闭；打开后互关静音账号和本地已知 blocked-by 账号的首页帖子单元格被隐藏，个人主页/浮窗/UserCell 不隐藏；关闭过滤后单元格恢复；
 - 自定义规则 Zod schema 规范化 handle，拒绝未知字段、重复 id/handle、无效或可能灾难性回溯的正则和超限 JSON；handle、显示名、正文、启停与到期匹配正确，关闭总开关或规则到期后帖子恢复；
@@ -64,8 +65,8 @@ npm run skills:validate
 12. 悬停打开一个已知 blocked-by 作者的完整浮窗，验证没有关注/粉丝链接时独立标注并收集；关闭浮窗、刷新页面后仍由本地已知记录回标该评论 ID。
 13. 验证只有转发不可用、普通“帖子不可用”、用户正文写出 blocked you、三项按钮尚未渲染（包括同页存在正常基线时）、滚动图片查看器右侧列表时出现的空壳/`pointer-events`/`aria-hidden` 单元格、三项受限但没有同层基线、正常浮窗含计数时均不标注、不收集。
 14. 确认自己的帖子/评论没有徽标，Side Panel 最近观察和所有统计也没有本人。
-15. 核对 X 页面 dock 的状态和四项概览，点击本地化详情按钮确认打开当前标签页 Side Panel。
-16. 点击 dock 右上角 `×`，确认收为带对应状态点的 NB 悬浮球，且不挡住 X 右下角的聊天/Grok 按钮；刷新 X 后仍为悬浮球，点击球、按 Enter 和按 Space 都可恢复完整概览。
+15. 核对 X 页面 dock 的状态和四项概览，以及自定义黑名单行：未打开总开关时应显示未应用和规则条数；打开后显示应用中和有效规则数。点击“编辑规则”应打开档案库黑名单页。点击本地化详情按钮确认打开当前标签页 Side Panel。悬停一名作者，点浮窗里紧挨名字的「不是兄弟！」后该 handle 应出现在黑名单并立即保存；打开帖子右上角三个点，菜单最上方同一项应写入该帖作者。在帖子正文划词后点「拉黑关键词」应写入 contains 规则。这些入口都不得点击 X 的拉黑/静音按钮。
+16. 点击 dock 右上角 `×`，确认收为带对应状态点的 NB 悬浮球，球仍在右下角；X 自己的聊天/Grok 按钮应上移到球上方，不盖住时间线。刷新 X 后仍为悬浮球，点击球、按 Enter 和按 Space 都可恢复完整概览，聊天/Grok 回到原位。
 17. 保持正常滚动一分钟，确认没有重复徽标、重复 dock、明显布局跳动或控制台异常。打开含大量 @提及的帖子详情（例如主贴和跟帖点名很多人的线程），确认页面保持可滚动、只给帖子作者打标、正文提及没有徽标。
 18. 分别以浅色和暗黑系统主题检查扩展页，再切换 X 主题检查页面徽标、完整 dock 与悬浮球。
 19. 打开 Side Panel，核对计数和最近列表；依次点击四个分类数字与变化提示，确认列表、标题、`aria-pressed` 和空筛选状态正确，再次点击同一分类恢复全部。用鼠标、Enter 和 Space 激活分类，点击或键盘激活具体用户，确认只在新标签页打开对应 `https://x.com/<handle>` Profile。

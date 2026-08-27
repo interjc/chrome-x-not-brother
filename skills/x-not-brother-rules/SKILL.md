@@ -15,7 +15,7 @@ Read [references/schema.md](references/schema.md) before changing JSON.
 2. Summarize existing rules in plain language: target, match, enabled/expiration, and count.
 3. Make only the requested edits. Keep unrelated rules unchanged.
 4. Return one complete, valid JSON document. Do not emit a partial patch.
-5. Tell the user to import it in 不是兄弟 → 关系档案库 → **黑名单**, then choose **追加到现有规则** or **清空后覆盖**. There is no id-merge.
+5. Tell the user to import it in 不是兄弟 → 关系档案库 → **黑名单**, then choose **追加到现有规则** or **清空后覆盖**. There is no id-merge. For UI authoring, Gist / GitHub Raw / public HTTPS hosting, and the in-app import buttons, point humans to the root `README.md` section 自定义黑名单规则.
 
 ## Editing rules
 

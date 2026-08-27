@@ -32,6 +32,7 @@ import { Icon } from "./components/Icon";
 import {
   FILTER_RULES_EDITOR_HASH,
   FilterRulesManager,
+  confirmLeaveFilterRulesEditor,
   revealFilterRulesEditor,
 } from "./components/FilterRulesManager";
 import { OptionsPanel } from "./components/OptionsPanel";
@@ -145,6 +146,8 @@ function Dashboard() {
   const [notice, setNotice] = useState<string | null>(null);
   const importInput = useRef<HTMLInputElement>(null);
   const searchInput = useRef<HTMLInputElement>(null);
+  const sectionRef = useRef(section);
+  sectionRef.current = section;
   const isWelcome = new URLSearchParams(window.location.search).get("welcome") === "1";
 
   useEffect(() => {
@@ -158,6 +161,16 @@ function Dashboard() {
   useEffect(() => {
     const syncSection = (): void => {
       const next = dashboardSectionFromHash(window.location.hash);
+      if (
+        sectionRef.current === "filter-rules" &&
+        next !== "filter-rules" &&
+        !confirmLeaveFilterRulesEditor(locale)
+      ) {
+        if (window.location.hash !== FILTER_RULES_EDITOR_HASH) {
+          window.history.replaceState(null, "", FILTER_RULES_EDITOR_HASH);
+        }
+        return;
+      }
       setSection(next);
       window.requestAnimationFrame(() => {
         document.querySelector<HTMLElement>(".dashboard-section-page h1")
@@ -166,7 +179,7 @@ function Dashboard() {
     };
     window.addEventListener("hashchange", syncSection);
     return () => window.removeEventListener("hashchange", syncSection);
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {

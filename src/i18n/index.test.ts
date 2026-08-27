@@ -66,6 +66,14 @@ describe("runtime internationalization", () => {
     expect(translate("en", "actionConsentMenu")).toContain("privacy notice");
     expect(translate("ja", "dockCollapseAria")).toContain("フローティング");
     expect(translate("ja", "dockReviewConsentAria")).toContain("プライバシー");
+    expect(translate("zh-CN", "quickRuleHandle")).toContain("不是兄弟");
+    expect(translate("zh-CN", "quickRuleKeyword")).toContain("关键词");
+    expect(translate("en", "quickRuleHandle")).toContain("Not Brother");
+    expect(translate("ja", "quickRuleKeyword")).toContain("キーワード");
+    expect(translate("zh-CN", "dockFilterRulesLabel")).toContain("黑名单");
+    expect(translate("zh-CN", "dockFilterRulesApplying", { count: 3 })).toContain("3");
+    expect(translate("en", "dockFilterRulesEdit")).toContain("Edit");
+    expect(translate("ja", "dockFilterRulesIdle", { count: 2 })).toContain("未適用");
   });
 
   it("localizes the extension language switcher", () => {
@@ -95,6 +103,8 @@ describe("runtime internationalization", () => {
     expect(translate("zh-CN", "filterRulesNamespace", { handle: "alice" })).toContain("@alice");
     expect(translate("en", "filterRulesUseExampleUrl")).toContain("example URL");
     expect(translate("zh-CN", "filterRulesImportAppend")).toContain("追加");
+    expect(translate("zh-CN", "filterRulesUnsavedLeave")).toContain("尚未保存");
+    expect(translate("en", "filterRulesUnsavedHint")).toContain("Unsaved");
     expect(translate("en", "filterRulesImportReplace")).toContain("replace");
     expect(translate("en", "filterRulesRemotePrivacy")).toContain("Chrome asks");
     expect(translate("en", "filterRulesGuideRegexBody")).toContain("Unicode");

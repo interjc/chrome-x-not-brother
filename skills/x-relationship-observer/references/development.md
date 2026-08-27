@@ -17,13 +17,14 @@ Python is managed through pyenv. The repository currently has no Python runtime 
 ## Architecture
 
 - `src/content/`: inspect already-rendered X DOM, read already-loaded page UI store relationship fields through `page-store.ts` and the main-world `page-bridge.ts`, pair display names and avatars to the same handle, combine semantic mutation events with a visible-page 2-second fallback rescan, serialize triggers, normalize evidence, discard internal unknown, inject badges, and send known observation drafts whose signatures are committed only after persistence succeeds.
-- `src/content/observer-panel.ts`: render the X-page state/summary dock, its accessible panel/floating-ball toggle, the pre-consent disclosure CTA, and forward its user gesture to Side Panel.
+- `src/content/observer-panel.ts`: render the X-page state/summary dock, its accessible panel/floating-ball toggle, the pre-consent disclosure CTA, blacklist applying/count status after consent, and forward its user gesture to Side Panel or the fieldbook `#filter-rules` editor. The collapsed ball stays in the corner; Chat/Grok drawer selectors live in `x-adapter.ts` and are only used to shift those controls up while the ball is shown.
 - `src/background/`: persist messages, remove the signed-in viewer, expose summaries, show toolbar state, initialize Chrome side-panel/onboarding behavior, and maintain the localized pre-consent action context-menu entry.
 - `src/domain/`: types, relationship resolution, data merge semantics, derived unfollowed-you/you-unfollowed/blocked-you presentation, mutual-always-mutual display, none-for-both-unfollowed, import, and export.
 - `src/i18n/`: type-checked English, Japanese, and Simplified Chinese runtime catalogs, locale resolution, relationship labels, and source labels.
 - `src/storage/`: IndexedDB access, small Chrome-synced preferences, local viewer exclusion state, local filter-rule documents, and conflict-safe legacy settings migration.
 - `src/ui/`: side panel, its pure relationship filter model, user-gesture profile links, dashboard and custom-rule manager, Options page, shared components, presentation, and storage-change-aware settings/rule listeners.
 - `src/content/timeline-hide.ts`: opt-in Home/search/notification hiding of muted or known blocked-by tweet cells.
+- `src/content/quick-rules.ts`: after-consent HoverCard (name-adjacent), tweet `caret` menu, and tweet-text selection actions that save one blacklist rule immediately through the service worker.
 - `public/`: manifest, `_locales` Manifest catalogs, extension HTML shells, content CSS, and icons.
 - `assets/branding/`: ImageGen source art used to derive Chrome icon sizes.
 - `scripts/`: deterministic build, validation, and packaging.

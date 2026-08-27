@@ -1,13 +1,17 @@
 import type {
   GetFilterRulesResponse,
+  GetFilterRulesStatusResponse,
   GetSummaryResponse,
   LookupUsersResponse,
   OpenDashboardMessage,
   OpenSidePanelResponse,
+  QuickAddFilterRuleResponse,
   RuntimeMessage,
   UpsertObservationsMessage,
   UpsertObservationsResponse,
 } from "../domain/messages";
+import { appendQuickFilterRule } from "../domain/filter-rules";
+import { filterRuleSetStatus } from "../domain/filter-rule-matching";
 import type { ObserverSettings } from "../domain/types";
 import { resolveUiLocale } from "../i18n";
 import { actionPresentation } from "./action-state";
@@ -30,7 +34,7 @@ import {
   getSettings,
   updateSettings,
 } from "../storage/settings";
-import { getFilterRuleSet } from "../storage/filter-rules";
+import { getFilterRuleSet, saveFilterRuleSet } from "../storage/filter-rules";
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
@@ -134,6 +138,72 @@ chrome.runtime.onMessage.addListener(
           ok: true,
           ruleSet,
         } satisfies GetFilterRulesResponse))
+        .catch((error: unknown) => sendResponse({
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        }));
+      return true;
+    }
+
+    if (message.type === "filter-rules:quick-add") {
+      if (!sender.url?.startsWith("https://x.com/")) {
+        sendResponse({ ok: false, error: "Quick filter rules are available only to x.com" });
+        return false;
+      }
+      void getSettings()
+        .then(async (settings) => {
+          if (settings.consentVersion < CURRENT_CONSENT_VERSION) {
+            throw new Error("Observation consent is required");
+          }
+          const viewerHandle = message.viewerHandle ?? settings.viewerHandle;
+          const current = await getFilterRuleSet(viewerHandle);
+          const result = appendQuickFilterRule(current, message.kind, message.value);
+          const saved = result.added
+            ? await saveFilterRuleSet(result.ruleSet, viewerHandle)
+            : result.ruleSet;
+          let enabledHiding = settings.hideByFilterRules;
+          if (!enabledHiding) {
+            await updateSettings({ hideByFilterRules: true });
+            enabledHiding = true;
+          }
+          const value = message.kind === "handle"
+            ? message.value.replace(/^@/, "").trim().toLowerCase()
+            : message.value.normalize("NFKC").trim();
+          return {
+            ok: true,
+            added: result.added,
+            kind: message.kind,
+            value,
+            enabledHiding,
+            status: filterRuleSetStatus(saved, enabledHiding),
+          } satisfies QuickAddFilterRuleResponse;
+        })
+        .then((response) => sendResponse(response))
+        .catch((error: unknown) => sendResponse({
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        }));
+      return true;
+    }
+
+    if (message.type === "filter-rules:status") {
+      if (!sender.url?.startsWith("https://x.com/")) {
+        sendResponse({ ok: false, error: "Filter rule status is available only to x.com" });
+        return false;
+      }
+      void getSettings()
+        .then(async (settings) => {
+          const applying = settings.consentVersion >= CURRENT_CONSENT_VERSION &&
+            settings.hideByFilterRules;
+          const ruleSet = await getFilterRuleSet(
+            message.viewerHandle ?? settings.viewerHandle,
+          );
+          return filterRuleSetStatus(ruleSet, applying);
+        })
+        .then((status) => sendResponse({
+          ok: true,
+          status,
+        } satisfies GetFilterRulesStatusResponse))
         .catch((error: unknown) => sendResponse({
           ok: false,
           error: error instanceof Error ? error.message : String(error),

@@ -236,8 +236,6 @@
   background: transparent;
   border: 0;
   box-shadow: none;
-  /* Sit inward of X's bottom-right Grok/chat FAB (~56px + gap). */
-  right: 92px;
   width: auto;
 }
 
@@ -363,6 +361,54 @@
 .xro-observer-panel--needs-consent .xro-observer-panel__action { background: #e9a83a; }
 .xro-observer-panel--needs-consent .xro-observer-panel__action:hover { background: #f7c86d; }
 
+.xro-observer-panel__filters {
+  align-items: center;
+  border-top: 1px solid var(--xro-panel-line);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 8px 13px 10px;
+}
+
+.xro-observer-panel__filters-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.xro-observer-panel__filters-copy strong {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.xro-observer-panel__filters-copy span {
+  color: var(--xro-panel-muted);
+  font-size: 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xro-observer-panel__filters[data-xro-filter-applying] .xro-observer-panel__filters-copy span {
+  color: #3d6b1f;
+}
+
+.xro-observer-panel__filters-edit {
+  appearance: none;
+  background: var(--xro-panel-deep);
+  border: 1px solid var(--xro-panel-ink);
+  color: var(--xro-panel-ink);
+  cursor: pointer;
+  font: 800 9px/1.2 "Avenir Next", "Hiragino Sans", "Microsoft YaHei", sans-serif;
+  padding: 7px 8px;
+  white-space: nowrap;
+}
+
+.xro-observer-panel__filters-edit::after { content: "↗"; margin-inline-start: 4px; }
+.xro-observer-panel__filters-edit:hover { background: #c9ed67; }
+.xro-observer-panel__filters-edit:focus-visible { outline: 3px solid #78bfea; outline-offset: 2px; }
+
 :root[data-xro-theme="dark"] .xro-badge--mutual { background: #183b25; color: #b8efa9; }
 :root[data-xro-theme="dark"] .xro-badge--following_only { background: #493817; color: #ffd77b; }
 :root[data-xro-theme="dark"] .xro-badge--unfollowed_you { background: #493817; color: #ffd77b; }
@@ -398,6 +444,13 @@
   color: #16221b;
 }
 :root[data-xro-theme="dark"] .xro-observer-panel__bubble .xro-observer-panel__dot { border-color: #101713; }
+:root[data-xro-theme="dark"] .xro-observer-panel__filters[data-xro-filter-applying] .xro-observer-panel__filters-copy span {
+  color: #b8efa9;
+}
+:root[data-xro-theme="dark"] .xro-observer-panel__filters-edit:hover {
+  background: #c9ed67;
+  color: #16221b;
+}
 
 @media (prefers-reduced-motion: no-preference) {
   .xro-badge {
@@ -445,6 +498,114 @@
   padding: 0 !important;
   pointer-events: none !important;
   opacity: 0 !important;
+}
+
+.xro-quick-rule {
+  align-items: center;
+  appearance: none;
+  background: #c9ed67;
+  border: 1px solid #16221b;
+  box-shadow: 3px 3px 0 rgb(22 34 27 / 0.18);
+  color: #16221b;
+  cursor: pointer;
+  display: inline-flex;
+  font-family: "Avenir Next", "Hiragino Sans", "Microsoft YaHei", sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  gap: 6px;
+  line-height: 1.2;
+  margin: 8px 12px 12px;
+  max-width: calc(100% - 24px);
+  padding: 7px 10px;
+  pointer-events: auto;
+  z-index: 2147483645;
+}
+
+.xro-quick-rule:focus-visible {
+  outline: 2px solid #16221b;
+  outline-offset: 2px;
+}
+
+.xro-quick-rule--handle {
+  align-self: flex-start;
+  flex: none;
+  margin: 4px 0 6px;
+  max-width: 100%;
+  padding: 4px 8px;
+  width: max-content;
+}
+
+.xro-quick-rule--menu {
+  box-sizing: border-box;
+  box-shadow: none;
+  font-size: 15px;
+  gap: 12px;
+  margin: 0;
+  max-width: none;
+  padding: 12px 16px;
+  width: 100%;
+}
+
+.xro-quick-rule--menu:hover,
+.xro-quick-rule--menu:focus-visible {
+  background: #d6f47a;
+}
+
+.xro-quick-rule__mark {
+  align-items: center;
+  background: #16221b;
+  border-radius: 50%;
+  color: #c9ed67;
+  display: inline-flex;
+  flex: none;
+  font-size: 10px;
+  font-weight: 900;
+  height: 18px;
+  justify-content: center;
+  width: 18px;
+}
+
+.xro-quick-rule[data-xro-added="true"] {
+  background: #e8e1d1;
+  box-shadow: none;
+}
+
+.xro-quick-rule--keyword {
+  margin: 0;
+  position: fixed;
+}
+
+.xro-quick-rule-toast {
+  background: #16221b;
+  border: 1px solid #c9ed67;
+  bottom: 88px;
+  box-shadow: 6px 6px 0 rgb(22 34 27 / 0.28);
+  color: #f2eee3;
+  font-family: "Avenir Next", "Hiragino Sans", "Microsoft YaHei", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  left: 50%;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 10px 14px;
+  pointer-events: none;
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 2147483646;
+}
+
+:root[data-xro-theme="dark"] .xro-quick-rule {
+  border-color: #647068;
+}
+
+:root[data-xro-theme="dark"] .xro-quick-rule[data-xro-added="true"] {
+  background: #18211c;
+  color: #edf0e7;
+}
+
+:root[data-xro-theme="dark"] .xro-quick-rule-toast {
+  background: #edf0e7;
+  border-color: #101713;
+  color: #16221b;
 }
 
 @media print {

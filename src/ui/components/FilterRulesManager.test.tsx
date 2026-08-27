@@ -110,6 +110,55 @@ describe("FilterRulesManager", () => {
     expect(onEnabledChange).toHaveBeenCalledWith(true);
   });
 
+  it("makes unsaved edits obvious and warns before leaving the page", async () => {
+    stored[FILTER_RULES_KEY] = createEmptyFilterRuleSet();
+    await act(async () => {
+      root.render(
+        <FilterRulesManager
+          locale="zh-CN"
+          enabled={false}
+          disabled={false}
+          standalone
+          onEnabledChange={() => undefined}
+        />,
+      );
+    });
+
+    const findSave = (): HTMLButtonElement =>
+      [...document.querySelectorAll<HTMLButtonElement>("button")]
+        .find((button) => button.textContent === "保存规则")!;
+    expect(findSave().classList.contains("primary-button")).toBe(true);
+    expect(findSave().disabled).toBe(true);
+    expect(document.querySelector("[data-filter-rules-dirty]")).toBeNull();
+
+    const add = document.querySelector<HTMLButtonElement>(".filter-rules-editor__compose .filter-rules-editor__add")!;
+    expect(add.textContent).toBe("添加规则");
+    expect(add.closest(".filter-rules-editor__compose")?.querySelector("select")).toBeTruthy();
+    await act(async () => add.click());
+
+    expect(document.querySelector("[data-filter-rules-dirty]")).toBeTruthy();
+    expect(document.querySelector(".filter-rules-editor.is-dirty")).toBeTruthy();
+    expect(document.querySelector(".filter-rules-editor__unsaved")?.textContent)
+      .toContain("未保存");
+    expect(findSave().disabled).toBe(false);
+
+    const leaving = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(leaving);
+    expect(leaving.defaultPrevented).toBe(true);
+
+    const handles = document.querySelector<HTMLTextAreaElement>(".filter-rule-card textarea")!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")
+        ?.set?.call(handles, "alice");
+      handles.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () => findSave().click());
+    expect(document.querySelector("[data-filter-rules-dirty]")).toBeNull();
+    const afterSave = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(afterSave);
+    expect(afterSave.defaultPrevented).toBe(false);
+  });
+
   it("opens and focuses the editor from its deep link and keeps the authoring guide collapsed", async () => {
     stored[FILTER_RULES_KEY] = createEmptyFilterRuleSet();
     window.location.hash = "#filter-rules";

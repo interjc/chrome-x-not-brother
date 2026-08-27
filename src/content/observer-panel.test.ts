@@ -94,6 +94,40 @@ describe("observer panel", () => {
     expect(onCollapsedChange).toHaveBeenLastCalledWith(false);
   });
 
+  it("keeps the NB ball in the page corner and shifts X chat/Grok drawers up", () => {
+    const grok = document.createElement("div");
+    grok.setAttribute("data-testid", "GrokDrawer");
+    const chat = document.createElement("div");
+    chat.setAttribute("data-testid", "DMDrawer");
+    document.body.append(grok, chat);
+
+    const collapsed = renderObserverPanel(document, {
+      state: "active",
+      summary: null,
+      locale: "en",
+      collapsed: true,
+    }, () => undefined, () => undefined);
+
+    const shift = collapsed.querySelector("style.xro-observer-panel__corner-fab-shift");
+    expect(shift?.textContent).toContain("GrokDrawer");
+    expect(shift?.textContent).toContain("DMDrawer");
+    expect(shift?.textContent).toContain("chat-drawer-root");
+    expect(shift?.textContent).toContain("translate:0 -72px");
+    expect(collapsed.classList.contains("xro-observer-panel--collapsed")).toBe(true);
+
+    renderObserverPanel(document, {
+      state: "active",
+      summary: null,
+      locale: "en",
+      collapsed: false,
+    }, () => undefined, () => undefined);
+    expect(document.querySelector("style.xro-observer-panel__corner-fab-shift")).toBeNull();
+
+    removeObserverPanel(document);
+    grok.remove();
+    chat.remove();
+  });
+
   it("keeps a prominent consent entry next to the collapsed floating button", () => {
     const onOpen = vi.fn();
     const onCollapsedChange = vi.fn();
@@ -115,5 +149,57 @@ describe("observer panel", () => {
     bubble?.click();
     expect(onOpen).toHaveBeenCalledOnce();
     expect(onCollapsedChange).toHaveBeenCalledWith(false);
+  });
+
+  it("shows custom blacklist status and opens the editor from the expanded dock", () => {
+    const onOpenFilterRules = vi.fn();
+    const panel = renderObserverPanel(document, {
+      state: "active",
+      summary: { total: 4, followingOnly: 1, blockedBy: 0, changed: 0 },
+      locale: "zh-CN",
+      collapsed: false,
+      filterRules: { applying: true, ruleCount: 5, activeRuleCount: 3 },
+    }, () => undefined, () => undefined, onOpenFilterRules);
+
+    const filters = panel.querySelector<HTMLElement>(".xro-observer-panel__filters");
+    expect(filters?.dataset.xroFilterApplying).toBe("true");
+    expect(filters?.textContent).toContain("自定义黑名单");
+    expect(filters?.textContent).toContain("应用中");
+    expect(filters?.textContent).toContain("3");
+    panel.querySelector<HTMLButtonElement>(".xro-observer-panel__filters-edit")?.click();
+    expect(onOpenFilterRules).toHaveBeenCalledOnce();
+  });
+
+  it("keeps blacklist status on a paused dock and hides it before consent", () => {
+    const paused = renderObserverPanel(document, {
+      state: "paused",
+      summary: null,
+      locale: "en",
+      collapsed: false,
+      filterRules: { applying: false, ruleCount: 2, activeRuleCount: 0 },
+    }, () => undefined, () => undefined, () => undefined);
+    expect(paused.textContent).toContain("Custom blacklist");
+    expect(paused.textContent).toContain("Off");
+    expect(paused.textContent).toContain("2");
+
+    renderObserverPanel(document, {
+      state: "needs-consent",
+      summary: null,
+      locale: "zh-CN",
+      collapsed: false,
+      filterRules: { applying: false, ruleCount: 2, activeRuleCount: 0 },
+    }, () => undefined, () => undefined, () => undefined);
+    expect(document.querySelector(".xro-observer-panel__filters")).toBeNull();
+  });
+
+  it("does not show blacklist controls on the collapsed floating button", () => {
+    renderObserverPanel(document, {
+      state: "active",
+      summary: null,
+      locale: "zh-CN",
+      collapsed: true,
+      filterRules: { applying: true, ruleCount: 4, activeRuleCount: 4 },
+    }, () => undefined, () => undefined, () => undefined);
+    expect(document.querySelector(".xro-observer-panel__filters")).toBeNull();
   });
 });

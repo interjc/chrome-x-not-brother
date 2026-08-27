@@ -34,6 +34,18 @@ import { downloadFile } from "../format";
 
 export const FILTER_RULES_EDITOR_HASH = "#filter-rules";
 
+export function filterRulesEditorIsDirty(root: ParentNode = document): boolean {
+  return root.querySelector("[data-filter-rules-dirty]") !== null;
+}
+
+export function confirmLeaveFilterRulesEditor(
+  locale: AppLocale,
+  root: ParentNode = document,
+): boolean {
+  if (!filterRulesEditorIsDirty(root)) return true;
+  return window.confirm(translate(locale, "filterRulesUnsavedLeave"));
+}
+
 export function revealFilterRulesEditor(root: Document = document): boolean {
   const manager = root.getElementById("filter-rules");
   if (!manager) return false;
@@ -161,6 +173,16 @@ export function FilterRulesManager({
     window.addEventListener("hashchange", revealFromHash);
     return () => window.removeEventListener("hashchange", revealFromHash);
   }, []);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent): void => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
 
   const setEditedDraft = (next: FilterRuleSet): void => {
     dirtyRef.current = true;
@@ -428,7 +450,10 @@ export function FilterRulesManager({
           </div>
         </details>
 
-        <form className="filter-rules-editor" onSubmit={(event) => void save(event)}>
+        <form
+          className={`filter-rules-editor${dirty ? " is-dirty" : ""}`}
+          onSubmit={(event) => void save(event)}
+        >
           <div className="filter-rules-editor__meta">
             <label>
               <span>{t("filterRulesSetName")}</span>
@@ -587,26 +612,38 @@ export function FilterRulesManager({
           </div>
 
           <div className="filter-rules-editor__actions">
-            <label>
-              <span>{t("filterRulesAddType")}</span>
-              <select value={addType} onChange={(event) => setAddType(event.target.value as FilterRuleType)}>
-                <option value="user_handles">{t("filterRulesTypeHandles")}</option>
-                <option value="display_name">{t("filterRulesTypeDisplayName")}</option>
-                <option value="content">{t("filterRulesTypeContent")}</option>
-              </select>
-            </label>
-            <button
-              type="button"
-              onClick={() => setEditedDraft({
-                ...draft,
-                rules: [...draft.rules, newRule(addType, t("filterRulesNewRule"))],
-              })}
-            >
-              {t("filterRulesAddRule")}
-            </button>
-            <button className="primary-button" disabled={!ready || !dirty} type="submit">
-              {t("filterRulesSave")}
-            </button>
+            <div className="filter-rules-editor__compose">
+              <label>
+                <span>{t("filterRulesAddType")}</span>
+                <select value={addType} onChange={(event) => setAddType(event.target.value as FilterRuleType)}>
+                  <option value="user_handles">{t("filterRulesTypeHandles")}</option>
+                  <option value="display_name">{t("filterRulesTypeDisplayName")}</option>
+                  <option value="content">{t("filterRulesTypeContent")}</option>
+                </select>
+              </label>
+              <button
+                className="filter-rules-editor__add"
+                type="button"
+                onClick={() => setEditedDraft({
+                  ...draft,
+                  rules: [...draft.rules, newRule(addType, t("filterRulesNewRule"))],
+                })}
+              >
+                {t("filterRulesAddRule")}
+              </button>
+            </div>
+            <div className="filter-rules-editor__commit">
+              {dirty ? (
+                <span className="filter-rules-editor__unsaved">{t("filterRulesUnsavedHint")}</span>
+              ) : null}
+              <button
+                className="primary-button"
+                disabled={!ready || !dirty}
+                type="submit"
+              >
+                {t("filterRulesSave")}
+              </button>
+            </div>
           </div>
         </form>
 
@@ -706,6 +743,7 @@ export function FilterRulesManager({
     return (
       <section
         className="filter-rules-manager filter-rules-manager--standalone"
+        data-filter-rules-dirty={dirty ? "true" : undefined}
         id="filter-rules"
         ref={(node) => { manager.current = node; }}
       >
@@ -717,6 +755,7 @@ export function FilterRulesManager({
   return (
     <details
       className="filter-rules-manager"
+      data-filter-rules-dirty={dirty ? "true" : undefined}
       id="filter-rules"
       ref={(node) => { manager.current = node; }}
     >

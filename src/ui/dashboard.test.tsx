@@ -179,4 +179,33 @@ describe("dashboard profile links", () => {
     const heading = document.querySelector("#filter-rules [data-filter-rules-focus]");
     expect(heading?.textContent).toContain("自定义黑名单");
   });
+
+  it("asks before leaving unsaved blacklist edits", async () => {
+    const confirm = vi.fn(() => false);
+    vi.stubGlobal("confirm", confirm);
+
+    await act(async () => {
+      window.location.hash = "#filter-rules";
+      window.dispatchEvent(new Event("hashchange"));
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const add = [...document.querySelectorAll<HTMLButtonElement>("button")]
+      .find((button) => button.textContent === "添加规则");
+    expect(add).toBeTruthy();
+    await act(async () => add?.click());
+    expect(document.querySelector("[data-filter-rules-dirty]")).toBeTruthy();
+
+    await act(async () => {
+      window.location.hash = "#archive";
+      window.dispatchEvent(new Event("hashchange"));
+    });
+
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(document.querySelector("#filter-rules")).toBeTruthy();
+    expect(document.querySelector("#dashboard-panel-archive")).toBeNull();
+  });
 });

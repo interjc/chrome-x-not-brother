@@ -2,6 +2,8 @@
 
 本文定义 Not Brother 的 `not-brother-filter-rules` JSON v1。代码中的权威校验器是 `src/domain/filter-rules.ts`；导入文件必须通过 Zod 完整校验，未知字段也会被拒绝。
 
+面向安装用户的规则编写、界面编辑、导入导出，以及 Gist / GitHub Raw / 公开 HTTPS 托管说明写在仓库根目录 [README.md](../README.md#自定义黑名单规则)。
+
 ## 行为边界
 
 - 总开关 `hideByFilterRules` 默认关闭，作为小型偏好保存在 `chrome.storage.sync`；规则文档不参与同步，只保存在当前 Chrome 配置的 `chrome.storage.local`，并按当前登录 X 账号的小写 handle 分命名空间：`notBrother.filterRules.v1.ns.{handle}`。切换 X 账号时，匹配和编辑都只使用该账号自己的规则。旧的未分命名空间文档会在首次识别到 handle 时迁入该账号。
@@ -83,9 +85,9 @@ v1 用 X handle 作为公开、稳定且当前页面可确认的账号标识，�
 
 ## 编辑、导入和导出
 
-Side Panel、Chrome Options 页与关系档案库中，“应用自定义黑名单规则”开关旁都提供“编辑规则与查看教程”入口。Side Panel 与 Options 会打开 `dashboard.html#filter-rules`；档案库内则原地展开规则区、滚动到目标并把键盘焦点移到折叠标题。该入口不依赖开关是否已经启用，也不新增 Chrome 权限。
+Side Panel、Chrome Options 页、X 页面展开的观察 dock 与关系档案库中，都提供自定义黑名单入口。Side Panel、Options 与 dock 的“编辑规则”打开 `dashboard.html#filter-rules`；档案库内则原地展开规则区、滚动到目标并把键盘焦点移到折叠标题。该入口不依赖开关是否已经启用，也不新增 Chrome 权限。dock 另外显示当前账号规则是否正在应用以及条数；条数来自 service worker 的 `filter-rules:status`，不把规则正文下发到 X 页面。未同意时 dock 不展示这一行。同意后，头像 HoverCard 名字旁的「不是兄弟！」、帖子右上角三个点菜单里的同一项，以及帖子正文划词「拉黑关键词」通过 `filter-rules:quick-add` 立即写入并保存对应 handle / contains 规则；若总开关关闭会一并打开。不点击 X 账号操作控件。
 
-关系档案库提供完整表单编辑器，以及默认收起的编写教程。教程说明三种匹配对象、contains 与安全正则、大小写、单条启停、失效时间、OR 语义、导入时的追加/清空覆盖、内容隐私边界，并给出完整 JSON v1 示例。用户不需要手写 JSON 即可使用表单；也可用 `skills/x-not-brother-rules` 让 AI 阅读或改导出的 JSON。保存前对整个草稿运行 Zod 校验；校验失败时不覆盖已保存规则。导出使用浏览器 Blob 下载，不申请 `downloads` 权限。
+关系档案库提供完整表单编辑器，以及默认收起的编写教程。教程说明三种匹配对象、contains 与安全正则、大小写、单条启停、失效时间、OR 语义、导入时的追加/清空覆盖、内容隐私边界，并给出完整 JSON v1 示例。用户不需要手写 JSON 即可使用表单；也可用 `skills/x-not-brother-rules` 让 AI 阅读或改导出的 JSON。保存按钮贴在编辑区底部并使用主色；有未保存修改时离开黑名单页、关掉标签或后退会先确认。保存前对整个草稿运行 Zod 校验；校验失败时不覆盖已保存规则。导出使用浏览器 Blob 下载，不申请 `downloads` 权限。
 
 导入支持：
 

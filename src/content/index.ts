@@ -1,8 +1,10 @@
 import type {
   GetFilterRulesResponse,
+  GetFilterRulesStatusResponse,
   GetSummaryResponse,
   LookupUsersResponse,
   OpenSidePanelResponse,
+  QuickAddFilterRuleResponse,
   RuntimeMessage,
   UpsertObservationsMessage,
   UpsertObservationsResponse,
@@ -23,7 +25,7 @@ import {
   compileFilterRuleSet,
   type CompiledFilterRuleSet,
 } from "../domain/filter-rule-matching";
-import { getDocumentLocale, resolveUiLocale, type AppLocale } from "../i18n";
+import { getDocumentLocale, resolveUiLocale, translate, type AppLocale } from "../i18n";
 import {
   CURRENT_CONSENT_VERSION,
   getSettings,
@@ -40,6 +42,7 @@ import {
   removeObserverPanel,
   renderObserverPanel,
   showObserverPanelOpenHint,
+  type ObserverPanelFilterRules,
 } from "./observer-panel";
 import {
   hasExtensionContext,
@@ -68,6 +71,16 @@ import {
   createMuteMemory,
 } from "./timeline-hide";
 import {
+  createQuickRuleSelectionWatcher,
+  refreshHoverQuickRules,
+  refreshTweetMenuQuickRules,
+  removeQuickRuleActions,
+  showQuickRuleToast,
+} from "./quick-rules";
+import {
+  DROPDOWN_SELECTOR,
+  HOVER_CARD_SELECTOR,
+  TWEET_CARET_SELECTOR,
   isInsideXUserAuthoredContent,
   scanXDocument,
   type ExtractedCandidate,
@@ -99,11 +112,167 @@ let filterRulesLoading: Promise<void> | null = null;
 let filterRulesLoadingFor: string | null = null;
 let compiledFilterRules: CompiledFilterRuleSet = compileFilterRuleSet({ rules: [] });
 let compiledFilterRulesForViewer: string | null = null;
+let latestFilterStatus: ObserverPanelFilterRules | null = null;
+const quickBlockedHandles = new Set<string>();
+let keywordWatcher: { refresh(): void; stop(): void } | null = null;
+let caretClickTimers: number[] = [];
+let filterStatusLoading: Promise<void> | null = null;
+let filterStatusLoadingFor: string | null = null;
 
 function currentViewerHandle(): string | null {
   return viewerHandleFromDocument(document)?.toLowerCase()
     ?? latestSettings?.viewerHandle
     ?? null;
+}
+
+function rememberQuickBlockedHandles(
+  rules: GetFilterRulesResponse["ruleSet"]["rules"],
+): void {
+  quickBlockedHandles.clear();
+  for (const rule of rules) {
+    if (!rule.enabled || rule.type !== "user_handles") continue;
+    for (const handle of rule.handles) quickBlockedHandles.add(handle);
+  }
+}
+
+function toastSnippet(value: string): string {
+  const normalized = value.normalize("NFKC").trim();
+  return normalized.length <= 24 ? normalized : `${normalized.slice(0, 23)}…`;
+}
+
+function syncQuickRuleUi(): void {
+  const settings = latestSettings;
+  const enabled = Boolean(
+    settings && settings.consentVersion >= CURRENT_CONSENT_VERSION,
+  );
+  const actionState = {
+    locale: pageUiLocale(settings),
+    viewerHandle: currentViewerHandle(),
+    enabled,
+    blockedHandles: quickBlockedHandles,
+    onAddHandle: (handle: string) => void quickAddFilterRule("handle", handle),
+    onAddKeyword: (value: string) => void quickAddFilterRule("content", value),
+  };
+  refreshHoverQuickRules(document, actionState);
+  refreshTweetMenuQuickRules(document, actionState);
+  keywordWatcher?.refresh();
+}
+
+function handleTweetCaretClick(event: Event): void {
+  if (!(event.target instanceof Element)) return;
+  if (!event.target.closest(TWEET_CARET_SELECTOR)) return;
+  const view = document.defaultView;
+  for (const id of caretClickTimers) view?.clearTimeout(id);
+  caretClickTimers = [0, 50, 160].map((delay) =>
+    view?.setTimeout(() => {
+      if (!stopped) syncQuickRuleUi();
+    }, delay) ?? 0
+  );
+}
+
+function mutationTouchesQuickRuleHost(mutation: MutationRecord): boolean {
+  if (mutation.type === "attributes") {
+    if (!(mutation.target instanceof Element)) return false;
+    if (mutation.attributeName === "aria-expanded") {
+      return mutation.target.closest(TWEET_CARET_SELECTOR) !== null;
+    }
+    return mutation.target.closest(`${HOVER_CARD_SELECTOR}, ${DROPDOWN_SELECTOR}`) !== null;
+  }
+  if (mutation.type !== "childList") return false;
+  if (
+    mutation.target instanceof Element &&
+    mutation.target.closest(`${HOVER_CARD_SELECTOR}, ${DROPDOWN_SELECTOR}`)
+  ) {
+    return true;
+  }
+  for (const node of mutation.addedNodes) {
+    if (!(node instanceof Element)) continue;
+    if (
+      node.matches(HOVER_CARD_SELECTOR) ||
+      node.matches(DROPDOWN_SELECTOR) ||
+      node.querySelector(`${HOVER_CARD_SELECTOR}, ${DROPDOWN_SELECTOR}`)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function quickAddFilterRule(
+  kind: "handle" | "content",
+  value: string,
+): Promise<void> {
+  const locale = pageUiLocale();
+  const clipped = kind === "content"
+    ? value.normalize("NFKC").trim().slice(0, 256)
+    : value.trim();
+  if (!clipped) return;
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: "filter-rules:quick-add",
+      kind,
+      value: clipped,
+      viewerHandle: currentViewerHandle(),
+    }) as QuickAddFilterRuleResponse | { ok: false; error: string };
+    if (!response.ok) throw new Error(response.error);
+    if (kind === "handle") quickBlockedHandles.add(response.value.toLowerCase());
+    latestFilterStatus = response.status;
+    if (latestSettings) {
+      latestSettings = {
+        ...latestSettings,
+        hideByFilterRules: response.enabledHiding,
+      };
+      renderPanel(latestSettings);
+    }
+    const toastKey = kind === "handle"
+      ? (response.added ? "quickRuleToastHandleAdded" : "quickRuleToastHandleExists")
+      : (response.added ? "quickRuleToastKeywordAdded" : "quickRuleToastKeywordExists");
+    showQuickRuleToast(document, translate(locale, toastKey, {
+      handle: response.value,
+      value: toastSnippet(response.value),
+    }));
+    syncQuickRuleUi();
+    scheduleHide();
+    scheduleProcess();
+  } catch (error) {
+    handleRuntimeError(error, "Could not save a quick blacklist rule");
+    showQuickRuleToast(document, translate(locale, "quickRuleToastFailed"));
+  }
+}
+
+function dockFilterRules(settings: ObserverSettings): ObserverPanelFilterRules | null {
+  if (settings.consentVersion < CURRENT_CONSENT_VERSION) return null;
+  return {
+    applying: settings.hideByFilterRules,
+    ruleCount: latestFilterStatus?.ruleCount ?? 0,
+    activeRuleCount: latestFilterStatus?.activeRuleCount ?? 0,
+  };
+}
+
+function refreshFilterStatus(): Promise<void> {
+  const viewerHandle = currentViewerHandle();
+  const requested = viewerHandle ?? "";
+  if (filterStatusLoading && filterStatusLoadingFor === requested) {
+    return filterStatusLoading;
+  }
+  filterStatusLoadingFor = requested;
+  filterStatusLoading = chrome.runtime.sendMessage({
+    type: "filter-rules:status",
+    viewerHandle,
+  })
+    .then((response: GetFilterRulesStatusResponse | { ok: false; error: string }) => {
+      if (requested !== (currentViewerHandle() ?? "")) return;
+      if (!response.ok) throw new Error(response.error);
+      latestFilterStatus = response.status;
+    }).catch((error: unknown) => {
+      handleRuntimeError(error, "Could not read custom filter rule status");
+    }).finally(() => {
+      if (filterStatusLoadingFor === requested) {
+        filterStatusLoading = null;
+        filterStatusLoadingFor = null;
+      }
+    });
+  return filterStatusLoading;
 }
 
 function ensureFilterRulesLoaded(): Promise<void> {
@@ -126,6 +295,7 @@ function ensureFilterRulesLoaded(): Promise<void> {
       compiledFilterRules = compileFilterRuleSet(response.ruleSet);
       compiledFilterRulesForViewer = requested;
       filterRulesLoaded = true;
+      rememberQuickBlockedHandles(response.ruleSet.rules);
     }).catch((error: unknown) => {
       if (requested !== currentViewerHandle()) return;
       compiledFilterRules = compileFilterRuleSet({ rules: [] });
@@ -148,12 +318,18 @@ function handleStorageChanged(
   if (isSettingsStorageChange(changes, areaName)) {
     filterRulesLoaded = false;
     compiledFilterRulesForViewer = null;
+    void refreshFilterStatus().then(() => {
+      if (!stopped && latestSettings) renderPanel(latestSettings);
+    });
     scheduleHide();
     scheduleProcess();
   }
   if (isFilterRulesStorageChange(changes, areaName, currentViewerHandle())) {
     filterRulesLoaded = false;
     compiledFilterRulesForViewer = null;
+    void refreshFilterStatus().then(() => {
+      if (!stopped && latestSettings) renderPanel(latestSettings);
+    });
     if (
       !latestSettings?.hideByFilterRules ||
       latestSettings.consentVersion < CURRENT_CONSENT_VERSION
@@ -267,7 +443,17 @@ function stopContentScript(): void {
   filterRulesLoaded = false;
   filterRulesLoading = null;
   compiledFilterRules = compileFilterRuleSet({ rules: [] });
+  latestFilterStatus = null;
+  filterStatusLoading = null;
+  filterStatusLoadingFor = null;
   latestPageUsers = new Map();
+  keywordWatcher?.stop();
+  keywordWatcher = null;
+  document.removeEventListener("click", handleTweetCaretClick, true);
+  for (const id of caretClickTimers) window.clearTimeout(id);
+  caretClickTimers = [];
+  quickBlockedHandles.clear();
+  removeQuickRuleActions(document);
   removeObserverPanel(document);
 }
 
@@ -333,6 +519,17 @@ async function handleSidePanelOpenFailure(): Promise<void> {
   showObserverPanelOpenHint(document, pageUiLocale());
 }
 
+async function openFilterRules(): Promise<void> {
+  try {
+    await chrome.runtime.sendMessage({
+      type: "dashboard:open",
+      section: "filter-rules",
+    });
+  } catch (error) {
+    handleRuntimeError(error, "Could not open the blacklist editor");
+  }
+}
+
 function renderPanel(settings: ObserverSettings): void {
   const hasConsent = settings.consentVersion >= CURRENT_CONSENT_VERSION;
   renderObserverPanel(document, {
@@ -343,7 +540,10 @@ function renderPanel(settings: ObserverSettings): void {
     locale: pageUiLocale(settings),
     collapsed: settings.dockCollapsed,
     version: chrome.runtime.getManifest().version,
-  }, () => void openSidePanel(), (collapsed) => void setPanelCollapsed(collapsed));
+    filterRules: dockFilterRules(settings),
+  }, () => void openSidePanel(), (collapsed) => void setPanelCollapsed(collapsed), () => {
+    void openFilterRules();
+  });
 }
 
 async function setPanelCollapsed(collapsed: boolean): Promise<void> {
@@ -447,6 +647,14 @@ async function processPage(): Promise<void> {
   const settings = await getSettings();
   if (stopped) return;
   latestSettings = settings;
+  if (settings.consentVersion >= CURRENT_CONSENT_VERSION) {
+    try {
+      await refreshFilterStatus();
+    } catch (error) {
+      handleRuntimeError(error, "Could not read custom filter rule status");
+    }
+    if (stopped) return;
+  }
   if (settings.hideByFilterRules) {
     try {
       await ensureFilterRulesLoaded();
@@ -461,8 +669,10 @@ async function processPage(): Promise<void> {
   if (!hasConsent) {
     removeRelationshipBadges();
     clearTimelineHiding(document);
+    removeQuickRuleActions();
     return;
   }
+  syncQuickRuleUi();
   if (!settings.observerEnabled && !hidingEnabled) {
     removeRelationshipBadges();
     clearTimelineHiding(document);
@@ -536,7 +746,9 @@ function scheduleHide(): void {
 
 function nodeIsInsideInjectedUi(node: Node): boolean {
   const element = node instanceof Element ? node : node.parentElement;
-  return Boolean(element?.closest("[data-xro-badge], [data-xro-overlay]"));
+  return Boolean(
+    element?.closest("[data-xro-badge], [data-xro-overlay], [data-xro-quick-rule]"),
+  );
 }
 
 observer = new MutationObserver((mutations) => {
@@ -549,6 +761,9 @@ observer = new MutationObserver((mutations) => {
   ) {
     return;
   }
+  if (latestSettings && mutations.some(mutationTouchesQuickRuleHost)) {
+    syncQuickRuleUi();
+  }
   scheduleHide();
   scheduleProcess();
 });
@@ -560,6 +775,7 @@ observer.observe(document.documentElement, {
   attributes: true,
   attributeFilter: [
     "aria-disabled",
+    "aria-expanded",
     "aria-hidden",
     "aria-label",
     "data-testid",
@@ -620,6 +836,16 @@ if (hasExtensionContext()) {
     },
   });
   periodicRescan.start();
+
+  keywordWatcher = createQuickRuleSelectionWatcher(document, () => ({
+    locale: pageUiLocale(),
+    enabled: Boolean(
+      latestSettings &&
+      latestSettings.consentVersion >= CURRENT_CONSENT_VERSION,
+    ),
+    onAddKeyword: (value) => void quickAddFilterRule("content", value),
+  }));
+  document.addEventListener("click", handleTweetCaretClick, true);
 
   scheduleHide();
   scheduleProcess();

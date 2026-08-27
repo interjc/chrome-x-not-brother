@@ -1,5 +1,6 @@
 import type { ObservationDraft, ObservationSummary, UserRecord } from "./types";
 import type { FilterRuleSet } from "./filter-rules";
+import type { FilterRuleSetStatus } from "./filter-rule-matching";
 
 export interface UpsertObservationsMessage {
   type: "observations:upsert";
@@ -59,11 +60,39 @@ export interface GetFilterRulesResponse {
   ruleSet: FilterRuleSet;
 }
 
+export interface GetFilterRulesStatusMessage {
+  type: "filter-rules:status";
+  viewerHandle?: string | null;
+}
+
+export interface GetFilterRulesStatusResponse {
+  ok: true;
+  status: FilterRuleSetStatus;
+}
+
+export interface QuickAddFilterRuleMessage {
+  type: "filter-rules:quick-add";
+  kind: "handle" | "content";
+  value: string;
+  viewerHandle?: string | null;
+}
+
+export interface QuickAddFilterRuleResponse {
+  ok: true;
+  added: boolean;
+  kind: "handle" | "content";
+  value: string;
+  enabledHiding: boolean;
+  status: FilterRuleSetStatus;
+}
+
 export type RuntimeMessage =
   | UpsertObservationsMessage
   | OpenDashboardMessage
   | GetSummaryMessage
   | LookupUsersMessage
   | GetFilterRulesMessage
+  | GetFilterRulesStatusMessage
+  | QuickAddFilterRuleMessage
   | OpenSidePanelMessage
   | DataChangedMessage;

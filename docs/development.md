@@ -40,12 +40,13 @@ npm run dev
 - Chrome 清单本地化：`public/_locales/en|ja|zh_CN/messages.json`；
 - 数据结构与迁移：`src/storage/database.ts`；
 - 注入徽标：`src/content/badge.ts`、`public/content-script.css`；
-- X 页面观察 dock：`src/content/observer-panel.ts`、`public/content-script.css`；
+- X 页面观察 dock：`src/content/observer-panel.ts`、`public/content-script.css`；收起球贴右下角，Chat/Grok 上移选择器在 `x-adapter.ts`；同意后展开 dock 的黑名单状态走 `filter-rules:status`，编辑入口打开档案库；
 - 工具栏状态与安装引导：`src/background/action-state.ts`、`src/background/service-worker.ts`；
 - Side Panel：`src/ui/sidepanel.tsx`；
 - 管理页：`src/ui/dashboard.tsx`；
 - Chrome 选项页：`src/ui/options.tsx`、`src/ui/open-options-tab.ts`、`public/options.html`；右键「选项」应打开侧栏 Options 标签；
 - 可选时间线隐藏：`src/content/timeline-hide.ts`、`public/content-script.css`；
+- 时间线快速加规则：`src/content/quick-rules.ts`，HoverCard 入口贴在名字旁，帖子 `caret` 菜单也可加 handle 规则，保存走 service worker `filter-rules:quick-add`；
 - 视觉 token：`src/ui/styles.css`；
 - 品牌源图与 Chrome icons：`assets/branding/`、`public/icons/`；
 - 权限：`public/manifest.json`，同时更新校验与隐私文档。

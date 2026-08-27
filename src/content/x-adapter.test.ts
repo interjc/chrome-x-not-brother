@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  handleFromHoverCard,
+  hoverCardQuickRuleAnchor,
   isInsideXUserAuthoredContent,
+  openTweetMoreMenu,
   scanXDocument,
   sourceTypeFromUrl,
+  tweetAuthorHandle,
+  tweetTextRootFrom,
   viewerHandleFromDocument,
+  visibleHoverCards,
 } from "./x-adapter";
 
 function fixture(body: string): Document {
@@ -801,6 +807,49 @@ describe("scanXDocument", () => {
 
     const [candidate] = scanXDocument(doc, "https://x.com/home", 100);
     expect(candidate?.observation.handle).toBe("Alice");
+  });
+});
+
+describe("hover card and tweet text helpers", () => {
+  it("reads a loaded hover card handle and ignores tweet-body mentions", () => {
+    const doc = fixture(`<article data-testid="tweet">
+      <div data-testid="tweetText"><a href="/Mention">@Mention</a></div>
+    </article>
+    <aside data-testid="HoverCard">
+      <a href="/Alice"><span>@Alice</span></a>
+    </aside>`);
+    const card = doc.querySelector('[data-testid="HoverCard"]')!;
+    expect(handleFromHoverCard(card)).toBe("Alice");
+    expect([...visibleHoverCards(doc).keys()]).toEqual(["alice"]);
+    expect(tweetTextRootFrom(doc.querySelector('a[href="/Mention"]')!)).not.toBeNull();
+    expect(tweetTextRootFrom(card)).toBeNull();
+    expect(hoverCardQuickRuleAnchor(card as HTMLElement).textContent).toContain("@Alice");
+  });
+
+  it("anchors the hover quick-add after User-Name when that cluster exists", () => {
+    const doc = fixture(`<aside data-testid="HoverCard">
+      <div data-testid="User-Name"><a href="/Alice">Alice</a></div>
+      <p>bio</p>
+    </aside>`);
+    const card = doc.querySelector<HTMLElement>('[data-testid="HoverCard"]')!;
+    expect(hoverCardQuickRuleAnchor(card).getAttribute("data-testid")).toBe("User-Name");
+  });
+
+  it("reads the expanded tweet more-menu author and ignores quoted inner carets", () => {
+    const doc = fixture(`<article data-testid="tweet">
+      <div data-testid="Tweet-User-Avatar"><a href="/Alice"><img alt=""></a></div>
+      <button data-testid="caret" aria-expanded="true">More</button>
+      <article data-testid="tweet">
+        <div data-testid="Tweet-User-Avatar"><a href="/Quoted"><img alt=""></a></div>
+        <button data-testid="caret" aria-expanded="false">More</button>
+      </article>
+    </article>
+    <div data-testid="Dropdown"><div role="menu"><div role="menuitem">Mute</div></div></div>`);
+    const outer = doc.querySelector("article")!;
+    expect(tweetAuthorHandle(outer)).toBe("Alice");
+    const open = openTweetMoreMenu(doc);
+    expect(open?.handle).toBe("Alice");
+    expect(open?.menu.getAttribute("role")).toBe("menu");
   });
 });
 

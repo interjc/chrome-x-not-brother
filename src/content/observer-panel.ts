@@ -1,7 +1,14 @@
 import type { ObservationSummary } from "../domain/types";
 import { getDocumentLocale, translate, type AppLocale } from "../i18n";
+import { X_CORNER_FAB_SELECTOR } from "./x-adapter";
 
 export type ObserverPanelState = "active" | "paused" | "needs-consent";
+
+export interface ObserverPanelFilterRules {
+  applying: boolean;
+  ruleCount: number;
+  activeRuleCount: number;
+}
 
 export interface ObserverPanelModel {
   state: ObserverPanelState;
@@ -9,9 +16,20 @@ export interface ObserverPanelModel {
   locale: AppLocale;
   collapsed: boolean;
   version?: string;
+  filterRules?: ObserverPanelFilterRules | null;
 }
 
 const ROOT_ID = "not-brother-observer-panel";
+const CORNER_FAB_SHIFT_STYLE_CLASS = "xro-observer-panel__corner-fab-shift";
+const CORNER_FAB_SHIFT = "72px";
+
+function cornerFabShiftStyle(doc: Document): HTMLStyleElement {
+  const style = doc.createElement("style");
+  style.className = CORNER_FAB_SHIFT_STYLE_CLASS;
+  style.textContent =
+    `${X_CORNER_FAB_SELECTOR}{translate:0 -${CORNER_FAB_SHIFT}}`;
+  return style;
+}
 
 function element<K extends keyof HTMLElementTagNameMap>(
   doc: Document,
@@ -28,6 +46,7 @@ export function renderObserverPanel(
   model: ObserverPanelModel,
   onOpen: () => void,
   onCollapsedChange: (collapsed: boolean) => void,
+  onOpenFilterRules?: () => void,
 ): HTMLElement {
   const existing = doc.getElementById(ROOT_ID);
   const root = existing ?? element(doc, "div");
@@ -37,6 +56,7 @@ export function renderObserverPanel(
     model.locale,
     model.collapsed,
     model.version,
+    model.filterRules,
   ]);
   if (existing?.dataset.xroRenderKey === renderKey) return existing;
   root.id = ROOT_ID;
@@ -77,7 +97,7 @@ export function renderObserverPanel(
     } else {
       launcher.append(expand);
     }
-    root.replaceChildren(launcher);
+    root.replaceChildren(launcher, cornerFabShiftStyle(doc));
 
     if (!existing) doc.documentElement.append(root);
     return root;
@@ -137,6 +157,37 @@ export function renderObserverPanel(
       stats.append(item);
     }
     root.append(stats);
+  }
+
+  if (model.state !== "needs-consent" && model.filterRules) {
+    const filters = element(doc, "div", "xro-observer-panel__filters");
+    if (model.filterRules.applying) {
+      filters.dataset.xroFilterApplying = "true";
+    }
+    const copy = element(doc, "div", "xro-observer-panel__filters-copy");
+    const label = element(doc, "strong");
+    label.textContent = translate(model.locale, "dockFilterRulesLabel");
+    const status = element(doc, "span");
+    status.textContent = translate(
+      model.locale,
+      model.filterRules.applying ? "dockFilterRulesApplying" : "dockFilterRulesIdle",
+      {
+        count: model.filterRules.applying
+          ? model.filterRules.activeRuleCount
+          : model.filterRules.ruleCount,
+      },
+    );
+    copy.append(label, status);
+    filters.append(copy);
+    if (onOpenFilterRules) {
+      const edit = element(doc, "button", "xro-observer-panel__filters-edit");
+      edit.type = "button";
+      edit.textContent = translate(model.locale, "dockFilterRulesEdit");
+      edit.setAttribute("aria-label", translate(model.locale, "dockFilterRulesEditAria"));
+      edit.addEventListener("click", onOpenFilterRules);
+      filters.append(edit);
+    }
+    root.append(filters);
   }
 
   const button = element(doc, "button", "xro-observer-panel__action");
