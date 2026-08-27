@@ -42,7 +42,7 @@ npm run skills:validate
 - 可选时间线过滤默认关闭；打开后互关静音账号和本地已知 blocked-by 账号的首页帖子单元格被隐藏，个人主页/浮窗/UserCell 不隐藏；关闭过滤后单元格恢复；
 - 自定义规则 Zod schema 规范化 handle，拒绝未知字段、重复 id/handle、无效或可能灾难性回溯的正则和超限 JSON；handle、显示名、正文、启停与到期匹配正确，关闭总开关或规则到期后帖子恢复；
 - content script 仅通过 service worker 的 `filter-rules:get` 取得已校验规则快照；未同意或总开关关闭时后台拒绝返回，content bundle 不包含 Zod 或 `safe-regex2`；
-- 规则文件导入会询问追加或清空覆盖，不按 id 合并；公开 HTTPS/Gist URL 解析、单 JSON 选择、截断 Raw 文件、超时/响应大小/HTTP/非法 JSON 错误都安全失败；规则只写当前登录账号命名空间下的 `chrome.storage.local`；
+- 规则文件导入会询问按 ID 更新或清空覆盖；相同 id 整条替换、没有的 id 新增；公开 HTTPS/Gist URL 解析、单 JSON 选择、截断 Raw 文件、超时/响应大小/HTTP/非法 JSON 错误都安全失败；规则只写当前登录账号命名空间下的 `chrome.storage.local`；
 - CSV escaping 与 JSON schema validation；
 - Manifest 文件、最小常驻权限、仅用于用户手势远程导入的 optional HTTPS host permission 和所需 build artifacts；
 - `en`、`ja`、`zh_CN` Manifest catalog、语言归一化、翻译占位符、关系与来源名称。
@@ -83,7 +83,7 @@ npm run skills:validate
 30. 在 Side Panel 和关系档案库页脚点击“发送反馈”，确认新标签页打开 `https://github.com/interjc/chrome-x-not-brother/issues`，且没有因此申请额外权限或发送本地观察数据。
 31. 侧栏默认在状态标签显示用户列表；切换到选项后出现语言、徽标和时间线过滤，状态列表被收起。右键工具栏图标选择 **选项**，确认侧栏打开并停在选项标签；三个时间线过滤默认关闭。打开“彻底隐藏已静音账号”后，首页互关但仍被静音的帖子消失，对方主页仍可打开；打开“隐藏拉黑了我的账号”后，本地已记录 blocked-by 的首页帖子以及帖子详情/评论区里该作者的回复都会消失。档案里已有的账号应立刻消失；第一次检测到的账号会先收起再隐藏。档案库的同一开关即时同步。
 32. 从旧版本升级时，先在 `chrome.storage.local` 准备旧设置：若 sync 为空，确认偏好迁入 sync、`viewerHandle` 迁入新的 local key；若 sync 已有不同偏好，确认保留 sync 值。未登录 Chrome 或关闭同步时修改偏好仍应立即保存并在重启后保留；登录并启用 Chrome Sync 后由 Chrome 在其他配置恢复这些小型偏好，关系档案和 `viewerHandle` 不应出现。
-33. 在 Side Panel、Options 和档案库确认“编辑规则与查看教程”紧邻“应用自定义黑名单规则”开关；前两处点击后打开 `dashboard.html#filter-rules`，规则区自动展开、滚动且键盘焦点落在折叠标题，档案库内点击则原地完成相同行为。确认教程完整解释 handle、文字、正则、时效、导入时的追加或清空覆盖和隐私，并且示例 JSON 可解析且通过 schema。随后添加三种规则并测试启停、大小写和未来/已过期时间；打开总开关后只隐藏允许页面的匹配帖子，Profile、HoverCard、UserCell 和关注列表不隐藏，正文不出现在 IndexedDB 或导出。下载规则 JSON 后选择清空覆盖用文件恢复；再从只有一个 JSON 文件的公开 Gist 导入并选择追加，确认 Chrome 只在点击后请求 GitHub host 权限。拒绝权限、使用 HTTP、超过 1 MiB、多个 JSON 文件或无效正则时，现有规则保持不变且出现可读错误。关闭总开关后全部规则隐藏结果恢复。
+33. 在 Side Panel、Options 和档案库确认“编辑规则与查看教程”紧邻“应用自定义黑名单规则”开关；前两处点击后打开 `dashboard.html#filter-rules`，规则区自动展开、滚动且键盘焦点落在折叠标题，档案库内点击则原地完成相同行为。确认教程完整解释 handle、文字、正则、时效、导入时的按 ID 更新或清空覆盖和隐私，并且示例 JSON 可解析且通过 schema。随后添加三种规则并测试启停、大小写和未来/已过期时间；打开总开关后只隐藏允许页面的匹配帖子，Profile、HoverCard、UserCell 和关注列表不隐藏，正文不出现在 IndexedDB 或导出。下载规则 JSON 后选择清空覆盖用文件恢复；再从只有一个 JSON 文件的公开 Gist 导入并选择按 ID 更新，确认相同 id 被替换、新 id 被追加，且 Chrome 只在点击后请求 GitHub host 权限。拒绝权限、使用 HTTP、超过 1 MiB、多个 JSON 文件或无效正则时，现有规则保持不变且出现可读错误。关闭总开关后全部规则隐藏结果恢复。
 
 ## 边界检查
 

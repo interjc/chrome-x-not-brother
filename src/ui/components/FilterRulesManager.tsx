@@ -154,7 +154,7 @@ export function FilterRulesManager({
   const [remoteUrl, setRemoteUrl] = useState(DEFAULT_FILTER_RULES_URL);
   const [importPrompt, setImportPrompt] = useState<"file" | "url" | null>(null);
   const [importing, setImporting] = useState(false);
-  const importModeRef = useRef<FilterRuleImportMode>("append");
+  const importModeRef = useRef<FilterRuleImportMode>("update");
   const [addType, setAddType] = useState<FilterRuleType>("user_handles");
   const manager = useRef<HTMLElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -274,7 +274,7 @@ export function FilterRulesManager({
     dirtyRef.current = false;
     setDirty(false);
     setStatus(t(
-      mode === "replace" ? "filterRulesReplaced" : "filterRulesAppended",
+      mode === "replace" ? "filterRulesReplaced" : "filterRulesUpdated",
       { count: incoming.rules.length },
     ));
   };
@@ -716,8 +716,8 @@ export function FilterRulesManager({
               <strong id="filter-rules-import-ask">{t("filterRulesImportAsk")}</strong>
               <p>{t("filterRulesImportAskBody")}</p>
               <div className="filter-rules-import-prompt__actions">
-                <button type="button" onClick={() => confirmImportMode("append")}>
-                  {t("filterRulesImportAppend")}
+                <button type="button" onClick={() => confirmImportMode("update")}>
+                  {t("filterRulesImportUpdate")}
                 </button>
                 <button
                   className="danger-text"

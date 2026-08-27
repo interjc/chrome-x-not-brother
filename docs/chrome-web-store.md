@@ -97,7 +97,7 @@ npm run package
 | 权限/访问 | Dashboard 中的说明 |
 | --- | --- |
 | `https://x.com/*` | 在用户主动浏览 X 时，读取当前页面已经显示的账号身份和关系提示，以注入本地关系徽标并形成观察记录。 |
-| `contextMenus` | 在工具栏 action 图标右键菜单中提供“查看隐私说明并同意”入口；完成当前同意后隐藏，不读取网页右键内容。 |
+| `contextMenus` | 必填。只在扩展工具栏图标右键菜单（`contexts: ["action"]`）提供“查看隐私说明并同意”；完成当前同意后隐藏。不读取网页右键或页面选中内容，打开入口本身不记录同意。完整可粘贴英文/中文见 [store-listing.md](store-listing.md) 的 `contextMenus` 小节。 |
 | `storage` | 在 `chrome.storage.sync` 保存同意状态、观察器开关、徽标、语言、dock/侧栏状态和可选时间线过滤；当前 X handle 仅存 `chrome.storage.local` 用于排除本人，关系档案仍在 IndexedDB。 |
 | `sidePanel` | 在 Chrome 原生侧栏中显示本地关系概览和首次使用披露。 |
 | Optional `https://*/*` | 只在用户点击从公开 URL/Gist 加载规则后，按目标来源请求读取权限；安装时不授予，不用于后台访问、X 数据或远程代码。 |

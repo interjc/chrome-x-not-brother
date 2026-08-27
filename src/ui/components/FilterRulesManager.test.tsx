@@ -282,7 +282,7 @@ describe("FilterRulesManager", () => {
     )?.value).toBe("Bob only");
   });
 
-  it("asks whether to append or replace before importing a file", async () => {
+  it("asks whether to update by id or replace before importing a file", async () => {
     stored[FILTER_RULES_KEY] = createEmptyFilterRuleSet();
     await act(async () => {
       root.render(
@@ -300,7 +300,7 @@ describe("FilterRulesManager", () => {
     await act(async () => upload.click());
 
     const dialog = document.querySelector("[role='dialog']");
-    expect(dialog?.textContent).toContain("追加到现有规则");
+    expect(dialog?.textContent).toContain("按 ID 更新");
     expect(dialog?.textContent).toContain("清空后覆盖");
     expect(dialog?.querySelectorAll("button")).toHaveLength(3);
   });

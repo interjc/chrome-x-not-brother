@@ -102,7 +102,7 @@ describe("runtime internationalization", () => {
     expect(translate("zh-CN", "filterRulesExampleLoaded")).toContain("示例");
     expect(translate("zh-CN", "filterRulesNamespace", { handle: "alice" })).toContain("@alice");
     expect(translate("en", "filterRulesUseExampleUrl")).toContain("example URL");
-    expect(translate("zh-CN", "filterRulesImportAppend")).toContain("追加");
+    expect(translate("zh-CN", "filterRulesImportUpdate")).toContain("ID");
     expect(translate("zh-CN", "filterRulesUnsavedLeave")).toContain("尚未保存");
     expect(translate("en", "filterRulesUnsavedHint")).toContain("Unsaved");
     expect(translate("en", "filterRulesImportReplace")).toContain("replace");

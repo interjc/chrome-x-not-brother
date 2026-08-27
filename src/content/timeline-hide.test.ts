@@ -364,6 +364,40 @@ describe("timeline hide DOM", () => {
     document.body.innerHTML = "";
   });
 
+  it("does not hide profile-page tweets that match a custom handle rule", () => {
+    const doc = fixture(`
+      <div data-testid="cellInnerDiv">
+        <article data-testid="tweet">
+          <div data-testid="User-Name" data-handle="listed"><a href="/Listed">Listed</a></div>
+        </article>
+      </div>`);
+    const filterRules = compileFilterRuleSet({
+      ...createEmptyFilterRuleSet(),
+      rules: [{
+        id: "listed",
+        label: "Listed",
+        enabled: true,
+        expiresAt: null,
+        type: "user_handles",
+        handles: ["listed"],
+      }],
+    });
+    applyTimelineHiding({
+      root: doc,
+      candidates: [candidate(doc, "Listed", {
+        sourceType: "profile",
+        sourceUrl: "https://x.com/Listed",
+      })],
+      hideMutedAccounts: false,
+      hideBlockedByAccounts: false,
+      filterRules,
+      pageUsers: new Map(),
+      records: new Map(),
+      muteMemory: createMuteMemory(),
+    });
+    expect(doc.querySelectorAll(`[${HIDDEN_TWEET_ATTRIBUTE}]`)).toHaveLength(0);
+  });
+
   it("does not hide hover cards, user cells, or profile-only name rows", () => {
     const doc = fixture(`
       <div data-testid="HoverCard">

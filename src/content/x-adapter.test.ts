@@ -790,7 +790,8 @@ describe("scanXDocument", () => {
       evidence: ["blocked-notice"],
     });
     expect(candidates[1]?.observation.relationship).toBe("unknown");
-    expect(Date.now() - started).toBeLessThan(750);
+    // Five passes stay well under a freeze; coverage instrumentation is slower than `npm test`.
+    expect(Date.now() - started).toBeLessThan(1500);
   });
 
   it("still identifies a compact card when tweetText is packed with mentions", () => {

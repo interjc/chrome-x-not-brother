@@ -34,7 +34,7 @@
 23. Side Panel 的互关、我单向关注、TA 关注了我、TA 拉黑了我分类数字必须是键盘可达的筛选按钮；变化提示也可筛选全部未确认变化。再次点击当前分类恢复全部最近观察，空分类显示明确空状态。点击具体用户整行必须由该用户手势在新标签页打开其标准 X Profile；档案库的头像、显示名和 @handle 也必须打开同一资料。不得自动打开、预取或遍历资料页。
 24. 可选时间线过滤默认关闭：彻底隐藏已静音账号（即使互关），以及隐藏扩展已经确认拉黑了你的账号。作用于首页、搜索、通知和帖子详情/评论区中的帖子单元格；个人主页、浮窗和关注列表保持可见。开关出现在 Chrome Options/选项页、Side Panel 和关系档案库，三处通过 `chrome.storage.sync` 同步。过滤只改变当前浏览器显示，不点击静音/拉黑，不枚举完整名单，也不把静音列表写入关系数据库。
 25. 小型偏好使用 `chrome.storage.sync` 跟随用户启用的 Chrome Sync；未登录 Chrome、关闭同步或离线时仍作为本机设置工作。关系 users/observations 和当前 X `viewerHandle` 不同步：前者留在 IndexedDB，后者留在 `chrome.storage.local`。旧 local 设置只在 sync 无值时迁入，不能覆盖另一设备已有的 sync 设置。
-26. 提供默认关闭的自定义黑名单规则过滤：v1 支持 X handle 精确列表、显示名称文字/安全正则、当前帖子正文文字/安全正则，每条规则可单独启停并设置 ISO 到期时间。规则在关系档案库本地编辑，以独立 JSON v1 上传/下载；导入必须经 Zod 严格校验，支持本地文件、公开 HTTPS JSON 与公开 Gist；导入时询问追加或清空覆盖，暂不按 id 合并。规则文档只存 `chrome.storage.local`，不进入 Chrome Sync；小型总开关 `hideByFilterRules` 可同步。远程文件只在用户点击后读取一次，按来源申请 optional host permission，不后台订阅、不发送本地规则或帖子正文。内容只在本地当场匹配且不保存。过滤仍只改变允许页面中的 DOM 显示，不隐藏 Profile/HoverCard/UserCell/关注列表，不执行任何 X 账户操作。完整协议见 [自定义黑名单规则 v1](filter-rules.md)。
+26. 提供默认关闭的自定义黑名单规则过滤：v1 支持 X handle 精确列表、显示名称文字/安全正则、当前帖子正文文字/安全正则，每条规则可单独启停并设置 ISO 到期时间。规则在关系档案库本地编辑，以独立 JSON v1 上传/下载；导入必须经 Zod 严格校验，支持本地文件、公开 HTTPS JSON 与公开 Gist；导入时询问按 ID 更新或清空覆盖；按 ID 更新会替换相同 id 并新增没有的 id。规则文档只存 `chrome.storage.local`，不进入 Chrome Sync；小型总开关 `hideByFilterRules` 可同步。远程文件只在用户点击后读取一次，按来源申请 optional host permission，不后台订阅、不发送本地规则或帖子正文。内容只在本地当场匹配且不保存。过滤仍只改变允许页面中的 DOM 显示，不隐藏 Profile/HoverCard/UserCell/关注列表，不执行任何 X 账户操作。完整协议见 [自定义黑名单规则 v1](filter-rules.md)。
 27. 未完成当前同意版本时，X 页面展开 dock 的主按钮以及收起悬浮球旁的独立高对比按钮都必须显示“查看说明并同意”；工具栏 action 图标右键菜单也提供同名入口。所有入口只打开 Side Panel 的完整显著披露，打开失败时才回退到本地 dashboard，不得直接写入同意。完成同意后右键入口隐藏，内建“选项”菜单继续保留。
 
 ## 明确不做

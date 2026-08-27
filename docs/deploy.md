@@ -267,7 +267,7 @@ unzip -l output/not-brother-0.4.7.zip | head
 
 > Annotate relationship evidence already visible while the user browses x.com, and keep the observation history on the user's device for search, review, and export.
 
-**权限理由**：整段复制 [store-listing.md](store-listing.md) 里 Permission justifications 的全部英文段落。
+**权限理由**：打开 **隐私权规范 / Privacy practices**，把 [store-listing.md](store-listing.md) 里 Permission justifications 各小节贴进对应权限。`contextMenus` 必须单独填写，缺了商店会提示“必须提供需使用 contextMenus 权限的理由”；优先贴该小节英文稿，中文后台可贴中文稿。其余权限同样整段复制，不要改写成比代码更宽的用途。
 
 **Remote code**：选 **No, I am not using remote code.**
 

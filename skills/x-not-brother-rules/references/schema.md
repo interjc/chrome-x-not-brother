@@ -23,7 +23,7 @@ Canonical validator: `src/domain/filter-rules.ts`. Protocol notes: `docs/filter-
 | `rules` | max 500; `id` unique in the file |
 | file size | max 1 MiB UTF-8 |
 
-Unknown fields are rejected. The only action is hide (display-only).
+Unknown fields are rejected. The only action is hide (display-only). Exports include each rule `id`. Import can update matching ids in place and append unknown ids, or replace the whole document.
 
 ## Common rule fields
 

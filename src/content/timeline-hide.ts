@@ -182,6 +182,7 @@ export function applyTimelineHiding(input: {
   };
   if (input.hideMutedAccounts || input.hideBlockedByAccounts || input.filterRules) {
     for (const candidate of input.candidates) {
+      if (!HIDABLE_SOURCE_TYPES.has(candidate.observation.sourceType)) continue;
       const userKey = candidate.observation.userKey;
       const pageUser = input.pageUsers.get(userKey);
       const alreadyKnown =

@@ -36,6 +36,12 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 - Adds local Zod-validated blacklist rules for handles, display names, and post content, with expiration, JSON file import/export, and one-time public HTTPS/Gist import behind optional per-site permission.
 - Makes first-run consent easier to find with a prominent entry beside the minimized NB button and an action-icon context-menu shortcut; both open the full disclosure before consent.
 
+### Version 0.5.5 release notes
+
+- Splits the Fieldbook into Archive, Blacklist, and Settings. Custom rules stay on this Chrome profile, namespaced by the signed-in X account. Imports can update matching rule ids or clear-and-replace, and leaving unsaved edits warns first.
+- After consent, add a handle from the hover card next to the name or the tweet more menu, or blacklist selected post text. These save immediately and can turn on custom hiding. Profile pages, hover cards, and follow lists stay visible.
+- Keeps mention-heavy threads from freezing the tab, and shifts X Chat/Grok drawers up while the NB ball is showing.
+
 ### Version 0.5.4 release notes
 
 - Tightens "They unfollowed" so it only appears when history shows they used to follow you and you still follow them. Who to follow suggestions are no longer recorded as unfollows.
@@ -124,6 +130,12 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 - 小型偏好可通过用户启用的 Chrome Sync 同步，关系档案和当前 X handle 仍只保存在本机。旧 local 偏好迁移时不会覆盖 Chrome Sync 已有设置。
 - 未同意时，收起后的 NB 悬浮球旁会显示醒目入口，工具栏图标右键菜单也能打开完整隐私说明；入口不会直接代替用户同意。
+
+### 0.5.5 更新说明
+
+- 关系档案库拆成档案、黑名单、设置三页。自定义规则按当前登录 X 账号分开保存在本机；导入时可按 ID 更新或清空覆盖；未保存就离开会提示。
+- 同意后，头像浮窗名字旁或帖子三个点菜单可标记「不是兄弟！」，帖子正文划词可拉黑关键词，立即保存并可打开过滤。个人主页、浮窗和关注列表仍保持可见。
+- 修复大量 @提及帖子导致标签页卡死。收起 NB 悬浮球时把 X 的 Chat/Grok 按钮上移。
 
 ### 0.5.4 更新说明
 
@@ -215,6 +227,12 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 - 小さな設定をユーザーが有効にした Chrome Sync で同期し、関係アーカイブと現在の X ハンドルはローカルに保ちます。旧 local 設定の移行時も、Chrome Sync に既存の設定があれば上書きしません。
 - 未同意の場合、収納した NB ボタンの横に目立つ入口を表示し、ツールバーアイコンの右クリックメニューからも完全なプライバシー説明を開けます。入口だけで同意が確定することはありません。
 
+### 0.5.5 更新内容
+
+- 関係アーカイブを「アーカイブ / ブラックリスト / 設定」に分けました。カスタムルールはこの Chrome 設定に、ログイン中の X アカウントごとに保存されます。読み込みは ID で更新するか全消去後の上書きかを選べ、未保存のまま離れると確認します。
+- 同意後、ホバーカードの名前の横または投稿の「その他」メニューから「兄貴じゃない！」を追加でき、投稿本文の選択からもキーワードを隠せます。すぐ保存され、必要ならカスタム非表示をオンにします。プロフィール、ホバーカード、フォロー一覧は表示したままです。
+- 大量の @メンションがあるスレッドでタブが固まる問題を修正し、NB ボール表示中は X の Chat/Grok ボタンを上へずらします。
+
 ### 0.5.4 更新内容
 
 - 「相手が解除」の判定を厳しくしました。相手が以前あなたをフォローしていて、現在もあなたがフォローしている場合のみ表示します。「おすすめユーザー」カードを解除として記録しなくなりました。
@@ -300,6 +318,8 @@ https://interjc.github.io/chrome-x-not-brother/terms.html
 
 Dashboard 的权限说明建议使用英语，便于审核团队处理。保持以下内容与 Manifest 和隐私政策一致。
 
+**隐私权规范 / Privacy practices** 标签页会单独要求每一项权限的理由。`contextMenus` 缺这段会被拒。把对应小节整段贴进该权限的输入框；中文后台也可贴中文稿。
+
 ### Host access: `https://x.com/*`
 
 Not Brother runs only while the user actively browses x.com. It reads account names, handles, avatar URLs, relationship indicators, and the current source URL already rendered on that page so it can display relationship annotations and create a user-visible local observation history. It does not crawl pages, call X APIs, or run on other sites.
@@ -310,7 +330,19 @@ The extension uses `chrome.storage.sync` to save small preferences: consent vers
 
 ### `contextMenus`
 
-The extension adds one item to its own toolbar action menu so users who have not completed the current disclosure can find “Review privacy notice and agree.” Selecting it opens the full extension disclosure and does not inspect webpage context menus or record consent automatically. The item is hidden after consent.
+英文（审核常用，优先贴这段）：
+
+```text
+The contextMenus permission adds one item to this extension’s own toolbar-icon menu so users who have not completed the current privacy disclosure can open “Review privacy notice and agree.” Selecting the item opens the full in-extension notice in the Side Panel (or the local dashboard if the Side Panel cannot open). It does not inspect or modify webpage context menus, does not read page selection, and does not record consent by itself. The menu item is hidden after the current consent version is accepted.
+```
+
+中文（后台为中文时可用）：
+
+```text
+使用 contextMenus 权限，仅在本扩展工具栏图标的右键菜单中增加一项「查看隐私说明并同意」，方便尚未完成当前隐私披露的用户打开完整说明。点击后打开扩展自己的 Side Panel 披露页；若无法打开侧栏，则打开本地关系档案库。不会读取或改写网页右键菜单，不会读取页面选中内容，也不会仅因打开该入口而记录同意。用户完成当前版本同意后，该项会隐藏。
+```
+
+该项使用 `contexts: ["action"]`，只出现在扩展工具栏图标菜单，不是网页右键菜单。
 
 ### `sidePanel`
 

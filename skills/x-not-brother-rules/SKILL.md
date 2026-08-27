@@ -15,7 +15,7 @@ Read [references/schema.md](references/schema.md) before changing JSON.
 2. Summarize existing rules in plain language: target, match, enabled/expiration, and count.
 3. Make only the requested edits. Keep unrelated rules unchanged.
 4. Return one complete, valid JSON document. Do not emit a partial patch.
-5. Tell the user to import it in 不是兄弟 → 关系档案库 → **黑名单**, then choose **追加到现有规则** or **清空后覆盖**. There is no id-merge. For UI authoring, Gist / GitHub Raw / public HTTPS hosting, and the in-app import buttons, point humans to the root `README.md` section 自定义黑名单规则.
+5. Tell the user to import it in 不是兄弟 → 关系档案库 → **黑名单**, then choose **按 ID 更新** or **清空后覆盖**. Keep stable `id`s so update-by-id can replace existing rules; new ids are appended. For UI authoring, Gist / GitHub Raw / public HTTPS hosting, and the in-app import buttons, point humans to the root `README.md` section 自定义黑名单规则.
 
 ## Editing rules
 
@@ -23,7 +23,7 @@ Read [references/schema.md](references/schema.md) before changing JSON.
 - Prefer `contains` for ordinary keywords. Use `regex` only when needed; write the JavaScript Unicode pattern without surrounding `/`.
 - Normalize handles without `@`; they are case-insensitive.
 - Do not add unknown fields, X numeric user ids, mute/block actions, or stored post text.
-- If appending mentally for the user, keep current ids; the extension mints a new id on collision at import. If authoring a fresh file for overwrite, ids may be new.
+- Keep current ids when the user wants to update existing rules. Matching ids replace the whole rule on import; unknown ids are appended. If authoring a fresh file for overwrite, ids may be new.
 - Rules are stored per signed-in X handle. Ask which account the file is for when it matters.
 
 ## After writing JSON

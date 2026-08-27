@@ -49,7 +49,7 @@ Do not paste passwords, cookies, export backups, or other people's account data 
 ### 权限
 
 - `https://x.com/*`：只为在 X 页面运行 content script；
-- `contextMenus`：只在插件自己的工具栏图标右键菜单中提供隐私说明与同意入口；不读取网页右键内容，也不自动代表用户同意；
+- `contextMenus`：只在插件自己的工具栏图标右键菜单（不是网页右键）中提供隐私说明与同意入口；不读取网页右键或页面选中内容，打开该入口本身不会记录同意；完成当前同意后隐藏该项；
 - `storage`：保存扩展设置；
 - `sidePanel`：显示 Chrome 原生侧栏。
 - 可选的 `https://*/*` host access：只为用户主动从公开 HTTPS JSON 或 Gist 导入规则。该权限安装时不授予；点击“加载地址”后，Chrome 才针对所需来源显示授权请求。拒绝不影响本地文件导入、规则编辑或其他扩展功能。
@@ -104,7 +104,7 @@ Side Panel and Fieldbook display avatars from the stored X CDN URL captured for 
 ### Permissions
 
 - `https://x.com/*` to run the content script on X;
-- `contextMenus` only to add a privacy-notice and consent entry to the extension's own toolbar-icon menu; it does not inspect webpage context-menu content or consent on the user's behalf;
+- `contextMenus` only to add a privacy-notice and consent entry to the extension's own toolbar-icon menu (`contexts: ["action"]`), not the webpage context menu; it does not inspect webpage menus or page selection, and opening the item does not record consent; the item is hidden after the current consent version is accepted;
 - `storage` to save extension settings;
 - `sidePanel` to show Chrome's native side panel.
 - optional `https://*/*` host access only when the user chooses to import rules from a public HTTPS JSON file or Gist. It is not granted at install. Chrome asks for the needed source after the user clicks Load. Denial does not affect local file imports, rule editing, or other extension features.

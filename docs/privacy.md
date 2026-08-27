@@ -11,3 +11,5 @@
 - https://interjc.github.io/chrome-x-not-brother/terms.html
 
 商店 listing、扩展内首次披露、Dashboard Privacy practices 和 `terms/privacy.md` 必须描述相同的数据类别与用途。收集范围变化时，先改 `terms/privacy.md` 和同意版本，再改商店字段。
+
+Dashboard **隐私权规范** 里每一项权限的可粘贴理由写在 [store-listing.md](store-listing.md) 的 Permission justifications。`contextMenus` 必须单独填写。

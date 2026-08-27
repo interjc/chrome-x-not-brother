@@ -166,7 +166,7 @@ export function serializeFilterRuleSet(ruleSet: FilterRuleSet): string {
   return json;
 }
 
-export type FilterRuleImportMode = "append" | "replace";
+export type FilterRuleImportMode = "update" | "replace";
 
 function uniquifyRuleId(id: string, used: Set<string>): string {
   if (!used.has(id)) return id;
@@ -187,19 +187,24 @@ export function importFilterRuleSet(
   const parsedIncoming = parseFilterRuleSet(incoming);
   if (mode === "replace") return parsedIncoming;
 
-  const used = new Set(parsedCurrent.rules.map((rule) => rule.id));
-  const appended = parsedIncoming.rules.map((rule) => {
-    const id = uniquifyRuleId(rule.id, used);
-    used.add(id);
-    return id === rule.id ? rule : { ...rule, id };
-  });
+  const next = parsedCurrent.rules.slice();
+  const indexById = new Map(next.map((rule, index) => [rule.id, index]));
+  for (const rule of parsedIncoming.rules) {
+    const index = indexById.get(rule.id);
+    if (index === undefined) {
+      indexById.set(rule.id, next.length);
+      next.push(rule);
+      continue;
+    }
+    next[index] = rule;
+  }
   return parseFilterRuleSet({
     ...parsedCurrent,
     name: parsedCurrent.rules.length === 0 ? parsedIncoming.name : parsedCurrent.name,
     description: parsedCurrent.rules.length === 0
       ? parsedIncoming.description
       : parsedCurrent.description,
-    rules: [...parsedCurrent.rules, ...appended],
+    rules: next,
   });
 }
 

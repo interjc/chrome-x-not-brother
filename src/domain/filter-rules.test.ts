@@ -81,7 +81,7 @@ describe("filter rule schema", () => {
     expect(JSON.parse(json)).toMatchObject({
       format: "not-brother-filter-rules",
       schemaVersion: 1,
-      rules: [{ handles: ["alice"] }],
+      rules: [{ id: "handles", handles: ["alice"] }],
     });
   });
 
@@ -192,24 +192,29 @@ describe("filter rule matching", () => {
 });
 
 describe("filter rule imports", () => {
-  it("appends incoming rules and mint a new id on collision", () => {
+  it("updates matching ids in place and appends rules with new ids", () => {
     const current = ruleSet([
       { ...common("same"), type: "user_handles", handles: ["old"] },
       { ...common("local"), type: "user_handles", handles: ["local"] },
     ]);
     const incoming = {
       ...ruleSet([
-        { ...common("same"), type: "user_handles", handles: ["new"] },
+        { ...common("same"), label: "Updated", type: "user_handles", handles: ["new"] },
         { ...common("remote"), type: "user_handles", handles: ["remote"] },
       ]),
       name: "Remote",
     };
 
-    const appended = importFilterRuleSet(current, incoming, "append");
-    expect(appended.name).toBe("Test rules");
-    expect(appended.rules.map((rule) => rule.id)).toEqual(["same", "local", "same-2", "remote"]);
-    expect(appended.rules[0]).toMatchObject({ handles: ["old"] });
-    expect(appended.rules[2]).toMatchObject({ id: "same-2", handles: ["new"] });
+    const updated = importFilterRuleSet(current, incoming, "update");
+    expect(updated.name).toBe("Test rules");
+    expect(updated.rules.map((rule) => rule.id)).toEqual(["same", "local", "remote"]);
+    expect(updated.rules[0]).toMatchObject({
+      id: "same",
+      label: "Updated",
+      handles: ["new"],
+    });
+    expect(updated.rules[1]).toMatchObject({ id: "local", handles: ["local"] });
+    expect(updated.rules[2]).toMatchObject({ id: "remote", handles: ["remote"] });
   });
 
   it("replaces the current document when overwrite is requested", () => {
