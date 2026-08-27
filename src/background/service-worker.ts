@@ -128,7 +128,7 @@ chrome.runtime.onMessage.addListener(
           ) {
             throw new Error("Custom timeline filtering is not enabled");
           }
-          return getFilterRuleSet();
+          return getFilterRuleSet(message.viewerHandle ?? settings.viewerHandle);
         })
         .then((ruleSet) => sendResponse({
           ok: true,

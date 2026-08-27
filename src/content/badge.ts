@@ -1,6 +1,6 @@
 import type { DisplayRelationship, RelationshipKind } from "../domain/types";
 import { relationshipPresentation, type AppLocale } from "../i18n";
-import { USER_NAME_SELECTOR } from "./x-adapter";
+import { iterateOutsideUserContent, USER_NAME_SELECTOR } from "./x-adapter";
 
 const BADGE_ATTRIBUTE = "data-xro-badge";
 const BADGE_ROW_ATTRIBUTE = "data-xro-badge-row";
@@ -61,8 +61,10 @@ function isVisibleHandleNode(element: Element, handle: string): boolean {
 }
 
 function innermostHandleNode(root: HTMLElement, handle: string): HTMLElement | null {
-  const matches = [...root.querySelectorAll<HTMLElement>("a[href], span")]
-    .filter((element) => isVisibleHandleNode(element, handle));
+  const matches: HTMLElement[] = [];
+  for (const element of iterateOutsideUserContent<HTMLElement>(root, "a[href], span")) {
+    if (isVisibleHandleNode(element, handle)) matches.push(element);
+  }
   return matches.find((element) =>
     !matches.some((other) => other !== element && element.contains(other)),
   ) ?? null;
@@ -83,7 +85,7 @@ function handlePlacementHost(root: HTMLElement, handle: string): HTMLElement | n
 
 function displayNamePlacementHost(root: HTMLElement, handle: string): HTMLElement | null {
   const handleHost = handlePlacementHost(root, handle);
-  for (const link of root.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+  for (const link of iterateOutsideUserContent<HTMLAnchorElement>(root, "a[href]")) {
     if (isTimeLike(link) || isAvatarIdentity(link) || !isProfileLink(link, handle)) continue;
     if (
       handleHost &&
@@ -184,8 +186,10 @@ function userCardAvatar(card: HTMLElement, handle: string): HTMLElement | null {
     return link instanceof HTMLAnchorElement ? isProfileLink(link, handle) : true;
   });
   if (matching) return matching.closest("a[href]") ?? matching;
-  return [...card.querySelectorAll<HTMLAnchorElement>("a[href]")]
-    .find((link) => isProfileLink(link, handle) && isAvatarIdentity(link)) ?? null;
+  for (const link of iterateOutsideUserContent<HTMLAnchorElement>(card, "a[href]")) {
+    if (isProfileLink(link, handle) && isAvatarIdentity(link)) return link;
+  }
+  return null;
 }
 
 function placeUserCardBadge(card: HTMLElement, badge: HTMLElement, handle: string): boolean {

@@ -52,7 +52,7 @@ content script 可通过 service worker 的 `users:lookup` 批量查询页面当
 
 ## filter rules
 
-`chrome.storage.local` 的 `notBrother.filterRules.v1` 保存一个独立的 `not-brother-filter-rules` schema v1 文档。它不是 Dexie 表，不进入关系备份，也不进入 Chrome Sync。设置对象里只有默认关闭的 `hideByFilterRules` 总开关可同步。
+`chrome.storage.local` 按当前登录 X 账号保存独立的 `not-brother-filter-rules` schema v1 文档，键为 `notBrother.filterRules.v1.ns.{handle}`。尚未识别账号时使用旧键 `notBrother.filterRules.v1`，并在首次识别 handle 时迁入该账号。它不是 Dexie 表，不进入关系备份，也不进入 Chrome Sync。设置对象里只有默认关闭的 `hideByFilterRules` 总开关可同步。
 
 规则由 Zod 判别联合校验：`user_handles` 保存规范化 handle 数组；`display_name` / `content` 保存 contains 或 safe-regex 匹配器；公共字段是稳定 `id`、用户标签、启用状态和可空 ISO 到期时间。导入默认以 id 做 upsert 并保留本地独有规则，也可由用户明确全量替换。到期和禁用规则仍保存在文档中但不匹配。content script 不直接读取这个文档；总开关和同意有效时，由 service worker 校验后通过 `filter-rules:get` 返回只读快照。完整结构与限制见 [自定义黑名单规则 v1](filter-rules.md)。
 

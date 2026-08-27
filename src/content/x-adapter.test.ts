@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isInsideXUserAuthoredContent,
   scanXDocument,
   sourceTypeFromUrl,
   viewerHandleFromDocument,
@@ -719,5 +720,97 @@ describe("scanXDocument", () => {
     </article>`);
     const candidates = scanXDocument(doc, "https://x.com/home", 100);
     expect(candidates.map((item) => item.observation.handle)).toEqual(["Alice"]);
+  });
+
+  it("does not treat tweet-body @mentions as authors", () => {
+    const mentions = Array.from({ length: 80 }, (_, index) =>
+      `<a href="/user${index}"><span>@user${index}</span></a>`,
+    ).join("");
+    const doc = fixture(`${accountSwitcher()}<article data-testid="tweet">
+      <div data-testid="tweetText">${mentions}</div>
+    </article>`);
+
+    expect(
+      scanXDocument(doc, "https://x.com/unki0422/status/2092619334267076924", 100)
+        .map((item) => item.observation.handle),
+    ).toEqual([]);
+  });
+
+  it("keeps mention-heavy thread authors and skips in-post @handles", () => {
+    const mentions = Array.from({ length: 240 }, (_, index) =>
+      `<a href="/ping${index}"><span>@ping${index}</span></a>`,
+    ).join("");
+    const doc = fixture(`${accountSwitcher()}
+      <div data-testid="cellInnerDiv">
+        <article data-testid="tweet">
+          <div data-testid="Tweet-User-Avatar">
+            <a href="/unki0422"><img src="https://pbs.twimg.com/profile_images/1/unki_normal.jpg" alt=""></a>
+          </div>
+          <div data-testid="User-Name"><span>Unki</span><a href="/unki0422">@unki0422</a></div>
+          <div data-testid="tweetText">${mentions}</div>
+          <div>This post is from an account that blocked you.</div>
+        </article>
+      </div>
+      <div data-testid="cellInnerDiv">
+        <article data-testid="tweet">
+          <div data-testid="Tweet-User-Avatar">
+            <a href="/ReplyUser"><img src="https://pbs.twimg.com/profile_images/2/reply_normal.jpg" alt=""></a>
+          </div>
+          <div data-testid="User-Name"><span>Reply User</span><a href="/ReplyUser">@ReplyUser</a></div>
+          <div data-testid="tweetText">${mentions}</div>
+        </article>
+      </div>`);
+    const started = Date.now();
+    let candidates = scanXDocument(
+      doc,
+      "https://x.com/unki0422/status/2092619334267076924",
+      100,
+    );
+    for (let pass = 0; pass < 4; pass += 1) {
+      candidates = scanXDocument(
+        doc,
+        "https://x.com/unki0422/status/2092619334267076924",
+        100,
+      );
+    }
+
+    expect(candidates.map((item) => item.observation.handle)).toEqual([
+      "unki0422",
+      "ReplyUser",
+    ]);
+    expect(candidates[0]?.observation).toMatchObject({
+      handle: "unki0422",
+      relationship: "blocked_by",
+      evidence: ["blocked-notice"],
+    });
+    expect(candidates[1]?.observation.relationship).toBe("unknown");
+    expect(Date.now() - started).toBeLessThan(750);
+  });
+
+  it("still identifies a compact card when tweetText is packed with mentions", () => {
+    const mentions = Array.from({ length: 120 }, (_, index) =>
+      `<a href="/ping${index}">@ping${index}</a>`,
+    ).join("");
+    const doc = fixture(`${accountSwitcher()}<article data-testid="tweet">
+      <div data-testid="Tweet-User-Avatar">
+        <a href="/Alice"><img src="https://pbs.twimg.com/profile_images/1.jpg" alt=""></a>
+      </div>
+      <a href="/Alice/status/123"><span>Alice Example</span></a>
+      <div data-testid="tweetText">${mentions}</div>
+    </article>`);
+
+    const [candidate] = scanXDocument(doc, "https://x.com/home", 100);
+    expect(candidate?.observation.handle).toBe("Alice");
+  });
+});
+
+describe("isInsideXUserAuthoredContent", () => {
+  it("marks tweet-body mentions and not the author identity", () => {
+    const doc = fixture(`<article data-testid="tweet">
+      <div data-testid="User-Name"><a href="/Author">@Author</a></div>
+      <div data-testid="tweetText"><a href="/Mention">@Mention</a></div>
+    </article>`);
+    expect(isInsideXUserAuthoredContent(doc.querySelector('a[href="/Mention"]')!)).toBe(true);
+    expect(isInsideXUserAuthoredContent(doc.querySelector('a[href="/Author"]')!)).toBe(false);
   });
 });

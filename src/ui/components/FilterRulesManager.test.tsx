@@ -1,8 +1,12 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { FilterRuleSetSchema } from "../../domain/filter-rules";
-import { FILTER_RULES_KEY } from "../../storage/filter-rules";
+import {
+  bundledDefaultFilterRuleSet,
+  DEFAULT_FILTER_RULES_URL,
+} from "../../domain/filter-rules-default";
+import { createEmptyFilterRuleSet, FilterRuleSetSchema } from "../../domain/filter-rules";
+import { FILTER_RULES_KEY, filterRulesStorageKey } from "../../storage/filter-rules";
 import { FilterRulesManager } from "./FilterRulesManager";
 
 describe("FilterRulesManager", () => {
@@ -32,6 +36,15 @@ describe("FilterRulesManager", () => {
               }
             }
           }),
+          remove: vi.fn(async (keys: string | string[]) => {
+            for (const key of Array.isArray(keys) ? keys : [keys]) {
+              const oldValue = stored[key];
+              delete stored[key];
+              for (const listener of listeners) {
+                listener({ [key]: { oldValue, newValue: undefined } }, "local");
+              }
+            }
+          }),
         },
         onChanged: {
           addListener: (listener: typeof listeners extends Set<infer Listener> ? Listener : never) =>
@@ -53,6 +66,7 @@ describe("FilterRulesManager", () => {
   });
 
   it("edits, validates, saves, and enables local handle rules", async () => {
+    stored[FILTER_RULES_KEY] = createEmptyFilterRuleSet();
     const onEnabledChange = vi.fn();
     await act(async () => {
       root.render(
@@ -96,7 +110,8 @@ describe("FilterRulesManager", () => {
     expect(onEnabledChange).toHaveBeenCalledWith(true);
   });
 
-  it("opens and focuses the editor from its deep link and shows the authoring guide", async () => {
+  it("opens and focuses the editor from its deep link and keeps the authoring guide collapsed", async () => {
+    stored[FILTER_RULES_KEY] = createEmptyFilterRuleSet();
     window.location.hash = "#filter-rules";
     await act(async () => {
       root.render(
@@ -110,19 +125,134 @@ describe("FilterRulesManager", () => {
     });
 
     const manager = document.querySelector<HTMLDetailsElement>("#filter-rules");
+    const guide = document.querySelector<HTMLDetailsElement>(".filter-rules-guide");
     expect(manager?.open).toBe(true);
-    expect(document.activeElement).toBe(manager?.querySelector("summary"));
-    expect(manager?.textContent).toContain("Rule authoring guide");
-    expect(manager?.textContent).toContain("Safe regular expressions");
-    expect(manager?.textContent).toContain("Imports, Gists, and merging");
+    expect(document.activeElement).toBe(manager?.querySelector(":scope > summary"));
+    expect(guide?.open).toBe(false);
+    expect(guide?.querySelector("summary")?.textContent).toContain("Rule authoring guide");
 
-    const example = manager?.querySelector(".filter-rules-guide__json code")?.textContent;
+    await act(async () => {
+      guide?.querySelector("summary")?.click();
+    });
+    expect(guide?.open).toBe(true);
+    expect(guide?.textContent).toContain("Safe regular expressions");
+    expect(guide?.textContent).toContain("Imports, Gists, and overwrite");
+
+    const example = guide?.querySelector(".filter-rules-guide__json code")?.textContent;
     const parsedExample = JSON.parse(example ?? "") as unknown;
     expect(parsedExample).toMatchObject({
       format: "not-brother-filter-rules",
       schemaVersion: 1,
-      rules: [{ id: "hide-giveaways", type: "content" }],
+      rules: bundledDefaultFilterRuleSet.rules,
     });
     expect(FilterRuleSetSchema.safeParse(parsedExample).success).toBe(true);
+    expect(document.querySelector<HTMLInputElement>("#filter-rules-url")?.value)
+      .toBe(DEFAULT_FILTER_RULES_URL);
+  });
+
+  it("loads the bundled default rules when the user has no local blacklist", async () => {
+    await act(async () => {
+      root.render(
+        <FilterRulesManager
+          locale="zh-CN"
+          enabled={false}
+          disabled={false}
+          onEnabledChange={vi.fn()}
+        />,
+      );
+    });
+
+    expect(stored[FILTER_RULES_KEY]).toMatchObject({
+      format: "not-brother-filter-rules",
+      rules: bundledDefaultFilterRuleSet.rules,
+    });
+    expect(document.querySelector("[role='status']")?.textContent).toContain("默认示例");
+    expect(document.querySelector<HTMLInputElement>(
+      ".filter-rule-card input[maxLength='120']",
+    )?.value).toBe("福");
+  });
+
+  it("keeps separate rule documents for different signed-in handles", async () => {
+    stored[filterRulesStorageKey("alice")] = {
+      ...createEmptyFilterRuleSet(),
+      name: "Alice rules",
+      rules: [{
+        id: "alice-rule",
+        label: "Alice only",
+        enabled: true,
+        expiresAt: null,
+        type: "content",
+        match: { mode: "contains", value: "alice", caseSensitive: false },
+      }],
+    };
+    stored[filterRulesStorageKey("bob")] = {
+      ...createEmptyFilterRuleSet(),
+      name: "Bob rules",
+      rules: [{
+        id: "bob-rule",
+        label: "Bob only",
+        enabled: true,
+        expiresAt: null,
+        type: "content",
+        match: { mode: "contains", value: "bob", caseSensitive: false },
+      }],
+    };
+
+    await act(async () => {
+      root.render(
+        <FilterRulesManager
+          locale="en"
+          enabled={false}
+          disabled={false}
+          viewerHandle="Alice"
+          onEnabledChange={vi.fn()}
+        />,
+      );
+    });
+    expect(document.querySelector(".filter-rules-manager__namespace")?.textContent)
+      .toContain("@Alice");
+    expect(document.querySelector<HTMLInputElement>(
+      ".filter-rule-card input[maxLength='120']",
+    )?.value).toBe("Alice only");
+
+    await act(async () => {
+      root.render(
+        <FilterRulesManager
+          locale="en"
+          enabled={false}
+          disabled={false}
+          viewerHandle="bob"
+          onEnabledChange={vi.fn()}
+        />,
+      );
+    });
+    expect(document.querySelector(".filter-rules-manager__namespace")?.textContent)
+      .toContain("@bob");
+    expect(document.querySelector<HTMLInputElement>(
+      ".filter-rule-card input[maxLength='120']",
+    )?.value).toBe("Bob only");
+  });
+
+  it("asks whether to append or replace before importing a file", async () => {
+    stored[FILTER_RULES_KEY] = createEmptyFilterRuleSet();
+    await act(async () => {
+      root.render(
+        <FilterRulesManager
+          locale="zh-CN"
+          enabled={false}
+          disabled={false}
+          onEnabledChange={vi.fn()}
+        />,
+      );
+    });
+
+    const upload = [...document.querySelectorAll<HTMLButtonElement>("button")]
+      .find((button) => button.textContent === "上传 JSON 文件")!;
+    await act(async () => upload.click());
+
+    const dialog = document.querySelector("[role='dialog']");
+    expect(dialog?.textContent).toContain("追加到现有规则");
+    expect(dialog?.textContent).toContain("清空后覆盖");
+    expect(dialog?.querySelectorAll("button")).toHaveLength(3);
   });
 });

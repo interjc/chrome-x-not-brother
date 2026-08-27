@@ -27,7 +27,7 @@ npm run skills:validate
 - 同 handle 完整浮窗可用 follow/unfollow 与 `userFollowIndicator` 补全普通关系，不匹配浮窗不会污染其他作者；
 - 评论线程的徽标固定插在可见 `@handle` 之前，不得出现在时间戳之后；没有可见 handle 时才跟在显示名称后面；帖子详情等不含时间戳的 `User-Name` 应把 X 原有显示名和 `@handle` 放在一行，关系标签单独在下一行，左边线与显示名之间只留 1–2px；移除徽标时也清理局部横排/堆叠类，不改变已含时间祖先的 `@handle` 与日期结构；
 - 相关用户 / UserCell 的徽标放在头像正下方，不插入显示名称行；
-- Side Panel 最近观察整行打开该账号 X 资料；档案库的头像、显示名和 @handle 也打开同一资料；头像按 handle 请求公开图片，失败后再用已保存的 X CDN URL；
+- Side Panel 最近观察整行打开该账号 X 资料；档案库的头像、显示名和 @handle 也打开同一资料；头像优先使用观察时保存的 X CDN 地址，没有时才按 handle 请求公开图片；
 - 可见且已启用页面每 2 秒兜底复扫，隐藏页暂停，恢复可见/焦点时立即复扫，重复 start 不产生多个计时器且 stop 清理监听；
 - observation 签名只在对应用户确认持久化后提交；未确认发送保持可重试，已确认的相同证据保持去重；
 - service worker 把数据变化广播到有 content script 的标签页并忽略无接收端标签页；档案页变更会使已打开 X 页清除本地关系缓存；
@@ -36,11 +36,12 @@ npm run skills:validate
 - 观察器总数为零时，dock 与 Side Panel 三语空状态把悬停说成补充路径；首条观察后 dock 恢复可见证据说明；
 - 未同意时，展开 dock 与收起悬浮球旁都有三语、键盘可达的显著披露入口；action 图标右键菜单项可打开 Side Panel、失败时回退 dashboard，完成同意后自动隐藏且不影响内建“选项”；
 - 首页时间线可从 `/handle/status/:id`、头像链接或带双向隔离符的 `@handle` 识别作者，证据不足时保持 unknown 且不把引用帖回退成外层作者；
+- 主贴和跟帖含大量正文 @提及的线程只识别作者，不把提及 handle 收成候选，平台拉黑提示仍排除 `tweetText`，扫描不得因克隆整篇帖子或遍历提及链接而退化；
 - 当前页 UI store、tweet 祖先 fiber，以及页面已完成的 TweetDetail 等 GraphQL 响应中的 `following` / `followed_by` / `blocked_by` / `muting` 可把首页和评论区 unknown 卡片提升为已知关系，并供可选时间线过滤使用；store 里已有查看者时仍要继续读回复作者；缺少完整布尔值不得编造；DOM 已可收集证据时 store 不得覆盖；
 - 可选时间线过滤默认关闭；打开后互关静音账号和本地已知 blocked-by 账号的首页帖子单元格被隐藏，个人主页/浮窗/UserCell 不隐藏；关闭过滤后单元格恢复；
 - 自定义规则 Zod schema 规范化 handle，拒绝未知字段、重复 id/handle、无效或可能灾难性回溯的正则和超限 JSON；handle、显示名、正文、启停与到期匹配正确，关闭总开关或规则到期后帖子恢复；
 - content script 仅通过 service worker 的 `filter-rules:get` 取得已校验规则快照；未同意或总开关关闭时后台拒绝返回，content bundle 不包含 Zod 或 `safe-regex2`；
-- 规则文件导入按稳定 id 合并或明确替换；公开 HTTPS/Gist URL 解析、单 JSON 选择、截断 Raw 文件、超时/响应大小/HTTP/非法 JSON 错误都安全失败；规则只写 `chrome.storage.local`；
+- 规则文件导入会询问追加或清空覆盖，不按 id 合并；公开 HTTPS/Gist URL 解析、单 JSON 选择、截断 Raw 文件、超时/响应大小/HTTP/非法 JSON 错误都安全失败；规则只写当前登录账号命名空间下的 `chrome.storage.local`；
 - CSV escaping 与 JSON schema validation；
 - Manifest 文件、最小常驻权限、仅用于用户手势远程导入的 optional HTTPS host permission 和所需 build artifacts；
 - `en`、`ja`、`zh_CN` Manifest catalog、语言归一化、翻译占位符、关系与来源名称。
@@ -64,8 +65,8 @@ npm run skills:validate
 13. 验证只有转发不可用、普通“帖子不可用”、用户正文写出 blocked you、三项按钮尚未渲染（包括同页存在正常基线时）、滚动图片查看器右侧列表时出现的空壳/`pointer-events`/`aria-hidden` 单元格、三项受限但没有同层基线、正常浮窗含计数时均不标注、不收集。
 14. 确认自己的帖子/评论没有徽标，Side Panel 最近观察和所有统计也没有本人。
 15. 核对 X 页面 dock 的状态和四项概览，点击本地化详情按钮确认打开当前标签页 Side Panel。
-16. 点击 dock 右上角 `×`，确认收为带对应状态点的 NB 悬浮球；刷新 X 后仍为悬浮球，点击球、按 Enter 和按 Space 都可恢复完整概览。
-17. 保持正常滚动一分钟，确认没有重复徽标、重复 dock、明显布局跳动或控制台异常。
+16. 点击 dock 右上角 `×`，确认收为带对应状态点的 NB 悬浮球，且不挡住 X 右下角的聊天/Grok 按钮；刷新 X 后仍为悬浮球，点击球、按 Enter 和按 Space 都可恢复完整概览。
+17. 保持正常滚动一分钟，确认没有重复徽标、重复 dock、明显布局跳动或控制台异常。打开含大量 @提及的帖子详情（例如主贴和跟帖点名很多人的线程），确认页面保持可滚动、只给帖子作者打标、正文提及没有徽标。
 18. 分别以浅色和暗黑系统主题检查扩展页，再切换 X 主题检查页面徽标、完整 dock 与悬浮球。
 19. 打开 Side Panel，核对计数和最近列表；依次点击四个分类数字与变化提示，确认列表、标题、`aria-pressed` 和空筛选状态正确，再次点击同一分类恢复全部。用鼠标、Enter 和 Space 激活分类，点击或键盘激活具体用户，确认只在新标签页打开对应 `https://x.com/<handle>` Profile。
 20. 打开完整管理页，测试搜索、筛选、排序、展开历史与确认变化；核对互关覆盖显示，首次单向关注显示“单向关注”，以及仅在历史比对成立时显示“对方取关”“你已取关”“对方拉黑”；确认其他双方都已取消关注的账号不再出现徽标和概览计数，dock 仍只显示一个变化合计数字，确认事件后徽标恢复当前基础关系。
@@ -81,7 +82,7 @@ npm run skills:validate
 30. 在 Side Panel 和关系档案库页脚点击“发送反馈”，确认新标签页打开 `https://github.com/interjc/chrome-x-not-brother/issues`，且没有因此申请额外权限或发送本地观察数据。
 31. 侧栏默认在状态标签显示用户列表；切换到选项后出现语言、徽标和时间线过滤，状态列表被收起。右键工具栏图标选择 **选项**，确认侧栏打开并停在选项标签；三个时间线过滤默认关闭。打开“彻底隐藏已静音账号”后，首页互关但仍被静音的帖子消失，对方主页仍可打开；打开“隐藏拉黑了我的账号”后，本地已记录 blocked-by 的首页帖子以及帖子详情/评论区里该作者的回复都会消失。档案里已有的账号应立刻消失；第一次检测到的账号会先收起再隐藏。档案库的同一开关即时同步。
 32. 从旧版本升级时，先在 `chrome.storage.local` 准备旧设置：若 sync 为空，确认偏好迁入 sync、`viewerHandle` 迁入新的 local key；若 sync 已有不同偏好，确认保留 sync 值。未登录 Chrome 或关闭同步时修改偏好仍应立即保存并在重启后保留；登录并启用 Chrome Sync 后由 Chrome 在其他配置恢复这些小型偏好，关系档案和 `viewerHandle` 不应出现。
-33. 在 Side Panel、Options 和档案库确认“编辑规则与查看教程”紧邻“应用自定义黑名单规则”开关；前两处点击后打开 `dashboard.html#filter-rules`，规则区自动展开、滚动且键盘焦点落在折叠标题，档案库内点击则原地完成相同行为。确认教程完整解释 handle、文字、正则、时效、Gist 合并和隐私，并且示例 JSON 可解析且通过 schema。随后添加三种规则并测试启停、大小写和未来/已过期时间；打开总开关后只隐藏允许页面的匹配帖子，Profile、HoverCard、UserCell 和关注列表不隐藏，正文不出现在 IndexedDB 或导出。下载规则 JSON 后清空并用文件恢复；再从只有一个 JSON 文件的公开 Gist 导入，确认 Chrome 只在点击后请求 GitHub host 权限。拒绝权限、使用 HTTP、超过 1 MiB、多个 JSON 文件或无效正则时，现有规则保持不变且出现可读错误。关闭总开关后全部规则隐藏结果恢复。
+33. 在 Side Panel、Options 和档案库确认“编辑规则与查看教程”紧邻“应用自定义黑名单规则”开关；前两处点击后打开 `dashboard.html#filter-rules`，规则区自动展开、滚动且键盘焦点落在折叠标题，档案库内点击则原地完成相同行为。确认教程完整解释 handle、文字、正则、时效、导入时的追加或清空覆盖和隐私，并且示例 JSON 可解析且通过 schema。随后添加三种规则并测试启停、大小写和未来/已过期时间；打开总开关后只隐藏允许页面的匹配帖子，Profile、HoverCard、UserCell 和关注列表不隐藏，正文不出现在 IndexedDB 或导出。下载规则 JSON 后选择清空覆盖用文件恢复；再从只有一个 JSON 文件的公开 Gist 导入并选择追加，确认 Chrome 只在点击后请求 GitHub host 权限。拒绝权限、使用 HTTP、超过 1 MiB、多个 JSON 文件或无效正则时，现有规则保持不变且出现可读错误。关闭总开关后全部规则隐藏结果恢复。
 
 ## 边界检查
 

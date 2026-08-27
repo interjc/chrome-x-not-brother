@@ -68,6 +68,7 @@ import {
   createMuteMemory,
 } from "./timeline-hide";
 import {
+  isInsideXUserAuthoredContent,
   scanXDocument,
   type ExtractedCandidate,
   viewerHandleFromDocument,
@@ -95,22 +96,47 @@ let extensionListenersRegistered = false;
 let pageStoreListenerRegistered = false;
 let filterRulesLoaded = false;
 let filterRulesLoading: Promise<void> | null = null;
+let filterRulesLoadingFor: string | null = null;
 let compiledFilterRules: CompiledFilterRuleSet = compileFilterRuleSet({ rules: [] });
+let compiledFilterRulesForViewer: string | null = null;
+
+function currentViewerHandle(): string | null {
+  return viewerHandleFromDocument(document)?.toLowerCase()
+    ?? latestSettings?.viewerHandle
+    ?? null;
+}
 
 function ensureFilterRulesLoaded(): Promise<void> {
-  if (filterRulesLoaded) return Promise.resolve();
-  if (filterRulesLoading) return filterRulesLoading;
-  filterRulesLoading = chrome.runtime.sendMessage({ type: "filter-rules:get" })
+  const viewerHandle = currentViewerHandle();
+  if (filterRulesLoaded && compiledFilterRulesForViewer === viewerHandle) {
+    return Promise.resolve();
+  }
+  if (filterRulesLoading && filterRulesLoadingFor === viewerHandle) {
+    return filterRulesLoading;
+  }
+  const requested = viewerHandle;
+  filterRulesLoadingFor = viewerHandle;
+  filterRulesLoading = chrome.runtime.sendMessage({
+    type: "filter-rules:get",
+    viewerHandle,
+  })
     .then((response: GetFilterRulesResponse | { ok: false; error: string }) => {
+      if (requested !== currentViewerHandle()) return;
       if (!response.ok) throw new Error(response.error);
       compiledFilterRules = compileFilterRuleSet(response.ruleSet);
+      compiledFilterRulesForViewer = requested;
       filterRulesLoaded = true;
     }).catch((error: unknown) => {
+      if (requested !== currentViewerHandle()) return;
       compiledFilterRules = compileFilterRuleSet({ rules: [] });
+      compiledFilterRulesForViewer = requested;
       filterRulesLoaded = true;
       throw error;
     }).finally(() => {
-      filterRulesLoading = null;
+      if (filterRulesLoadingFor === requested) {
+        filterRulesLoading = null;
+        filterRulesLoadingFor = null;
+      }
     });
   return filterRulesLoading;
 }
@@ -120,11 +146,14 @@ function handleStorageChanged(
   areaName: string,
 ): void {
   if (isSettingsStorageChange(changes, areaName)) {
+    filterRulesLoaded = false;
+    compiledFilterRulesForViewer = null;
     scheduleHide();
     scheduleProcess();
   }
-  if (isFilterRulesStorageChange(changes, areaName)) {
+  if (isFilterRulesStorageChange(changes, areaName, currentViewerHandle())) {
     filterRulesLoaded = false;
+    compiledFilterRulesForViewer = null;
     if (
       !latestSettings?.hideByFilterRules ||
       latestSettings.consentVersion < CURRENT_CONSENT_VERSION
@@ -418,7 +447,7 @@ async function processPage(): Promise<void> {
   const settings = await getSettings();
   if (stopped) return;
   latestSettings = settings;
-  if (settings.hideByFilterRules && !filterRulesLoaded) {
+  if (settings.hideByFilterRules) {
     try {
       await ensureFilterRulesLoaded();
     } catch (error) {
@@ -513,7 +542,10 @@ function nodeIsInsideInjectedUi(node: Node): boolean {
 observer = new MutationObserver((mutations) => {
   if (stopped) return;
   if (
-    mutations.every((mutation) => nodeIsInsideInjectedUi(mutation.target))
+    mutations.every((mutation) =>
+      nodeIsInsideInjectedUi(mutation.target) ||
+      isInsideXUserAuthoredContent(mutation.target)
+    )
   ) {
     return;
   }

@@ -104,6 +104,7 @@ describe("dashboard profile links", () => {
         local: {
           get: vi.fn(async () => ({})),
           set: vi.fn(async () => undefined),
+          remove: vi.fn(async () => undefined),
         },
         onChanged: {
           addListener: vi.fn(),
@@ -133,17 +134,49 @@ describe("dashboard profile links", () => {
     expect(person?.textContent).toContain("@thsottiaux");
   });
 
-  it("opens the blacklist editor in place from the nearby filter action", async () => {
-    const manager = document.querySelector<HTMLDetailsElement>("#filter-rules");
-    expect(manager?.open).toBe(false);
+  it("keeps archive, blacklist, and settings on separate pages", async () => {
+    expect(document.querySelector("#dashboard-panel-archive")).toBeTruthy();
+    expect(document.querySelector("#filter-rules")).toBeNull();
+    expect(document.querySelector(".options-panel")).toBeNull();
+
+    await act(async () => {
+      window.location.hash = "#filter-rules";
+      window.dispatchEvent(new Event("hashchange"));
+    });
+    expect(document.querySelector("#dashboard-panel-archive")).toBeNull();
+    expect(document.querySelector("#filter-rules")).toBeTruthy();
+    expect(document.querySelector(".options-panel")).toBeNull();
+
+    await act(async () => {
+      window.location.hash = "#settings";
+      window.dispatchEvent(new Event("hashchange"));
+    });
+    expect(document.querySelector("#filter-rules")).toBeNull();
+    expect(document.querySelector(".options-panel")).toBeTruthy();
+    expect(document.querySelector("#dashboard-tab-settings")?.getAttribute("aria-selected"))
+      .toBe("true");
+  });
+
+  it("opens the blacklist editor from the settings filter action", async () => {
+    await act(async () => {
+      window.location.hash = "#settings";
+      window.dispatchEvent(new Event("hashchange"));
+    });
 
     const editRules = document.querySelector<HTMLButtonElement>(
-      ".local-settings .timeline-filters__edit-rules",
+      ".timeline-filters__edit-rules",
     );
+    expect(editRules).toBeTruthy();
     await act(async () => editRules?.click());
+    await act(async () => {
+      window.dispatchEvent(new Event("hashchange"));
+    });
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    });
 
     expect(window.location.hash).toBe("#filter-rules");
-    expect(manager?.open).toBe(true);
-    expect(document.activeElement).toBe(manager?.querySelector("summary"));
+    const heading = document.querySelector("#filter-rules [data-filter-rules-focus]");
+    expect(heading?.textContent).toContain("自定义黑名单");
   });
 });

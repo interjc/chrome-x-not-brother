@@ -165,11 +165,12 @@
     var(--xro-panel);
   border: 1px solid var(--xro-panel-ink);
   box-shadow: 7px 7px 0 rgb(22 34 27 / 0.16);
+  bottom: 20px;
   color: var(--xro-panel-ink);
   font-family: "Avenir Next", "Hiragino Sans", "Microsoft YaHei", sans-serif;
-  inset: auto 20px 20px auto;
   line-height: 1.2;
   position: fixed;
+  right: 20px;
   width: 286px;
   z-index: 2147483646;
 }
@@ -231,10 +232,12 @@
   outline-offset: 2px;
 }
 
-.xro-observer-panel--collapsed {
+.xro-observer-panel.xro-observer-panel--collapsed {
   background: transparent;
   border: 0;
   box-shadow: none;
+  /* Sit inward of X's bottom-right Grok/chat FAB (~56px + gap). */
+  right: 92px;
   width: auto;
 }
 
@@ -424,7 +427,7 @@
 
 @media (max-width: 560px) {
   .xro-observer-panel:not(.xro-observer-panel--collapsed) { bottom: 10px; left: 10px; right: 10px; width: auto; }
-  .xro-observer-panel--collapsed { bottom: 12px; left: auto; right: 12px; width: auto; }
+  .xro-observer-panel.xro-observer-panel--collapsed { bottom: 12px; left: auto; width: auto; }
 }
 
 [data-xro-hiding-tweet] {

@@ -91,6 +91,11 @@ describe("runtime internationalization", () => {
     expect(translate("en", "hideBlockedByAccountsDescription")).toContain("not a complete list");
     expect(translate("zh-CN", "hideByFilterRulesLabel")).toContain("黑名单");
     expect(translate("zh-CN", "editFilterRules")).toContain("教程");
+    expect(translate("zh-CN", "filterRulesExampleLoaded")).toContain("示例");
+    expect(translate("zh-CN", "filterRulesNamespace", { handle: "alice" })).toContain("@alice");
+    expect(translate("en", "filterRulesUseExampleUrl")).toContain("example URL");
+    expect(translate("zh-CN", "filterRulesImportAppend")).toContain("追加");
+    expect(translate("en", "filterRulesImportReplace")).toContain("replace");
     expect(translate("en", "filterRulesRemotePrivacy")).toContain("Chrome asks");
     expect(translate("en", "filterRulesGuideRegexBody")).toContain("Unicode");
     expect(translate("ja", "filterRulesTypeContent")).toContain("投稿内容");

@@ -44,7 +44,7 @@ Do not paste passwords, cookies, export backups, or other people's account data 
 - 完整黑名单规则文档单独保存在 `chrome.storage.local`，不进入 Chrome Sync，也不与关系档案备份混合；
 - 扩展没有开发者服务器、扩展账号系统或遥测。关系观察数据不会进入 Chrome Sync，也不会发送给开发者；设置同步由 Chrome 提供。
 
-侧栏和档案库展示头像时，按 handle 请求公开头像图片（`https://unavatar.io/x/{handle}`）；若失败再回退到观察时保存的 X CDN URL。这只用于显示，观察记录仍只保存在本地。
+侧栏和档案库展示头像时，优先使用观察时保存的 X CDN 头像 URL；没有保存地址时才按 handle 请求公开头像（`https://unavatar.io/x/{handle}`）。这只用于显示，观察记录仍只保存在本地。
 
 ### 权限
 
@@ -99,7 +99,7 @@ You may create blacklist rules containing X handles, display-name match text, co
 - the full blacklist rule document stays separately in `chrome.storage.local`, does not enter Chrome Sync, and is separate from relationship archive backups;
 - the extension has no developer server, extension account system, or telemetry. Relationship observations do not enter Chrome Sync and are not sent to the developer; preference sync is provided by Chrome.
 
-Side Panel and Fieldbook display avatars by requesting a public image for that handle (`https://unavatar.io/x/{handle}`), then falling back to a stored X CDN URL if needed. That request is only for display; observation records stay local.
+Side Panel and Fieldbook display avatars from the stored X CDN URL captured for that handle, then request a public image (`https://unavatar.io/x/{handle}`) only if none is stored. That request is only for display; observation records stay local.
 
 ### Permissions
 

@@ -28,7 +28,15 @@ describe("Avatar", () => {
     expect(container.querySelector(".avatar--fallback")).toBeNull();
   });
 
-  it("falls back to a stored X CDN URL if the handle avatar fails", () => {
+  it("uses the stored X CDN URL before the handle avatar", () => {
+    const stored = "https://pbs.twimg.com/profile_images/1/tibo_x96.jpg";
+    act(() => {
+      root.render(<Avatar avatarUrl={stored} displayName="Tibo" handle="thsottiaux" />);
+    });
+    expect(container.querySelector("img")?.getAttribute("src")).toBe(stored);
+  });
+
+  it("falls back to a handle avatar if the stored X CDN URL fails", () => {
     const stored = "https://pbs.twimg.com/profile_images/1/tibo_x96.jpg";
     act(() => {
       root.render(<Avatar avatarUrl={stored} displayName="Tibo" handle="thsottiaux" />);
@@ -37,7 +45,9 @@ describe("Avatar", () => {
     act(() => {
       image?.dispatchEvent(new Event("error"));
     });
-    expect(container.querySelector("img")?.getAttribute("src")).toBe(stored);
+    expect(container.querySelector("img")?.getAttribute("src")).toBe(
+      "https://unavatar.io/x/thsottiaux",
+    );
   });
 
   it("shows the initial when both avatar sources fail", () => {

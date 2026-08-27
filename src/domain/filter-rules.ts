@@ -166,27 +166,39 @@ export function serializeFilterRuleSet(ruleSet: FilterRuleSet): string {
   return json;
 }
 
-export function mergeFilterRuleSets(
+export type FilterRuleImportMode = "append" | "replace";
+
+function uniquifyRuleId(id: string, used: Set<string>): string {
+  if (!used.has(id)) return id;
+  for (let n = 2; n < 10_000; n += 1) {
+    const suffix = `-${n}`;
+    const candidate = `${id.slice(0, Math.max(1, 64 - suffix.length))}${suffix}`;
+    if (!used.has(candidate)) return candidate;
+  }
+  throw new FilterRuleValidationError("Could not assign a unique rule id.");
+}
+
+export function importFilterRuleSet(
   current: FilterRuleSet,
   incoming: FilterRuleSet,
-  replace = false,
+  mode: FilterRuleImportMode,
 ): FilterRuleSet {
   const parsedCurrent = parseFilterRuleSet(current);
   const parsedIncoming = parseFilterRuleSet(incoming);
-  if (replace) return parsedIncoming;
+  if (mode === "replace") return parsedIncoming;
 
-  const incomingById = new Map(parsedIncoming.rules.map((rule) => [rule.id, rule]));
-  const currentIds = new Set(parsedCurrent.rules.map((rule) => rule.id));
-  const rules = parsedCurrent.rules.map((rule) => incomingById.get(rule.id) ?? rule);
-  for (const rule of parsedIncoming.rules) {
-    if (!currentIds.has(rule.id)) rules.push(rule);
-  }
+  const used = new Set(parsedCurrent.rules.map((rule) => rule.id));
+  const appended = parsedIncoming.rules.map((rule) => {
+    const id = uniquifyRuleId(rule.id, used);
+    used.add(id);
+    return id === rule.id ? rule : { ...rule, id };
+  });
   return parseFilterRuleSet({
     ...parsedCurrent,
     name: parsedCurrent.rules.length === 0 ? parsedIncoming.name : parsedCurrent.name,
     description: parsedCurrent.rules.length === 0
       ? parsedIncoming.description
       : parsedCurrent.description,
-    rules,
+    rules: [...parsedCurrent.rules, ...appended],
   });
 }

@@ -51,6 +51,7 @@ export interface OpenSidePanelResponse {
 
 export interface GetFilterRulesMessage {
   type: "filter-rules:get";
+  viewerHandle?: string | null;
 }
 
 export interface GetFilterRulesResponse {

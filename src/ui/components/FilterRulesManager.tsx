@@ -1,12 +1,18 @@
 import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
+  bundledDefaultFilterRuleJson,
+  bundledDefaultFilterRuleSet,
+  DEFAULT_FILTER_RULES_URL,
+} from "../../domain/filter-rules-default";
+import {
   createEmptyFilterRuleSet,
   FilterRuleValidationError,
   FilterRuleSetSchema,
   MAX_FILTER_RULES_JSON_BYTES,
-  mergeFilterRuleSets,
+  importFilterRuleSet,
   parseFilterRuleSetJson,
+  type FilterRuleImportMode,
   serializeFilterRuleSet,
   type FilterRule,
   type FilterRuleSet,
@@ -20,7 +26,7 @@ import {
 } from "../../domain/filter-rule-import";
 import { translate, type AppLocale, type MessageKey } from "../../i18n";
 import {
-  getFilterRuleSet,
+  getStoredFilterRuleSet,
   isFilterRulesStorageChange,
   saveFilterRuleSet,
 } from "../../storage/filter-rules";
@@ -38,27 +44,6 @@ export function revealFilterRulesEditor(root: Document = document): boolean {
   )?.focus({ preventScroll: true });
   return true;
 }
-
-const FILTER_RULES_JSON_EXAMPLE = `{
-  "format": "not-brother-filter-rules",
-  "schemaVersion": 1,
-  "name": "My filters",
-  "description": "",
-  "rules": [
-    {
-      "id": "hide-giveaways",
-      "label": "Giveaway posts",
-      "enabled": true,
-      "expiresAt": null,
-      "type": "content",
-      "match": {
-        "mode": "regex",
-        "value": "giveaway\\\\s+(today|now)",
-        "caseSensitive": false
-      }
-    }
-  ]
-}`;
 
 const IMPORT_ERROR_KEYS: Record<FilterRuleImportErrorCode, MessageKey> = {
   "invalid-url": "filterRulesInvalidUrl",
@@ -138,12 +123,14 @@ export function FilterRulesManager({
   enabled,
   disabled,
   standalone = false,
+  viewerHandle = null,
   onEnabledChange,
 }: {
   locale: AppLocale;
   enabled: boolean;
   disabled: boolean;
   standalone?: boolean;
+  viewerHandle?: string | null;
   onEnabledChange: (enabled: boolean) => void;
 }) {
   const t = (key: MessageKey, values?: Record<string, string | number>) =>
@@ -152,15 +139,18 @@ export function FilterRulesManager({
   const [ready, setReady] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState("");
-  const [remoteUrl, setRemoteUrl] = useState("");
-  const [replaceImport, setReplaceImport] = useState(false);
+  const [remoteUrl, setRemoteUrl] = useState(DEFAULT_FILTER_RULES_URL);
+  const [importPrompt, setImportPrompt] = useState<"file" | "url" | null>(null);
   const [importing, setImporting] = useState(false);
+  const importModeRef = useRef<FilterRuleImportMode>("append");
   const [addType, setAddType] = useState<FilterRuleType>("user_handles");
   const manager = useRef<HTMLElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const dirtyRef = useRef(false);
   const localeRef = useRef(locale);
+  const viewerHandleRef = useRef(viewerHandle);
   localeRef.current = locale;
+  viewerHandleRef.current = viewerHandle;
 
   useEffect(() => {
     const revealFromHash = (): void => {
@@ -184,8 +174,18 @@ export function FilterRulesManager({
     const localT = (key: MessageKey): string => translate(localeRef.current, key);
     const load = async (): Promise<void> => {
       try {
-        const stored = await getFilterRuleSet();
+        const stored = await getStoredFilterRuleSet(viewerHandleRef.current);
         if (!active) return;
+        if (!stored) {
+          const example = bundledDefaultFilterRuleSet;
+          await saveFilterRuleSet(example, viewerHandleRef.current);
+          if (!active) return;
+          setDraft(example);
+          dirtyRef.current = false;
+          setDirty(false);
+          setStatus(localT("filterRulesExampleLoaded"));
+          return;
+        }
         const next = stored.rules.length === 0 && stored.name === "My blacklist rules"
           ? localizedEmptyRuleSet(localeRef.current)
           : stored;
@@ -202,7 +202,7 @@ export function FilterRulesManager({
       changes: Record<string, chrome.storage.StorageChange>,
       areaName: string,
     ): void => {
-      if (!active || !isFilterRulesStorageChange(changes, areaName)) return;
+      if (!active || !isFilterRulesStorageChange(changes, areaName, viewerHandleRef.current)) return;
       if (dirtyRef.current) {
         setStatus(localT("filterRulesExternalChange"));
         return;
@@ -215,7 +215,7 @@ export function FilterRulesManager({
       active = false;
       chrome.storage.onChanged.removeListener(onChanged);
     };
-  }, []);
+  }, [viewerHandle]);
 
   const save = async (event?: FormEvent): Promise<void> => {
     event?.preventDefault();
@@ -228,7 +228,7 @@ export function FilterRulesManager({
       return;
     }
     try {
-      const saved = await saveFilterRuleSet(result.data);
+      const saved = await saveFilterRuleSet(result.data, viewerHandleRef.current);
       setDraft(saved);
       dirtyRef.current = false;
       setDirty(false);
@@ -240,14 +240,21 @@ export function FilterRulesManager({
     }
   };
 
-  const applyImported = async (incoming: FilterRuleSet): Promise<void> => {
+  const applyImported = async (
+    incoming: FilterRuleSet,
+    mode: FilterRuleImportMode,
+  ): Promise<void> => {
     const saved = await saveFilterRuleSet(
-      mergeFilterRuleSets(draft, incoming, replaceImport),
+      importFilterRuleSet(draft, incoming, mode),
+      viewerHandleRef.current,
     );
     setDraft(saved);
     dirtyRef.current = false;
     setDirty(false);
-    setStatus(t("filterRulesImported", { count: incoming.rules.length }));
+    setStatus(t(
+      mode === "replace" ? "filterRulesReplaced" : "filterRulesAppended",
+      { count: incoming.rules.length },
+    ));
   };
 
   const importFailure = (error: unknown): void => {
@@ -272,7 +279,7 @@ export function FilterRulesManager({
     }
     setImporting(true);
     try {
-      await applyImported(parseFilterRuleSetJson(await file.text()));
+      await applyImported(parseFilterRuleSetJson(await file.text()), importModeRef.current);
     } catch (error) {
       importFailure(error);
     } finally {
@@ -280,8 +287,7 @@ export function FilterRulesManager({
     }
   };
 
-  const importRemote = async (event: FormEvent): Promise<void> => {
-    event.preventDefault();
+  const importRemote = async (): Promise<void> => {
     let target;
     try {
       target = resolveFilterRuleImportTarget(remoteUrl);
@@ -298,12 +304,23 @@ export function FilterRulesManager({
       if (!await permissionRequest) {
         throw new FilterRuleImportError("permission-denied", "Host access was not granted.");
       }
-      await applyImported(await fetchFilterRuleSet(target));
+      await applyImported(await fetchFilterRuleSet(target), importModeRef.current);
     } catch (error) {
       importFailure(error);
     } finally {
       setImporting(false);
     }
+  };
+
+  const confirmImportMode = (mode: FilterRuleImportMode): void => {
+    const pending = importPrompt;
+    importModeRef.current = mode;
+    setImportPrompt(null);
+    if (pending === "file") {
+      fileInput.current?.click();
+      return;
+    }
+    if (pending === "url") void importRemote();
   };
 
   const exportRules = (): void => {
@@ -323,7 +340,7 @@ export function FilterRulesManager({
   const clearRules = async (): Promise<void> => {
     if (!window.confirm(t("filterRulesClearConfirm"))) return;
     const empty = localizedEmptyRuleSet(locale);
-    await saveFilterRuleSet(empty);
+    await saveFilterRuleSet(empty, viewerHandleRef.current);
     setDraft(empty);
     dirtyRef.current = false;
     setDirty(false);
@@ -341,6 +358,11 @@ export function FilterRulesManager({
               <h2 data-filter-rules-focus tabIndex={-1}>{t("filterRulesHeading")}</h2>
             )}
             <p>{t("filterRulesIntro")}</p>
+            <p className="filter-rules-manager__namespace">
+              {viewerHandle
+                ? t("filterRulesNamespace", { handle: viewerHandle.replace(/^@/, "") })
+                : t("filterRulesNamespaceUnknown")}
+            </p>
           </div>
           <label className="filter-rules-manager__master">
             <input
@@ -353,12 +375,12 @@ export function FilterRulesManager({
           </label>
         </header>
 
-        <section className="filter-rules-guide" aria-labelledby="filter-rules-guide-heading">
-          <div className="filter-rules-guide__heading">
+        <details className="filter-rules-guide">
+          <summary className="filter-rules-guide__heading">
             <p className="eyebrow">AUTHORING GUIDE / JSON V1</p>
             <h3 id="filter-rules-guide-heading">{t("filterRulesGuideHeading")}</h3>
             <p>{t("filterRulesGuideIntro")}</p>
-          </div>
+          </summary>
 
           <ol className="filter-rules-guide__steps">
             <li>{t("filterRulesGuideStepChoose")}</li>
@@ -402,9 +424,9 @@ export function FilterRulesManager({
               <h4>{t("filterRulesGuideJsonHeading")}</h4>
               <p>{t("filterRulesGuideJsonBody")}</p>
             </div>
-            <pre tabIndex={0}><code>{FILTER_RULES_JSON_EXAMPLE}</code></pre>
+            <pre tabIndex={0}><code>{bundledDefaultFilterRuleJson}</code></pre>
           </div>
-        </section>
+        </details>
 
         <form className="filter-rules-editor" onSubmit={(event) => void save(event)}>
           <div className="filter-rules-editor__meta">
@@ -594,17 +616,8 @@ export function FilterRulesManager({
             <h3 id="filter-rules-import-heading">{t("filterRulesImportHeading")}</h3>
             <p>{t("filterRulesImportIntro")}</p>
           </div>
-          <label className="filter-rules-import__replace">
-            <input
-              checked={replaceImport}
-              disabled={dirty || importing}
-              onChange={(event) => setReplaceImport(event.target.checked)}
-              type="checkbox"
-            />
-            <span>{t("filterRulesReplaceImport")}</span>
-          </label>
           <div className="filter-rules-import__buttons">
-            <button disabled={dirty || importing} type="button" onClick={() => fileInput.current?.click()}>
+            <button disabled={dirty || importing} type="button" onClick={() => setImportPrompt("file")}>
               {t("filterRulesImportFile")}
             </button>
             <input
@@ -621,13 +634,20 @@ export function FilterRulesManager({
               {t("filterRulesClear")}
             </button>
           </div>
-          <form className="filter-rules-import__url" onSubmit={(event) => void importRemote(event)}>
+          <form
+            className="filter-rules-import__url"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (dirty || importing) return;
+              setImportPrompt("url");
+            }}
+          >
             <label htmlFor="filter-rules-url">{t("filterRulesUrlLabel")}</label>
             <div>
               <input
                 id="filter-rules-url"
                 inputMode="url"
-                placeholder="https://gist.github.com/user/gist-id"
+                placeholder={DEFAULT_FILTER_RULES_URL}
                 type="url"
                 required
                 value={remoteUrl}
@@ -637,8 +657,44 @@ export function FilterRulesManager({
                 {importing ? t("filterRulesLoading") : t("filterRulesLoadUrl")}
               </button>
             </div>
-            <small>{t("filterRulesRemotePrivacy")}</small>
+            <small>
+              {t("filterRulesRemotePrivacy")}
+              {" "}
+              <button
+                className="filter-rules-import__example"
+                type="button"
+                onClick={() => setRemoteUrl(DEFAULT_FILTER_RULES_URL)}
+              >
+                {t("filterRulesUseExampleUrl")}
+              </button>
+            </small>
           </form>
+          {importPrompt ? (
+            <div
+              aria-labelledby="filter-rules-import-ask"
+              aria-modal="true"
+              className="filter-rules-import-prompt"
+              role="dialog"
+            >
+              <strong id="filter-rules-import-ask">{t("filterRulesImportAsk")}</strong>
+              <p>{t("filterRulesImportAskBody")}</p>
+              <div className="filter-rules-import-prompt__actions">
+                <button type="button" onClick={() => confirmImportMode("append")}>
+                  {t("filterRulesImportAppend")}
+                </button>
+                <button
+                  className="danger-text"
+                  type="button"
+                  onClick={() => confirmImportMode("replace")}
+                >
+                  {t("filterRulesImportReplace")}
+                </button>
+                <button type="button" onClick={() => setImportPrompt(null)}>
+                  {t("filterRulesImportCancel")}
+                </button>
+              </div>
+            </div>
+          ) : null}
           {dirty ? <p className="filter-rules-import__dirty">{t("filterRulesSaveBeforeImport")}</p> : null}
         </section>
 

@@ -12,10 +12,12 @@ export function Avatar({
 }) {
   const constructed = handleAvatarUrl(handle);
   const stored = isProfileImageUrl(avatarUrl) ? avatarUrl : null;
-  const [mode, setMode] = useState<"constructed" | "stored" | "fallback">("constructed");
+  const [mode, setMode] = useState<"constructed" | "stored" | "fallback">(
+    stored ? "stored" : "constructed",
+  );
 
   useEffect(() => {
-    setMode("constructed");
+    setMode(stored ? "stored" : "constructed");
   }, [handle, stored]);
 
   const letter = [...visibleDisplayName(displayName, handle).replace(/^@/, "") || handle][0]
@@ -37,7 +39,7 @@ export function Avatar({
       height="42"
       loading="lazy"
       onError={() => {
-        if (mode === "constructed" && stored) setMode("stored");
+        if (mode === "stored") setMode("constructed");
         else setMode("fallback");
       }}
       referrerPolicy="no-referrer"

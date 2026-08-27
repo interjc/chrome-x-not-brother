@@ -1,6 +1,6 @@
 # 开发者文档
 
-面向使用者的说明在仓库根目录 [README.md](../README.md)。本目录保存产品边界、架构、开发、测试、发布和商店文案。给编码代理的入口是 [AGENTS.md](../AGENTS.md) 与 [项目 skill](../skills/x-relationship-observer/SKILL.md)。
+面向使用者的说明在仓库根目录 [README.md](../README.md)。本目录保存产品边界、架构、开发、测试、发布和商店文案。给编码代理的入口是 [AGENTS.md](../AGENTS.md) 与 [项目 skill](../skills/x-relationship-observer/SKILL.md)。阅读或改写导出的黑名单 JSON 用 [x-not-brother-rules](../skills/x-not-brother-rules/SKILL.md)。
 
 ## 文档索引
 

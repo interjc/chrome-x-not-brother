@@ -3,7 +3,7 @@ import {
   createEmptyFilterRuleSet,
   FilterRuleValidationError,
   MAX_FILTER_RULES_JSON_BYTES,
-  mergeFilterRuleSets,
+  importFilterRuleSet,
   parseFilterRuleSet,
   parseFilterRuleSetJson,
   serializeFilterRuleSet,
@@ -11,6 +11,7 @@ import {
   type FilterRuleSet,
 } from "./filter-rules";
 import { compileFilterRuleSet } from "./filter-rule-matching";
+import { bundledDefaultFilterRuleSet } from "./filter-rules-default";
 
 function ruleSet(rules: FilterRule[]): FilterRuleSet {
   return {
@@ -25,6 +26,11 @@ function common(id: string) {
 }
 
 describe("filter rule schema", () => {
+  it("accepts the bundled default example document", () => {
+    expect(bundledDefaultFilterRuleSet.rules.length).toBeGreaterThan(0);
+    expect(serializeFilterRuleSet(bundledDefaultFilterRuleSet)).toContain("not-brother-filter-rules");
+  });
+
   it("normalizes handles and ISO expiration timestamps", () => {
     const parsed = parseFilterRuleSet({
       ...ruleSet([]),
@@ -155,7 +161,7 @@ describe("filter rule matching", () => {
 });
 
 describe("filter rule imports", () => {
-  it("merges by stable id and appends new rules", () => {
+  it("appends incoming rules and mint a new id on collision", () => {
     const current = ruleSet([
       { ...common("same"), type: "user_handles", handles: ["old"] },
       { ...common("local"), type: "user_handles", handles: ["local"] },
@@ -168,10 +174,23 @@ describe("filter rule imports", () => {
       name: "Remote",
     };
 
-    const merged = mergeFilterRuleSets(current, incoming);
-    expect(merged.name).toBe("Test rules");
-    expect(merged.rules.map((rule) => rule.id)).toEqual(["same", "local", "remote"]);
-    expect(merged.rules[0]).toMatchObject({ handles: ["new"] });
-    expect(mergeFilterRuleSets(current, incoming, true)).toEqual(incoming);
+    const appended = importFilterRuleSet(current, incoming, "append");
+    expect(appended.name).toBe("Test rules");
+    expect(appended.rules.map((rule) => rule.id)).toEqual(["same", "local", "same-2", "remote"]);
+    expect(appended.rules[0]).toMatchObject({ handles: ["old"] });
+    expect(appended.rules[2]).toMatchObject({ id: "same-2", handles: ["new"] });
+  });
+
+  it("replaces the current document when overwrite is requested", () => {
+    const current = ruleSet([
+      { ...common("local"), type: "user_handles", handles: ["local"] },
+    ]);
+    const incoming = {
+      ...ruleSet([
+        { ...common("remote"), type: "user_handles", handles: ["remote"] },
+      ]),
+      name: "Remote",
+    };
+    expect(importFilterRuleSet(current, incoming, "replace")).toEqual(incoming);
   });
 });

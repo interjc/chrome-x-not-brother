@@ -152,7 +152,7 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 ### 0.4.10 更新说明
 
 - 帖子详情把 X 原有的显示名和 @handle 放在一行，关系标签单独在下一行；左边线与名字只留 1–2px。
-- 侧栏和档案库按 handle 显示对应账号头像，避免串用其他账号的图片。
+- 侧栏和档案库优先显示该账号观察时保存的头像，没有保存地址时才按 handle 请求公开图片。
 - 档案库点击头像、显示名或 @handle 会打开该账号 X 主页；侧栏整行同样打开资料。 
 
 ### 0.4.9 更新说明
@@ -333,7 +333,7 @@ Dashboard 字段可能调整，提交时以实际界面为准。当前代码应�
 | Personal communications | No | 不读取私信；公开帖子正文属于上述 Website content，仅在用户启用规则时本地匹配且不保存。 |
 | Location, financial, health information | No | 功能不读取这些类别。 |
 | Data sale or advertising | No | 不出售数据，也不用于广告、信用或画像。 |
-| Data transfer | Chrome preference sync and user-requested public rule fetches only; no developer transfer | 小型偏好可由 Chrome Sync 在用户浏览器间同步；关系观察、完整规则和 `viewerHandle` 留在本地。侧栏/档案库展示头像时浏览器可能请求 unavatar.io/x/{handle}，失败后再请求已保存的 X CDN URL。用户主动按 URL/Gist 导入时，浏览器只向公开来源请求规则文件，不发送 X 或本地数据。 |
+| Data transfer | Chrome preference sync and user-requested public rule fetches only; no developer transfer | 小型偏好可由 Chrome Sync 在用户浏览器间同步；关系观察、完整规则和 `viewerHandle` 留在本地。侧栏/档案库展示头像时优先使用已保存的 X CDN URL，没有时才可能请求 unavatar.io/x/{handle}。用户主动按 URL/Gist 导入时，浏览器只向公开来源请求规则文件，不发送 X 或本地数据。 |
 
 ## Reviewer notes
 

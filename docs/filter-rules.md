@@ -4,7 +4,8 @@
 
 ## 行为边界
 
-- 总开关 `hideByFilterRules` 默认关闭，作为小型偏好保存在 `chrome.storage.sync`；规则文档不参与同步，只保存在当前 Chrome 配置的 `chrome.storage.local`。
+- 总开关 `hideByFilterRules` 默认关闭，作为小型偏好保存在 `chrome.storage.sync`；规则文档不参与同步，只保存在当前 Chrome 配置的 `chrome.storage.local`，并按当前登录 X 账号的小写 handle 分命名空间：`notBrother.filterRules.v1.ns.{handle}`。切换 X 账号时，匹配和编辑都只使用该账号自己的规则。旧的未分命名空间文档会在首次识别到 handle 时迁入该账号。
+- 用户本地还没有任何规则文档时，档案库黑名单页会载入 [`config/filter-rules-default.json`](../config/filter-rules-default.json) 作为可编辑示例，不会自动打开总开关。导入处的示例地址是该文件在仓库 `main` 上的 Raw URL。规则编写教程默认收起。
 - 任一启用且尚未过期的规则命中即隐藏帖子，规则之间是 OR；v1 的唯一动作是 `hide`，不点击 X 的静音、拉黑或其他控件。
 - 只处理首页、搜索、通知和帖子详情/评论区中当前已加载的帖子单元格。个人主页、HoverCard、UserCell、关注/粉丝列表保持可见。
 - 内容规则只读取当前候选帖子的可见正文用于当场匹配，不保存正文，不写观察历史，不向开发者或规则来源发送正文，也不额外请求 X 接口。
@@ -62,7 +63,7 @@ v1 用 X handle 作为公开、稳定且当前页面可确认的账号标识，�
 
 | 字段 | 约束 | 语义 |
 | --- | --- | --- |
-| `id` | 1–64 字符；字母或数字开头，之后可用字母、数字、`.`、`:`、`_`、`-`；规则集内唯一 | 导入合并时的稳定主键 |
+| `id` | 1–64 字符；字母或数字开头，之后可用字母、数字、`.`、`:`、`_`、`-`；规则集内唯一 | 规则标识；追加导入时若冲突会生成新 id |
 | `label` | 1–120 字符 | 供用户识别的规则名称 |
 | `enabled` | boolean | 是否参与匹配 |
 | `expiresAt` | `null` 或带时区的 ISO 8601 时间 | `null` 表示永久；到期瞬间起不再匹配 |
@@ -84,7 +85,7 @@ v1 用 X handle 作为公开、稳定且当前页面可确认的账号标识，�
 
 Side Panel、Chrome Options 页与关系档案库中，“应用自定义黑名单规则”开关旁都提供“编辑规则与查看教程”入口。Side Panel 与 Options 会打开 `dashboard.html#filter-rules`；档案库内则原地展开规则区、滚动到目标并把键盘焦点移到折叠标题。该入口不依赖开关是否已经启用，也不新增 Chrome 权限。
 
-关系档案库提供完整表单编辑器，以及与编辑器并列的内置编写教程。教程说明三种匹配对象、contains 与安全正则、大小写、单条启停、失效时间、OR 语义、Gist/文件导入的稳定 ID 合并、内容隐私边界，并给出一份可直接放入公开 Gist 的完整 JSON v1 示例。用户不需要手写 JSON 即可使用表单；JSON 主要用于分享、导入和导出。保存前对整个草稿运行 Zod 校验；校验失败时不覆盖已保存规则。导出使用浏览器 Blob 下载，不申请 `downloads` 权限。
+关系档案库提供完整表单编辑器，以及默认收起的编写教程。教程说明三种匹配对象、contains 与安全正则、大小写、单条启停、失效时间、OR 语义、导入时的追加/清空覆盖、内容隐私边界，并给出完整 JSON v1 示例。用户不需要手写 JSON 即可使用表单；也可用 `skills/x-not-brother-rules` 让 AI 阅读或改导出的 JSON。保存前对整个草稿运行 Zod 校验；校验失败时不覆盖已保存规则。导出使用浏览器 Blob 下载，不申请 `downloads` 权限。
 
 导入支持：
 
@@ -92,7 +93,7 @@ Side Panel、Chrome Options 页与关系档案库中，“应用自定义黑名�
 2. 公开 HTTPS JSON URL；
 3. 公开 Gist 页面 URL、Gist API URL 或单个 Raw URL。
 
-默认按 `id` 合并：同 id 的传入规则替换旧规则，新 id 追加，本地独有规则保留。用户也可以明确勾选“替换现有规则”。含多个 JSON 文件的 Gist 必须改用目标文件的 Raw URL，避免猜测。
+导入时必须选择 **追加到现有规则** 或 **清空后覆盖**，暂不提供按 id 合并。追加会保留当前规则，把导入规则接到后面；id 冲突时为导入规则生成新 id。清空覆盖用导入文件整份替换当前账号的规则集。含多个 JSON 文件的 Gist 必须改用目标文件的 Raw URL，避免猜测。
 
 远程加载只发生在用户点击“加载地址”后，不保存订阅，也不后台刷新。Manifest 仅声明 `https://*/*` 为 `optional_host_permissions`；每次首次访问某个来源前，由 `chrome.permissions.request()` 在该用户手势内申请相应 host。请求使用 HTTPS、`credentials: omit`、禁止重定向、12 秒超时和流式大小上限。Gist 页面通过公开 GitHub Gist API读取；文件被 API 截断时，只允许转到 GitHub 返回的 `gist.githubusercontent.com` Raw URL。私有或需要认证的资源不支持。
 

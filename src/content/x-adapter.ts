@@ -20,8 +20,12 @@ const HANDLE_PATTERN = /^@?([A-Za-z0-9_]{1,15})$/;
 export const USER_NAME_SELECTOR =
   '[data-testid="UserName"], [data-testid="User-Name"], [data-testid="User-Names"]';
 const TWEET_SURFACE_SELECTOR = 'article[data-testid="tweet"], [data-testid="UserCell"]';
-const USER_CONTENT_SELECTOR =
+export const USER_CONTENT_SELECTOR =
   '[data-testid="tweetText"], [data-testid="card.layoutLarge.media"]';
+const SUGGESTION_DIRECTORY_LINK_SELECTOR =
+  'a[href*="/i/connect_people"], a[href*="/i/related_users"]';
+const SUGGESTION_CHROME_SKIP_SELECTOR =
+  '[data-testid="UserCell"], article, [data-testid="tweet"]';
 const AVATAR_LINK_SELECTOR =
   '[data-testid="Tweet-User-Avatar"] a[href], [data-testid="UserAvatar-Container"] a[href], [data-testid^="UserAvatar-Container-"] a[href]';
 const AVATAR_CONTAINER_SELECTOR =
@@ -100,16 +104,56 @@ const SUGGESTION_HEADING_PATTERNS = [
   /おすすめ(?:の)?(?:ユーザー|アカウント)/u,
 ];
 
-function normalizedText(element: Element): string {
-  return (element.textContent ?? "").normalize("NFKC");
+export function isInsideXUserAuthoredContent(node: Node): boolean {
+  const element = node instanceof Element ? node : node.parentElement;
+  return Boolean(element?.closest(USER_CONTENT_SELECTOR));
+}
+
+function* elementsMatching<T extends Element>(
+  root: Element,
+  selector: string,
+  skipSelector: string,
+): Generator<T> {
+  const stack: Element[] = [root];
+  while (stack.length > 0) {
+    const element = stack.pop()!;
+    if (element !== root && element.matches(skipSelector)) continue;
+    if (element.matches(selector)) yield element as T;
+    const children = element.children;
+    for (let index = children.length - 1; index >= 0; index -= 1) {
+      stack.push(children[index]!);
+    }
+  }
+}
+
+export function* iterateOutsideUserContent<T extends Element>(
+  root: Element,
+  selector: string,
+): Generator<T> {
+  yield* elementsMatching<T>(root, selector, USER_CONTENT_SELECTOR);
+}
+
+function textExcluding(element: Element, skipSelector: string): string {
+  const parts: string[] = [];
+  const visit = (node: Node): void => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const value = node.textContent;
+      if (value) parts.push(value);
+      return;
+    }
+    if (!(node instanceof Element)) return;
+    if (node !== element && node.matches(skipSelector)) return;
+    const children = node.childNodes;
+    for (let index = 0; index < children.length; index += 1) {
+      visit(children[index]!);
+    }
+  };
+  visit(element);
+  return parts.join("").normalize("NFKC");
 }
 
 function platformText(element: Element): string {
-  const clone = element.cloneNode(true) as Element;
-  for (const userContent of clone.querySelectorAll(USER_CONTENT_SELECTOR)) {
-    userContent.remove();
-  }
-  return normalizedText(clone);
+  return textExcluding(element, USER_CONTENT_SELECTOR);
 }
 
 function matchesAny(text: string, patterns: RegExp[]): boolean {
@@ -310,11 +354,13 @@ function firstDirect<T extends Element>(surface: Element, selector: string): T |
 }
 
 function findHandle(area: Element): string | null {
-  for (const element of area.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+  for (const element of iterateOutsideUserContent<HTMLAnchorElement>(area, "a[href]")) {
+    if (isInsideNestedSurface(element, area)) continue;
     const fromHref = handleFromHref(element.getAttribute("href"));
     if (fromHref) return fromHref;
   }
-  for (const element of area.querySelectorAll<HTMLElement>("a[href], span")) {
+  for (const element of iterateOutsideUserContent<HTMLElement>(area, "a[href], span")) {
+    if (isInsideNestedSurface(element, area)) continue;
     const fromText = handleFromText(element.textContent ?? "");
     if (fromText) return fromText;
   }
@@ -334,7 +380,7 @@ function identityAnchorFromSurface(surface: HTMLElement, handle: string): HTMLEl
   const name = firstDirect<HTMLElement>(surface, USER_NAME_SELECTOR);
   if (name) return name;
   const normalized = handle.toLowerCase();
-  for (const link of surface.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+  for (const link of iterateOutsideUserContent<HTMLAnchorElement>(surface, "a[href]")) {
     if (isInsideNestedSurface(link, surface)) continue;
     if (handleFromHref(link.getAttribute("href"))?.toLowerCase() !== normalized) continue;
     if (!link.closest(AVATAR_CONTAINER_SELECTOR) && !link.querySelector("img")) return link;
@@ -372,32 +418,37 @@ function suggestionHref(href: string | null): boolean {
 function recommendationChrome(element: Element): boolean {
   const aria = element.getAttribute("aria-label") ?? "";
   if (matchesAny(aria, SUGGESTION_HEADING_PATTERNS)) return true;
-  for (const link of element.querySelectorAll("a[href]")) {
+  for (const link of element.querySelectorAll<HTMLAnchorElement>(SUGGESTION_DIRECTORY_LINK_SELECTOR)) {
     if (suggestionHref(link.getAttribute("href"))) return true;
   }
-  const clone = element.cloneNode(true) as Element;
-  for (const nested of clone.querySelectorAll(
-    '[data-testid="UserCell"], article, [data-testid="tweet"]',
-  )) {
-    nested.remove();
-  }
-  return matchesAny(normalizedText(clone), SUGGESTION_HEADING_PATTERNS);
+  return matchesAny(
+    textExcluding(element, SUGGESTION_CHROME_SKIP_SELECTOR),
+    SUGGESTION_HEADING_PATTERNS,
+  );
 }
 
-function isSuggestionSurface(surface: Element): boolean {
+function isSuggestionSurface(
+  surface: Element,
+  cellCache?: WeakMap<Element, boolean>,
+): boolean {
   const aside = surface.closest("aside");
   if (aside && !aside.closest('[data-testid="primaryColumn"]')) return true;
   const cell = surface.closest('[data-testid="cellInnerDiv"]');
-  return Boolean(cell && recommendationChrome(cell));
+  if (!cell) return false;
+  const cached = cellCache?.get(cell);
+  if (cached !== undefined) return cached;
+  const value = recommendationChrome(cell);
+  cellCache?.set(cell, value);
+  return value;
 }
 
 function shouldAssumeNotFollowedBy(
-  surface: Element,
   sourceType: SourceType,
   supplementalSurface: Element | null,
+  suggestionSurface: boolean,
 ): boolean {
   if (supplementalSurface !== null) return true;
-  if (isSuggestionSurface(surface)) return false;
+  if (suggestionSurface) return false;
   return sourceType === "following" || sourceType === "profile";
 }
 
@@ -429,6 +480,7 @@ function relationshipFacts(
   blockedByInteractionRestriction = false,
   blockedByProfileSummaryRestriction = false,
   supplementalSurface: Element | null = null,
+  suggestionSurface = false,
 ): { facts: RelationshipFacts; evidence: EvidenceType[] } {
   const relationshipSurfaces = supplementalSurface
     ? [surface, supplementalSurface]
@@ -471,7 +523,7 @@ function relationshipFacts(
   } else if (sourceType === "followers") {
     followsYou = true;
     evidence.push("viewer-followers-list");
-  } else if (shouldAssumeNotFollowedBy(surface, sourceType, supplementalSurface)) {
+  } else if (shouldAssumeNotFollowedBy(sourceType, supplementalSurface, suggestionSurface)) {
     followsYou = false;
   }
 
@@ -483,8 +535,8 @@ function displayNameFromArea(area: Element, handle: string): string | null {
   const fromLink = displayNameFromProfileLink(area, handle);
   if (fromLink) return fromLink;
   const leaves: string[] = [];
-  for (const element of area.querySelectorAll<HTMLElement>("span")) {
-    if (element.querySelector("span")) continue;
+  for (const element of iterateOutsideUserContent<HTMLElement>(area, "span")) {
+    if (isInsideNestedSurface(element, area) || element.querySelector("span")) continue;
     const text = cleanedText(element.textContent ?? "");
     if (handleFromText(text) || !isUsableDisplayName(text, handle)) continue;
     leaves.push(text);
@@ -499,7 +551,8 @@ function displayNameFromArea(area: Element, handle: string): string | null {
 
 function displayNameFromProfileLink(area: Element, handle: string): string | null {
   const normalized = handle.toLowerCase();
-  for (const link of area.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+  for (const link of iterateOutsideUserContent<HTMLAnchorElement>(area, "a[href]")) {
+    if (isInsideNestedSurface(link, area)) continue;
     if (handleFromHref(link.getAttribute("href"))?.toLowerCase() !== normalized) continue;
     const text = cleanedText(link.textContent ?? "");
     const withoutHandle = cleanedText(
@@ -522,17 +575,20 @@ function profileImageUrlFrom(image: HTMLImageElement | null): string | null {
 }
 
 function avatarFromSurface(surface: Element, handle: string): string | null {
+  const container = firstDirect<HTMLElement>(surface, AVATAR_CONTAINER_SELECTOR);
+  const fromContainer = profileImageUrlFrom(container?.querySelector("img") ?? null);
+  if (fromContainer) return fromContainer;
+  const avatarLink = firstDirect<HTMLAnchorElement>(surface, AVATAR_LINK_SELECTOR);
+  const fromAvatarLink = profileImageUrlFrom(avatarLink?.querySelector("img") ?? null);
+  if (fromAvatarLink) return fromAvatarLink;
   const normalized = handle.toLowerCase();
-  for (const link of surface.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+  for (const link of iterateOutsideUserContent<HTMLAnchorElement>(surface, "a[href]")) {
     if (isInsideNestedSurface(link, surface)) continue;
     if (handleFromHref(link.getAttribute("href"))?.toLowerCase() !== normalized) continue;
     const url = profileImageUrlFrom(link.querySelector("img"));
     if (url) return url;
   }
-  const container = firstDirect<HTMLElement>(surface, AVATAR_CONTAINER_SELECTOR);
-  const fromContainer = profileImageUrlFrom(container?.querySelector("img") ?? null);
-  if (fromContainer) return fromContainer;
-  for (const image of surface.querySelectorAll<HTMLImageElement>("img")) {
+  for (const image of iterateOutsideUserContent<HTMLImageElement>(surface, "img")) {
     if (isInsideNestedSurface(image, surface)) continue;
     const url = profileImageUrlFrom(image);
     if (url) return url;
@@ -550,6 +606,7 @@ function observationFor(
   blockedByInteractionRestriction = false,
   blockedByProfileSummaryRestriction = false,
   supplementalSurface: Element | null = null,
+  suggestionSurface = false,
 ): ObservationDraft {
   const { facts, evidence } = relationshipFacts(
     surface,
@@ -557,6 +614,7 @@ function observationFor(
     blockedByInteractionRestriction,
     blockedByProfileSummaryRestriction,
     supplementalSurface,
+    suggestionSurface,
   );
   return {
     userKey: handle.toLowerCase(),
@@ -607,6 +665,7 @@ export function scanXDocument(
   const candidates: ExtractedCandidate[] = [];
   const seenAnchors = new Set<HTMLElement>();
   const visibleHoverCards = visibleHoverCardsByHandle(doc);
+  const suggestionCells = new WeakMap<Element, boolean>();
   const engagementLayers = sourceType === "thread" ? actionableEngagementLayers(doc) : null;
 
   const addCandidate = (
@@ -625,6 +684,7 @@ export function scanXDocument(
       supplementalSurface ??
       visibleHoverCards.get(handle.toLowerCase()) ??
       null;
+    const suggestionSurface = isSuggestionSurface(surface, suggestionCells);
     const blockedByInteractionRestriction =
       sourceType === "thread" &&
       engagementIsUnavailable(surface) &&
@@ -644,9 +704,10 @@ export function scanXDocument(
         blockedByInteractionRestriction,
         blockedByProfileSummaryRestriction,
         hoverCard,
+        suggestionSurface,
       ),
       anchor: area,
-      acceptPageStoreRelationship: !isSuggestionSurface(surface),
+      acceptPageStoreRelationship: !suggestionSurface,
     });
   };
 

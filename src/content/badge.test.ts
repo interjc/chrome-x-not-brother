@@ -247,4 +247,24 @@ describe("relationship badge", () => {
     removeRelationshipBadge(root);
     expect(root.textContent).toBe("@Alice");
   });
+
+  it("does not badge tweet-body @mentions on a mention-heavy article", () => {
+    const article = document.createElement("article");
+    article.setAttribute("data-testid", "tweet");
+    const mentions = Array.from({ length: 80 }, (_, index) =>
+      `<a href="/ping${index}"><span>@ping${index}</span></a>`,
+    ).join("");
+    article.innerHTML = `
+      <div data-testid="User-Name">
+        <a href="/unki0422"><span>Unki</span></a>
+        <a href="/unki0422"><span>@unki0422</span></a>
+      </div>
+      <div data-testid="tweetText">${mentions}<a href="/unki0422"><span>@unki0422</span></a></div>
+    `;
+    const named = article.querySelector<HTMLElement>("[data-testid='User-Name']");
+    setRelationshipBadge(named ?? article, "blocked_by", "unki0422", "zh-CN");
+
+    expect(named?.querySelector("[data-xro-badge]")?.getAttribute("data-xro-badge")).toBe("blocked_by");
+    expect(article.querySelector("[data-testid='tweetText'] [data-xro-badge]")).toBeNull();
+  });
 });

@@ -43,6 +43,8 @@ For thread blocked-by changes, keep fixtures for explicit notices, all-three-dis
 
 For Home timeline identity, keep fixtures where the display name links to `/handle/status/:id`, the visible `@handle` is missing or bidi-wrapped, only `Tweet-User-Avatar` identifies the author, a matching hover card still enriches that card, and a quoted inner card does not inherit the outer avatar handle.
 
+For mention-heavy status threads, keep a fixture whose `tweetText` contains a large `@user` link list. Scanning must return only the post/reply authors, still honor a platform blocked notice outside `tweetText`, and must not treat in-post mentions as identity. Badge placement stays on the author `User-Name` and must not land inside `tweetText`.
+
 Never place credentials in the extension. The current release has no X API or AI integration.
 
 For issue reports and pull requests, follow `docs/contributing.md` and keep user feedback on `https://github.com/interjc/chrome-x-not-brother/issues`.

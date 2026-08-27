@@ -11,8 +11,9 @@
     "exactOptionalPropertyTypes": true,
     "useDefineForClassFields": true,
     "skipLibCheck": true,
+    "resolveJsonModule": true,
     "types": ["chrome", "vitest/globals"]
   },
-  "include": ["src", "scripts", "vitest.config.ts"]
+  "include": ["src", "scripts", "vitest.config.ts", "config/filter-rules-default.json"]
 }
 

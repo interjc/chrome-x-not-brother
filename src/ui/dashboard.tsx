@@ -280,21 +280,33 @@ function Dashboard() {
         </div>
       </header>
 
-      <nav className="dashboard-section-nav" aria-label={t(locale, "dashboardSectionNavAria")}>
-        {DASHBOARD_SECTIONS.map((item, index) => (
+      <nav
+        className="dashboard-tabs"
+        role="tablist"
+        aria-label={t(locale, "dashboardSectionNavAria")}
+      >
+        {DASHBOARD_SECTIONS.map((item) => (
           <a
-            aria-current={section === item.id ? "page" : undefined}
+            aria-controls={`dashboard-panel-${item.id}`}
+            aria-selected={section === item.id}
+            className={`dashboard-tab${section === item.id ? " is-active" : ""}`}
             href={`#${item.id}`}
+            id={`dashboard-tab-${item.id}`}
             key={item.id}
+            role="tab"
           >
-            <span>{String(index + 1).padStart(2, "0")}</span>
-            <strong>{t(locale, item.label)}</strong>
+            {t(locale, item.label)}
           </a>
         ))}
       </nav>
 
       {section === "archive" ? (
-        <div className="dashboard-section-page dashboard-section-page--archive">
+        <div
+          aria-labelledby="dashboard-tab-archive"
+          className="dashboard-section-page dashboard-section-page--archive"
+          id="dashboard-panel-archive"
+          role="tabpanel"
+        >
       <section className="hero">
         <div className="hero__copy">
           <p className="eyebrow">{t(locale, "fieldbookEyebrow")}</p>
@@ -419,6 +431,40 @@ function Dashboard() {
           </div>
         </section>
       </div>
+        </div>
+      ) : section === "filter-rules" ? (
+        <div
+          aria-labelledby="dashboard-tab-filter-rules"
+          className="dashboard-section-page dashboard-section-page--filter-rules"
+          id="dashboard-panel-filter-rules"
+          role="tabpanel"
+        >
+          <FilterRulesManager
+            disabled={!settingsReady || !hasConsent}
+            enabled={settings.hideByFilterRules}
+            locale={locale}
+            standalone
+            viewerHandle={settings.viewerHandle}
+            onEnabledChange={(enabled) => void setSetting("hideByFilterRules", enabled)}
+          />
+        </div>
+      ) : (
+        <div
+          aria-labelledby="dashboard-tab-settings"
+          className="dashboard-section-page dashboard-section-page--settings"
+          id="dashboard-panel-settings"
+          role="tabpanel"
+        >
+          <OptionsPanel
+            locale={locale}
+            onChange={(key, value) => void setSetting(key, value)}
+            onEditFilterRules={openFilterRulesEditor}
+            settings={settings}
+            settingsReady={settingsReady}
+            showObserverToggle
+          />
+        </div>
+      )}
 
       {notice ? <button className="toast" onClick={() => setNotice(null)}>{notice}<span>×</span></button> : null}
       <footer className="dashboard-footer">
