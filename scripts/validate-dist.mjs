@@ -98,6 +98,12 @@ for (const heading of [
 if (manifest.host_permissions) {
   throw new Error("Host access must come only from the scoped x.com content script match");
 }
+if (
+  JSON.stringify(manifest.optional_host_permissions ?? []) !==
+    JSON.stringify(["https://*/*"])
+) {
+  throw new Error("Remote rule imports must use only optional HTTPS host access");
+}
 const contentScripts = manifest.content_scripts ?? [];
 const matches = contentScripts.flatMap((script) => script.matches ?? []);
 if (
@@ -122,10 +128,10 @@ for (const permission of forbidden) {
     throw new Error(`Forbidden unnecessary permission: ${permission}`);
   }
 }
-const expectedPermissions = ["sidePanel", "storage"];
+const expectedPermissions = ["contextMenus", "sidePanel", "storage"];
 const actualPermissions = [...(manifest.permissions ?? [])].sort();
 if (JSON.stringify(actualPermissions) !== JSON.stringify(expectedPermissions)) {
-  throw new Error("Manifest permissions must be exactly storage and sidePanel");
+  throw new Error("Manifest permissions must be exactly contextMenus, storage, and sidePanel");
 }
 if (
   manifest.background?.service_worker !== "service-worker.js" ||

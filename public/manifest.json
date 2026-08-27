@@ -7,8 +7,12 @@
   "default_locale": "en",
   "minimum_chrome_version": "116",
   "permissions": [
+    "contextMenus",
     "storage",
     "sidePanel"
+  ],
+  "optional_host_permissions": [
+    "https://*/*"
   ],
   "background": {
     "service_worker": "service-worker.js",

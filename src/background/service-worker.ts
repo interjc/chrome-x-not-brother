@@ -1,4 +1,5 @@
 import type {
+  GetFilterRulesResponse,
   GetSummaryResponse,
   LookupUsersResponse,
   OpenDashboardMessage,
@@ -10,6 +11,10 @@ import type {
 import type { ObserverSettings } from "../domain/types";
 import { resolveUiLocale } from "../i18n";
 import { actionPresentation } from "./action-state";
+import {
+  CONSENT_CONTEXT_MENU_ID,
+  syncConsentContextMenu,
+} from "./consent-entry";
 import { broadcastDataChanged } from "./data-change-broadcast";
 import {
   deleteUserRecord,
@@ -20,23 +25,18 @@ import {
 } from "../storage/database";
 import {
   CURRENT_CONSENT_VERSION,
-  DEFAULT_SETTINGS,
   SETTINGS_KEY,
   coerceSettings,
   getSettings,
   updateSettings,
 } from "../storage/settings";
+import { getFilterRuleSet } from "../storage/filter-rules";
 
 chrome.runtime.onInstalled.addListener(async (details) => {
-  const stored = await chrome.storage.local.get(SETTINGS_KEY);
-  if (!stored[SETTINGS_KEY]) {
-    await chrome.storage.local.set({ [SETTINGS_KEY]: DEFAULT_SETTINGS });
-  }
   await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
   await purgeUnknownObservations();
   const settings = await getSettings();
-  await chrome.storage.local.set({ [SETTINGS_KEY]: settings });
-  await syncActionState(settings);
+  await syncExtensionUiState(settings);
   if (details.reason === "install") {
     await chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html?welcome=1") });
   }
@@ -44,17 +44,22 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 
 void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 void purgeUnknownObservations();
-void getSettings().then(async (settings) => {
-  await chrome.storage.local.set({ [SETTINGS_KEY]: settings });
-  await syncActionState(settings);
+void initializeActionState();
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId !== CONSENT_CONTEXT_MENU_ID) return;
+  const sidePanelOpen = tab?.windowId === undefined
+    ? null
+    : chrome.sidePanel.open({ windowId: tab.windowId });
+  void openConsentSurface(sidePanelOpen);
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== "local" || !changes[SETTINGS_KEY]) return;
+  if (areaName !== "sync" || !changes[SETTINGS_KEY]) return;
   const next = coerceSettings(
     changes[SETTINGS_KEY].newValue as Partial<ObserverSettings> | undefined,
   );
-  void syncActionState(next);
+  void syncExtensionUiStateFromStorage(next);
 });
 
 chrome.runtime.onMessage.addListener(
@@ -103,6 +108,32 @@ chrome.runtime.onMessage.addListener(
           return getUserRecords(message.userKeys, settings.viewerHandle);
         })
         .then((users) => sendResponse({ ok: true, users } satisfies LookupUsersResponse))
+        .catch((error: unknown) => sendResponse({
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        }));
+      return true;
+    }
+
+    if (message.type === "filter-rules:get") {
+      if (!sender.url?.startsWith("https://x.com/")) {
+        sendResponse({ ok: false, error: "Filter rules are available only to x.com" });
+        return false;
+      }
+      void getSettings()
+        .then(async (settings) => {
+          if (
+            settings.consentVersion < CURRENT_CONSENT_VERSION ||
+            !settings.hideByFilterRules
+          ) {
+            throw new Error("Custom timeline filtering is not enabled");
+          }
+          return getFilterRuleSet();
+        })
+        .then((ruleSet) => sendResponse({
+          ok: true,
+          ruleSet,
+        } satisfies GetFilterRulesResponse))
         .catch((error: unknown) => sendResponse({
           ok: false,
           error: error instanceof Error ? error.message : String(error),
@@ -171,7 +202,25 @@ async function handleUpsert(
   return { ok: true, users };
 }
 
-async function openDashboard(_message: OpenDashboardMessage): Promise<void> {
+async function openDashboard(message: OpenDashboardMessage): Promise<void> {
+  const suffix = message.section === "filter-rules" ? "#filter-rules" : "";
+  await chrome.tabs.create({ url: chrome.runtime.getURL(`dashboard.html${suffix}`) });
+}
+
+async function initializeActionState(): Promise<void> {
+  const settings = await getSettings();
+  await syncActionState(settings);
+}
+
+async function openConsentSurface(sidePanelOpen: Promise<void> | null): Promise<void> {
+  if (sidePanelOpen) {
+    try {
+      await sidePanelOpen;
+      return;
+    } catch {
+      // Fall through to the full local consent page.
+    }
+  }
   await chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
 }
 
@@ -183,4 +232,19 @@ async function syncActionState(settings: ObserverSettings): Promise<void> {
     chrome.action.setBadgeTextColor({ color: "#16221B" }),
     chrome.action.setTitle({ title: presentation.title }),
   ]);
+}
+
+async function syncExtensionUiState(settings: ObserverSettings): Promise<void> {
+  await Promise.all([
+    syncActionState(settings),
+    syncConsentContextMenu(settings),
+  ]);
+}
+
+async function syncExtensionUiStateFromStorage(settings: ObserverSettings): Promise<void> {
+  try {
+    await syncExtensionUiState(settings);
+  } catch {
+    // A later storage change or service-worker start will retry the presentation sync.
+  }
 }

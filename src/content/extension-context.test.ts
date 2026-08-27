@@ -19,7 +19,7 @@ describe("extension context lifecycle", () => {
   it("does not swallow an unrelated runtime error in a valid context", () => {
     vi.stubGlobal("chrome", {
       runtime: { id: "extension-id" },
-      storage: { local: {} },
+      storage: { local: {}, sync: {} },
     });
 
     expect(hasExtensionContext()).toBe(true);

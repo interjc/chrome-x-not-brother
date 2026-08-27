@@ -2,7 +2,9 @@
 
 数据库名：`not-brother-v1`，Dexie schema version：1。
 
-`chrome.storage.local` 另外保存观察设置、同意版本、观察 dock 的 `dockCollapsed` 展示偏好、插件界面语言 `uiLocale`、侧栏当前标签 `sidePanelTab`、可选时间线过滤 `hideMutedAccounts` / `hideBlockedByAccounts`，以及仅用于排除本人的 `viewerHandle`；这些字段不属于关系数据库。旧设置没有 `dockCollapsed` 时默认展开，没有 `uiLocale` 时默认 `auto`，没有 `sidePanelTab` 时默认状态页，没有时间线过滤字段时默认关闭，不需要数据库迁移。静音状态不写入 users/observations。
+`chrome.storage.sync` 保存同意版本、观察开关、页面徽标、观察 dock 的 `dockCollapsed` 展示偏好、插件界面语言 `uiLocale`、侧栏当前标签 `sidePanelTab`，以及默认关闭的 `hideMutedAccounts` / `hideBlockedByAccounts` / `hideByFilterRules`。这些小型偏好共用一个远低于 8 KB 单项上限的对象；users/observations 和规则文档不进入 sync。Chrome 未登录、关闭同步或离线时，`storage.sync` 仍在当前设备工作，Chrome 之后自行恢复账号同步。
+
+仅用于排除本人的 `viewerHandle` 单独保存在 `chrome.storage.local`，避免同一 Chrome 账号在不同设备登录不同 X 账号时串用排除对象。升级时若发现旧版 `chrome.storage.local` 设置：sync 尚无设置才把旧偏好复制过去；sync 已有设置时保留 sync 值；两种情况都把旧 `viewerHandle` 迁到新的 local key，确认写入后再删除旧对象。旧设置没有 `dockCollapsed` 时默认展开，没有 `uiLocale` 时默认 `auto`，没有 `sidePanelTab` 时默认状态页，没有时间线过滤字段时默认关闭。静音状态不写入 users/observations。
 
 从 0.4.0 起，`unknown` 只是 adapter/domain 的内部结果，不是数据库状态。content script 不发送它，service worker 和 repository 也会防御性拒绝；扩展启动和安装时清理旧版本遗留的 unknown users 与 observations。
 
@@ -48,6 +50,12 @@ blocked-by 可保存 `blocked-notice`、`blocked-interaction-restriction` 或 `b
 
 content script 可通过 service worker 的 `users:lookup` 批量查询页面当前可见的小写 handle。查询只返回已知关系并排除 viewer；它不会创建 observation 或改变 `lastSeenAt`，只用于把已有本地知识重新显示在页面 ID 区域。
 
+## filter rules
+
+`chrome.storage.local` 的 `notBrother.filterRules.v1` 保存一个独立的 `not-brother-filter-rules` schema v1 文档。它不是 Dexie 表，不进入关系备份，也不进入 Chrome Sync。设置对象里只有默认关闭的 `hideByFilterRules` 总开关可同步。
+
+规则由 Zod 判别联合校验：`user_handles` 保存规范化 handle 数组；`display_name` / `content` 保存 contains 或 safe-regex 匹配器；公共字段是稳定 `id`、用户标签、启用状态和可空 ISO 到期时间。导入默认以 id 做 upsert 并保留本地独有规则，也可由用户明确全量替换。到期和禁用规则仍保存在文档中但不匹配。content script 不直接读取这个文档；总开关和同意有效时，由 service worker 校验后通过 `filter-rules:get` 返回只读快照。完整结构与限制见 [自定义黑名单规则 v1](filter-rules.md)。
+
 ## 迁移
 
-结构变化必须增加 Dexie version 并编写保留数据的迁移。同步更新数据模型文档、JSON schema、merge/import tests 和维护 skill reference。
+关系数据库结构变化必须增加 Dexie version 并编写保留数据的迁移。设置存储变化必须保留旧偏好、避免覆盖已经存在的 sync 数据，并覆盖无 Chrome 登录/关闭同步时的本机行为。过滤规则的不兼容变化必须提高其独立 schemaVersion，并保留显式迁移或拒绝路径。同步更新数据模型文档、JSON schema、merge/import tests 和维护 skill reference。

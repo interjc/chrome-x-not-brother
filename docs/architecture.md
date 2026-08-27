@@ -5,6 +5,8 @@
 ```mermaid
 flowchart LR
     X["x.com 已渲染 DOM"] --> A["X adapter<br/>证据归一化"]
+    A --> T["可选本地显示过滤"]
+    T --> B
     A --> L["批量查询本地已知 handle"]
     L --> K{"当前或本地关系已知？"}
     K -->|是| B["Content script<br/>徽标 + 观察 Dock + 批量消息"]
@@ -15,9 +17,16 @@ flowchart LR
     D --> F["Relationship Fieldbook"]
     D --> H["本地关系概览"]
     H --> B
-    G["chrome.storage.local<br/>同意、观察器、dock 与时间线过滤"] --> B
+    G["chrome.storage.sync<br/>同意、观察器、dock 与时间线过滤"] --> B
     G --> E
     G --> F
+    V["chrome.storage.local<br/>当前 X viewerHandle"] --> B
+    V --> E
+    V --> F
+    R["chrome.storage.local<br/>filter-rules JSON v1"] --> C
+    C -->|已校验规则快照| T
+    R --> F
+    U["用户点击导入<br/>本地文件或公开 HTTPS/Gist"] --> F
 ```
 
 ## 上下文边界
@@ -38,9 +47,10 @@ flowchart LR
 - 通过 `users:lookup` 批量读取可见 handle 的本地已知关系，使已确认账号在证据浮层关闭后继续回标；
 - 读取 X 已经为当前页面载入的 UI store、tweet fiber（含祖先组件）以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`、`muting`，以及已有的 `name` / `profile_image_url_https`，给首页和评论区没有关注控件的卡片补全关系，并补全 DOM 抽坏的显示名和头像；不发起新的 GraphQL 或 REST 请求；
 - 同意后若打开可选时间线过滤，用已载入的 `muting`、现场/本地 `blocked_by` 隐藏首页、搜索、通知和帖子详情/评论区里对应帖子单元格；页面 GraphQL 一返回静音/拉黑信号就立即隐藏。本地名单已有的账号立刻消失，第一次检测到的账号带短收起动画。不隐藏个人主页、浮窗或关注列表，也不把静音列表写入数据库；
+- `hideByFilterRules` 打开且同意版本有效时，通过 `filter-rules:get` 向 service worker 请求已由 Zod 校验的规则快照，再用不依赖 Zod 的轻量匹配器预编译 handle 集合、contains 与正则。候选帖正文选择器仍封装在 `x-adapter.ts`；正文只作为内存中的当前匹配输入，不写档案或消息。每次匹配重新检查到期时间，2 秒复扫负责在规则到期后恢复节点；规则存储变化通过 `chrome.storage.onChanged` 使快照失效并复扫；
 - 页面主世界 `page-bridge.js` 只把上述已载入字段回传给隔离世界的观察器；DOM 证据优先，store / 已完成响应只填充内部 unknown；
 - 识别当前登录 handle 并在扫描阶段排除本人；
-- 插入观察状态/概览 dock；其本地 `dockCollapsed` 设置控制完整面板或状态悬浮球，用户手势可恢复面板或通过 service worker 打开当前标签页的 Side Panel；
+- 插入观察状态/概览 dock；可同步的 `dockCollapsed` 设置控制完整面板或状态悬浮球，用户手势可恢复面板或通过 service worker 打开当前标签页的 Side Panel；
 - 对已确认持久化的发送签名去重；消息失败或 service worker 未返回对应用户时不提交签名，后续复扫会重试；
 - 所有扫描经过 180ms 合并与 single-flight 串行门控：扫描期间的新触发只排队一次补扫，定期复扫不会并发执行或重复追加相同历史；隐藏标签页暂停定期复扫；扩展上下文终止时移除 DOM Observer、计时器及页面/Chrome 事件监听；
 - 不调用 `fetch`，不打开 URL，不点击页面控制。
@@ -56,20 +66,23 @@ flowchart LR
 - 清理 viewer 本人记录并向 content script 返回本地概览；
 - 把新观察以及档案页的确认、删除、导入、清空广播给所有已注入的 X content script，使其清除关系查询缓存并合并复扫；广播使用现有 `chrome.tabs` 消息能力，不申请 `tabs` 权限也不读取标签页内容；
 - 仅向 `x.com` content script 返回其请求 handle 的已知本地用户记录；
+- 仅在同意版本有效且 `hideByFilterRules` 已打开时，读取并 Zod 校验 local 规则文档，再向请求的 `x.com` content script 返回规则快照；校验库与 unsafe-regex 检查不进入每个 X 页面的 content bundle；
+- 使用 `contextMenus` 在 action 图标右键菜单提供当前同意版本的披露入口；点击手势立即打开 Side Panel，失败才打开本地 dashboard，完成同意后通过 sync 设置变化隐藏该项；
 - 处理用户主动打开完整管理页的请求。
 
 ### Extension pages
 
 - 与 service worker 同属扩展 origin，可以安全访问扩展 IndexedDB；
 - Dexie `liveQuery` 驱动 UI 数据更新；
-- Side Panel 用状态/选项两个标签分页：状态页是概览、分类筛选和用户列表；选项页是界面语言、页面徽标和时间线过滤。筛选不写数据库也不预取资料。Chrome 工具栏右键「选项」通过 `options_ui` 把 `sidePanelTab` 设为 options 并打开侧栏。dashboard 仍提供完整本地数据管理。扩展页通过共享 hook 订阅 `chrome.storage.onChanged`。
+- Side Panel 用状态/选项两个标签分页：状态页是概览、分类筛选和用户列表；选项页是界面语言、页面徽标和时间线过滤。筛选不写数据库也不预取资料。Chrome 工具栏右键「选项」通过 `options_ui` 把 `sidePanelTab` 设为 options 并打开侧栏。dashboard 仍提供完整本地数据管理。扩展页通过共享 hook 同时订阅 sync 偏好和 local viewer 的 `chrome.storage.onChanged`。
+- dashboard 的规则编辑器直接读写扩展 local storage；保存、文件导入和远程导入都先通过共享 Zod schema。远程 URL 仅在表单提交的用户手势内申请来源 host permission 并 fetch 一次；Gist 页面先读公开 Gist API，必要时只跟进 GitHub 返回的 Raw host。请求不带凭据、不跟随重定向、有超时与流式 1 MiB 上限。规则 URL 不持久化，因此没有后台订阅或自动刷新。
 
 ### Internationalization
 
 - `public/_locales/{en,ja,zh_CN}/messages.json` 提供 Chrome 解析的扩展名称、说明和工具栏默认标题；Manifest 使用 `__MSG_*__` 并以 `en` 为 `default_locale`。
 - `src/i18n/index.ts` 是运行时 UI 的类型化三语词库，集中提供语言归一化、占位符替换、关系展示和来源名称。
 - Side Panel、dashboard 与 service worker 默认通过 `chrome.i18n.getUILanguage()` 选择语言；`uiLocale` 不是 `auto` 时覆盖为用户在插件面板选择的语言。content script 在 `auto` 时读取 X 文档的 `lang`，手工选择后关系徽标和观察 dock 也改用该语言。
-- `zh-*` 归一化为 `zh-CN`，`ja-*` 归一化为 `ja`，其余未支持语言归一化为 `en`。界面语言偏好只存在 `chrome.storage.local`，不存进用户数据库，也不改变关系事实。
+- `zh-*` 归一化为 `zh-CN`，`ja-*` 归一化为 `ja`，其余未支持语言归一化为 `en`。界面语言偏好存在 `chrome.storage.sync`，不存进用户数据库，也不改变关系事实；未登录或关闭 Chrome Sync 时仍在本机生效。
 
 ## 构建
 
@@ -77,4 +90,4 @@ flowchart LR
 
 ## 权限
 
-Manifest 只申请 `storage` 和 `sidePanel`。站点访问只来自 content script 的单一 `https://x.com/*` match。生产校验会拒绝多余的 `tabs`、`scripting`、`cookies` 与 `webRequest` 权限。
+Manifest 的常驻 API 权限只有 `contextMenus`、`storage` 和 `sidePanel`。`contextMenus` 只添加 action 图标上的同意说明入口；content script 站点访问只来自单一 `https://x.com/*` match。为让用户导入任意公开 HTTPS 规则文件，Manifest 另声明 `https://*/*` 为 `optional_host_permissions`：安装时不授予，只有用户在规则表单点击加载后才用 `chrome.permissions.request()` 请求目标来源。拒绝授权不会影响 X 观察、本地编辑或文件导入。生产校验会拒绝常驻 `host_permissions` 及多余的 `tabs`、`scripting`、`cookies` 与 `webRequest` 权限。

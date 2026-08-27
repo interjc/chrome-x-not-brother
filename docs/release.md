@@ -72,7 +72,7 @@ npm run release
 ## 商店更新时记得
 
 - 隐私政策 URL 必须是 `https://interjc.github.io/chrome-x-not-brother/privacy.html`。
-- 主机权限理由仍只解释 `https://x.com/*`，文案在 [store-listing.md](store-listing.md)。
+- 常驻站点访问仍只解释 `https://x.com/*`；`contextMenus` 与规则导入的 optional HTTPS 权限也必须按 [store-listing.md](store-listing.md) 分别说明。
 - 不要把 GitHub README 上的作者 X / Profile 写进商店简介当推销。
 - 商店审核通过不代表 X 允许额外行为。
 

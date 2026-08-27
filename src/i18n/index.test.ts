@@ -61,8 +61,11 @@ describe("runtime internationalization", () => {
 
   it("localizes the observer dock collapse controls", () => {
     expect(translate("zh-CN", "dockCollapseAria")).toContain("悬浮球");
+    expect(translate("zh-CN", "dockReviewConsent")).toContain("同意");
     expect(translate("en", "dockExpandAria")).toContain("Expand");
+    expect(translate("en", "actionConsentMenu")).toContain("privacy notice");
     expect(translate("ja", "dockCollapseAria")).toContain("フローティング");
+    expect(translate("ja", "dockReviewConsentAria")).toContain("プライバシー");
   });
 
   it("localizes the extension language switcher", () => {
@@ -86,6 +89,12 @@ describe("runtime internationalization", () => {
     expect(translate("ja", "hideMutedAccountsLabel")).toContain("ミュート");
     expect(translate("zh-CN", "hideBlockedByAccountsLabel")).toContain("拉黑");
     expect(translate("en", "hideBlockedByAccountsDescription")).toContain("not a complete list");
+    expect(translate("zh-CN", "hideByFilterRulesLabel")).toContain("黑名单");
+    expect(translate("zh-CN", "editFilterRules")).toContain("教程");
+    expect(translate("en", "filterRulesRemotePrivacy")).toContain("Chrome asks");
+    expect(translate("en", "filterRulesGuideRegexBody")).toContain("Unicode");
+    expect(translate("ja", "filterRulesTypeContent")).toContain("投稿内容");
+    expect(translate("ja", "filterRulesGuideHeading")).toContain("ガイド");
     expect(translate("ja", "optionsIntro")).toContain("オフ");
   });
 

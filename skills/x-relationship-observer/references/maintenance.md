@@ -32,11 +32,17 @@ Increment `CURRENT_CONSENT_VERSION` only when data types, purposes, recipients, 
 
 Treat `viewerHandle` as exclusion-only data. Verify scan, database cleanup, summaries, and UI filtering together whenever viewer detection changes.
 
-Treat `dockCollapsed` as a presentation-only `chrome.storage.local` preference. Older partial settings must default to the expanded panel, and panel/bubble changes must retain keyboard access, status indication, X-theme parity, and narrow-screen safe margins.
+Keep `viewerHandle` in `chrome.storage.local`; it describes the X account on this device and must not sync into a different X session. Keep users and observations in IndexedDB.
 
-Treat `uiLocale` as a presentation-only `chrome.storage.local` preference. Missing or unknown values default to `auto` (Chrome UI language for extension pages, X page language for injected badges and dock). A manual English, Japanese, or Simplified Chinese choice updates already-open Side Panel, dashboard, and Options pages, the toolbar title, and X-injected badges and dock; it must not increment consent.
+Treat `dockCollapsed` as a presentation-only `chrome.storage.sync` preference. Older partial settings must default to the expanded panel, and panel/bubble changes must retain keyboard access, status indication, X-theme parity, and narrow-screen safe margins. Before current consent, both the expanded dock and collapsed launcher must expose a visible native disclosure button without recording consent; keep the localized action context-menu entry in sync and hide it after consent.
 
-Treat `hideMutedAccounts` and `hideBlockedByAccounts` as presentation-only `chrome.storage.local` preferences that default false. They must not increment consent, persist a mute list, hide profile/hover/user-list surfaces, or click X controls. Home, search, notifications, and post threads may hide muted or blocked-by tweet cells.
+Treat `uiLocale` as a presentation-only `chrome.storage.sync` preference. Missing or unknown values default to `auto` (Chrome UI language for extension pages, X page language for injected badges and dock). A manual English, Japanese, or Simplified Chinese choice updates already-open Side Panel, dashboard, and Options pages, the toolbar title, and X-injected badges and dock; it must not increment consent.
+
+Treat `hideMutedAccounts` and `hideBlockedByAccounts` as presentation-only `chrome.storage.sync` preferences that default false. They must not increment consent, persist a mute list, hide profile/hover/user-list surfaces, or click X controls. Home, search, notifications, and post threads may hide muted or blocked-by tweet cells.
+
+Treat `hideByFilterRules` as a default-false synced master switch and the full `notBrother.filterRules.v1` document as local-only. Rules can read post text transiently, so changes to that data use, storage, or remote import recipients require a consent-version and privacy review. Preserve Zod strict validation, safe-regex and size limits, runtime expiration, storage-change reload, and the optional-per-source permission boundary in [filter-rules.md](filter-rules.md).
+
+Keep all synced preferences in a small settings item below Chrome Sync's 8 KB per-item and 100 KB total quotas. Do not sync the relationship archive, viewer handle, or filter-rule document. When Chrome is signed out, sync is disabled, or the browser is offline, rely on `chrome.storage.sync`'s local behavior instead of creating a second fallback copy. During the one-time local-to-sync migration, existing sync preferences win; migrate only the local `viewerHandle`, and remove the legacy key only after destination writes succeed.
 
 Repository startup and install cleanup must purge legacy unknown users and observations. Import, export, summaries, content messages, and background writes must all keep the same filter.
 
@@ -54,7 +60,7 @@ After copy changes, check the 420px side panel, dashboard, toolbar titles, injec
 
 ## Incident response
 
-When an unpacked extension is reloaded, existing X tabs retain an orphaned content script whose Chrome extension APIs are invalid. Treat `Extension context invalidated` or a missing `chrome.storage.local` as lifecycle termination: catch pending promises, stop timers, disconnect MutationObserver, and remove injected UI. Do not retry or log repeated warnings. Refresh the X tab after reloading the extension to inject the new content script.
+When an unpacked extension is reloaded, existing X tabs retain an orphaned content script whose Chrome extension APIs are invalid. Treat `Extension context invalidated` or missing `chrome.storage.sync` / `chrome.storage.local` as lifecycle termination: catch pending promises, stop timers, disconnect MutationObserver, and remove injected UI. Do not retry or log repeated warnings. Refresh the X tab after reloading the extension to inject the new content script.
 
 The injected dock exposes the running candidate version through its read-only `data-xro-version` attribute. Confirm it matches the intended package after refreshing X before accepting live-page results.
 

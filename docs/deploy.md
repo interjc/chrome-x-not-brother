@@ -267,7 +267,7 @@ unzip -l output/not-brother-0.4.7.zip | head
 
 > Annotate relationship evidence already visible while the user browses x.com, and keep the observation history on the user's device for search, review, and export.
 
-**权限理由**：整段复制 [store-listing.md](store-listing.md) 里 Permission justifications 的三块英文。
+**权限理由**：整段复制 [store-listing.md](store-listing.md) 里 Permission justifications 的全部英文段落。
 
 **Remote code**：选 **No, I am not using remote code.**
 

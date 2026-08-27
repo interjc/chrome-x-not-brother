@@ -102,6 +102,7 @@ export interface ObserverSettings {
   uiLocale: UiLocalePreference;
   hideMutedAccounts: boolean;
   hideBlockedByAccounts: boolean;
+  hideByFilterRules: boolean;
   sidePanelTab: SidePanelTab;
 }
 

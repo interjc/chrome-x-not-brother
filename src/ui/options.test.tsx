@@ -6,7 +6,7 @@ import { DEFAULT_SETTINGS } from "../storage/settings";
 const testState = vi.hoisted(() => ({
   opened: true,
   settings: {
-    consentVersion: 1,
+    consentVersion: 3,
     observerEnabled: false,
     showBadges: true,
     dockCollapsed: false,
@@ -14,6 +14,7 @@ const testState = vi.hoisted(() => ({
     uiLocale: "zh-CN",
     hideMutedAccounts: false,
     hideBlockedByAccounts: false,
+    hideByFilterRules: false,
     sidePanelTab: "status",
   } as ObserverSettings,
 }));
@@ -47,7 +48,7 @@ vi.mock("./open-options-tab", () => ({
 describe("Options page", () => {
   beforeEach(async () => {
     testState.opened = true;
-    testState.settings = { ...DEFAULT_SETTINGS, consentVersion: 1, uiLocale: "zh-CN" };
+    testState.settings = { ...DEFAULT_SETTINGS, consentVersion: 3, uiLocale: "zh-CN" };
     vi.stubGlobal("chrome", {
       i18n: { getUILanguage: () => "zh-CN" },
     });
@@ -74,6 +75,8 @@ describe("Options page", () => {
     });
     expect(document.body.textContent).toContain("彻底隐藏已静音账号");
     expect(document.body.textContent).toContain("隐藏拉黑了我的账号");
+    expect(document.body.textContent).toContain("应用自定义黑名单规则");
+    expect(document.body.textContent).toContain("编辑规则与查看教程");
     expect(document.querySelector(".language-switch")).not.toBeNull();
   });
 });

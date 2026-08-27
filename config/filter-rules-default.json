@@ -1,0 +1,32 @@
+{
+  "format": "not-brother-filter-rules",
+  "schemaVersion": 1,
+  "name": "默认",
+  "description": "",
+  "rules": [
+    {
+      "id": "rule-23defc95e798401196dac475",
+      "label": "福",
+      "enabled": true,
+      "expiresAt": null,
+      "type": "content",
+      "match": {
+        "mode": "regex",
+        "value": "比我骚|我福不黑|我的福",
+        "caseSensitive": false
+      }
+    },
+    {
+      "id": "rule-79bebce123914dbc919c2269",
+      "label": "新规则",
+      "enabled": true,
+      "expiresAt": null,
+      "type": "display_name",
+      "match": {
+        "mode": "regex",
+        "value": "高返币",
+        "caseSensitive": false
+      }
+    }
+  ]
+}

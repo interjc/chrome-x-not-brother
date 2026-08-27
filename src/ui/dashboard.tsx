@@ -29,15 +29,26 @@ import {
 import { Avatar } from "./components/Avatar";
 import { Brand } from "./components/Brand";
 import { Icon } from "./components/Icon";
-import { LanguageSwitch } from "./components/LanguageSwitch";
+import {
+  FILTER_RULES_EDITOR_HASH,
+  FilterRulesManager,
+  revealFilterRulesEditor,
+} from "./components/FilterRulesManager";
+import { OptionsPanel } from "./components/OptionsPanel";
 import { RelationshipPill } from "./components/RelationshipPill";
-import { TimelineFilterSettings } from "./components/TimelineFilterSettings";
 import { absoluteTime, downloadFile, relativeTime } from "./format";
 import { useObserverSettings, useUsers } from "./hooks";
 import { CURRENT_CONSENT_VERSION } from "../storage/settings";
 
 type Filter = "all" | "changed" | Exclude<RelationshipKind, "unknown" | "none">;
 type Sort = "recent" | "handle" | "observations";
+type DashboardSection = "archive" | "filter-rules" | "settings";
+
+const DASHBOARD_SECTIONS = [
+  { id: "archive", label: "dashboardSectionArchive" },
+  { id: "filter-rules", label: "dashboardSectionBlacklist" },
+  { id: "settings", label: "dashboardSectionSettings" },
+] as const satisfies readonly { id: DashboardSection; label: MessageKey }[];
 
 const extensionVersion = chrome.runtime.getManifest?.().version ?? "dev";
 
@@ -58,6 +69,12 @@ function filterOptions(locale: AppLocale): { key: Filter; label: string }[] {
     { key: "follows_you_only", label: relationshipPresentation(locale, "follows_you_only").label },
     { key: "blocked_by", label: relationshipPresentation(locale, "blocked_by").label },
   ];
+}
+
+function dashboardSectionFromHash(hash: string): DashboardSection {
+  if (hash === FILTER_RULES_EDITOR_HASH) return "filter-rules";
+  if (hash === "#settings") return "settings";
+  return "archive";
 }
 
 async function notifyDataChanged(): Promise<void> {
@@ -119,11 +136,8 @@ function Dashboard() {
   const loading = usersLoading || !settingsReady;
   const hasConsent = settings.consentVersion >= CURRENT_CONSENT_VERSION;
   const filters = filterOptions(locale);
-
-  useEffect(() => {
-    document.documentElement.lang = locale;
-    document.title = t(locale, "dashboardTitle");
-  }, [locale]);
+  const [section, setSection] = useState<DashboardSection>(() =>
+    dashboardSectionFromHash(window.location.hash));
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("recent");
   const [query, setQuery] = useState("");
@@ -132,6 +146,27 @@ function Dashboard() {
   const importInput = useRef<HTMLInputElement>(null);
   const searchInput = useRef<HTMLInputElement>(null);
   const isWelcome = new URLSearchParams(window.location.search).get("welcome") === "1";
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    const current = DASHBOARD_SECTIONS.find((item) => item.id === section);
+    document.title = section === "archive"
+      ? t(locale, "dashboardTitle")
+      : `${t(locale, current?.label ?? "dashboardSectionArchive")} — ${t(locale, "brandName")}`;
+  }, [locale, section]);
+
+  useEffect(() => {
+    const syncSection = (): void => {
+      const next = dashboardSectionFromHash(window.location.hash);
+      setSection(next);
+      window.requestAnimationFrame(() => {
+        document.querySelector<HTMLElement>(".dashboard-section-page h1")
+          ?.focus({ preventScroll: true });
+      });
+    };
+    window.addEventListener("hashchange", syncSection);
+    return () => window.removeEventListener("hashchange", syncSection);
+  }, []);
 
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
@@ -218,6 +253,15 @@ function Dashboard() {
     setNotice(t(locale, "observerStarted"));
   }
 
+  function openFilterRulesEditor(): void {
+    if (window.location.hash !== FILTER_RULES_EDITOR_HASH) {
+      window.location.hash = FILTER_RULES_EDITOR_HASH;
+      return;
+    }
+    setSection("filter-rules");
+    window.requestAnimationFrame(() => revealFilterRulesEditor());
+  }
+
   return (
     <main className="app app--dashboard">
       <header className="dashboard-header">
@@ -226,16 +270,35 @@ function Dashboard() {
           <span className={`observer-state${settings.observerEnabled ? " is-on" : ""}`}>
             <i />{t(locale, settings.observerEnabled ? "observerRunning" : "observerPaused")}
           </span>
-          <button className="icon-button" title={t(locale, "importJson")} aria-label={t(locale, "importJson")} onClick={() => importInput.current?.click()}><Icon name="upload" /></button>
-          <input ref={importInput} className="visually-hidden" type="file" accept="application/json,.json" onChange={(event) => void importJson(event)} />
-          <button className="icon-button" title={t(locale, "exportJson")} aria-label={t(locale, "exportJson")} onClick={() => void exportJson()}><Icon name="download" /></button>
+          {section === "archive" ? (
+            <>
+              <button className="icon-button" title={t(locale, "importJson")} aria-label={t(locale, "importJson")} onClick={() => importInput.current?.click()}><Icon name="upload" /></button>
+              <input ref={importInput} className="visually-hidden" type="file" accept="application/json,.json" onChange={(event) => void importJson(event)} />
+              <button className="icon-button" title={t(locale, "exportJson")} aria-label={t(locale, "exportJson")} onClick={() => void exportJson()}><Icon name="download" /></button>
+            </>
+          ) : null}
         </div>
       </header>
 
+      <nav className="dashboard-section-nav" aria-label={t(locale, "dashboardSectionNavAria")}>
+        {DASHBOARD_SECTIONS.map((item, index) => (
+          <a
+            aria-current={section === item.id ? "page" : undefined}
+            href={`#${item.id}`}
+            key={item.id}
+          >
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <strong>{t(locale, item.label)}</strong>
+          </a>
+        ))}
+      </nav>
+
+      {section === "archive" ? (
+        <div className="dashboard-section-page dashboard-section-page--archive">
       <section className="hero">
         <div className="hero__copy">
           <p className="eyebrow">{t(locale, "fieldbookEyebrow")}</p>
-          <h1>{t(locale, "heroTitleBefore")}<br /><em>{t(locale, "heroTitleAfter")}</em></h1>
+          <h1 tabIndex={-1}>{t(locale, "heroTitleBefore")}<br /><em>{t(locale, "heroTitleAfter")}</em></h1>
         </div>
         <div className="hero__note">
           <span>{t(locale, "productRuleLabel")}</span>
@@ -278,23 +341,6 @@ function Dashboard() {
               </button>
             ))}
           </nav>
-          <div className="local-settings">
-            <span>{t(locale, "localControls")}</span>
-            <label><input type="checkbox" disabled={!settingsReady || !hasConsent} checked={settings.observerEnabled} onChange={(event) => void setSetting("observerEnabled", event.target.checked)} /><i />{t(locale, "annotateAndCollect")}</label>
-            <label><input type="checkbox" checked={settings.showBadges} onChange={(event) => void setSetting("showBadges", event.target.checked)} /><i />{t(locale, "showPageBadges")}</label>
-            <TimelineFilterSettings
-              disabled={!settingsReady}
-              locale={locale}
-              onChange={(key, value) => void setSetting(key, value)}
-              settings={settings}
-            />
-            <LanguageSwitch
-              disabled={!settingsReady}
-              locale={locale}
-              value={settings.uiLocale}
-              onChange={(uiLocale) => void setSetting("uiLocale", uiLocale)}
-            />
-          </div>
         </aside>
 
         <section className="records-panel">

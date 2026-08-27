@@ -8,10 +8,10 @@ export default defineConfig({
       reporter: ["text", "html"],
       include: [
         "src/domain/**/*.ts",
-        "src/background/{action-state,data-change-broadcast}.ts",
-        "src/content/{badge,extension-context,observation-signatures,observer-panel,periodic-rescan,process-scheduler,x-adapter}.ts",
+        "src/background/{action-state,consent-entry,data-change-broadcast}.ts",
+        "src/content/{badge,extension-context,observation-signatures,observer-panel,periodic-rescan,process-scheduler,timeline-hide,x-adapter}.ts",
         "src/i18n/**/*.ts",
-        "src/storage/settings.ts",
+        "src/storage/{filter-rules,settings}.ts",
         "src/ui/hooks.ts",
         "src/ui/sidepanel.tsx",
         "src/ui/sidepanel-model.ts",

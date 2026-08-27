@@ -20,6 +20,8 @@ const HANDLE_PATTERN = /^@?([A-Za-z0-9_]{1,15})$/;
 export const USER_NAME_SELECTOR =
   '[data-testid="UserName"], [data-testid="User-Name"], [data-testid="User-Names"]';
 const TWEET_SURFACE_SELECTOR = 'article[data-testid="tweet"], [data-testid="UserCell"]';
+const USER_CONTENT_SELECTOR =
+  '[data-testid="tweetText"], [data-testid="card.layoutLarge.media"]';
 const AVATAR_LINK_SELECTOR =
   '[data-testid="Tweet-User-Avatar"] a[href], [data-testid="UserAvatar-Container"] a[href], [data-testid^="UserAvatar-Container-"] a[href]';
 const AVATAR_CONTAINER_SELECTOR =
@@ -104,9 +106,7 @@ function normalizedText(element: Element): string {
 
 function platformText(element: Element): string {
   const clone = element.cloneNode(true) as Element;
-  for (const userContent of clone.querySelectorAll(
-    '[data-testid="tweetText"], [data-testid="card.layoutLarge.media"]',
-  )) {
+  for (const userContent of clone.querySelectorAll(USER_CONTENT_SELECTOR)) {
     userContent.remove();
   }
   return normalizedText(clone);
@@ -258,6 +258,20 @@ function actionableEngagementLayers(doc: Document): Set<Element | "page"> {
 
 function cleanedText(text: string): string {
   return text.replace(FORMAT_CHARS, "").normalize("NFKC").trim();
+}
+
+export function postTextForCandidate(anchor: HTMLElement): string | null {
+  const article = anchor.closest<HTMLElement>('article[data-testid="tweet"]');
+  if (!article) return null;
+  const parts = [...article.querySelectorAll<HTMLElement>(USER_CONTENT_SELECTOR)]
+    .filter((element) =>
+      element.closest('article[data-testid="tweet"]') === article &&
+      !element.closest('[data-testid="HoverCard"]'),
+    )
+    .map((element) => cleanedText(element.textContent ?? ""))
+    .filter(Boolean);
+  const text = cleanedText(parts.join("\n"));
+  return text || null;
 }
 
 function handleFromText(text: string, allowBare = false): string | null {

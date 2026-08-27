@@ -53,6 +53,7 @@ export function renderObserverPanel(
   root.setAttribute("aria-live", "polite");
 
   if (model.collapsed) {
+    const launcher = element(doc, "div", "xro-observer-panel__launcher");
     const expand = element(doc, "button", "xro-observer-panel__bubble");
     expand.type = "button";
     const expandLabel = translate(model.locale, "dockExpandAria");
@@ -66,7 +67,17 @@ export function renderObserverPanel(
     bubbleDot.setAttribute("aria-hidden", "true");
     expand.append(bubbleMark, bubbleDot);
     expand.addEventListener("click", () => onCollapsedChange(false));
-    root.replaceChildren(expand);
+    if (model.state === "needs-consent") {
+      const consent = element(doc, "button", "xro-observer-panel__consent-action");
+      consent.type = "button";
+      consent.textContent = translate(model.locale, "dockReviewConsent");
+      consent.setAttribute("aria-label", translate(model.locale, "dockReviewConsentAria"));
+      consent.addEventListener("click", onOpen);
+      launcher.append(consent, expand);
+    } else {
+      launcher.append(expand);
+    }
+    root.replaceChildren(launcher);
 
     if (!existing) doc.documentElement.append(root);
     return root;
@@ -132,13 +143,17 @@ export function renderObserverPanel(
   button.type = "button";
   button.textContent = translate(
     model.locale,
-    model.state === "active" ? "dockViewDetails" : "dockOpenSidePanel",
+    model.state === "active"
+      ? "dockViewDetails"
+      : model.state === "needs-consent" ? "dockReviewConsent" : "dockOpenSidePanel",
   );
   button.setAttribute(
     "aria-label",
     translate(
       model.locale,
-      model.state === "active" ? "dockViewDetailsAria" : "dockStartAria",
+      model.state === "active"
+        ? "dockViewDetailsAria"
+        : model.state === "needs-consent" ? "dockReviewConsentAria" : "dockStartAria",
     ),
   );
   button.addEventListener("click", onOpen);

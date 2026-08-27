@@ -26,13 +26,16 @@
 15. 用户可见界面至少支持简体中文、英语和日语：插件页面默认跟随 Chrome UI 语言，Side Panel 和档案库可手工改成英语、日语或简体中文并记住选择；手工选择后 X 页面徽标和观察 dock 也改用该语言，选择跟随浏览器时仍跟随 X 页面语言，其他语言回退英语。
 16. 不存在用户可见或可持久化的“未知关系”：证据不足时不显示徽标、不写数据库；启动和安装时清理旧版本 unknown 记录，导入导出也过滤 unknown。
 17. 评论区作者的回复、转发、点赞三种控件都已渲染为真实可交互节点并以 `disabled` / `aria-disabled` / `inert` 明确禁用，且同一浮层或页面层存在三项均可操作的正常帖子时，可作为 `blocked-interaction-restriction`；完整加载、没有进度条且同时缺少 following/follower 链接的已显示作者浮窗，可独立作为 `blocked-profile-summary-restriction`。控件尚未渲染、只有 testid 空壳、滚动锁定 `pointer-events: none`、虚拟列表 `aria-hidden` 单元格、只有转发不可用、普通“帖子不可用”或用户正文不得触发。图片查看器按帖子详情识别，但不得用背后时间线当对照。blocked-by 与我单向关注应紧邻 `@handle` 之前显著标注，并在本地档案已知后回标以后出现的同 handle 卡片。
-18. X 页面观察 dock 可由右上角 `×` 收起为保留运行状态点的 NB 悬浮球；点击悬浮球恢复完整概览，收起偏好保存在扩展本地设置并在刷新后保持。
+18. X 页面观察 dock 可由右上角 `×` 收起为保留运行状态点的 NB 悬浮球；点击悬浮球恢复完整概览，收起偏好保存在可同步设置并在刷新后保持；Chrome 未登录或关闭同步时仍在本机工作。
 19. 已完整加载并显示的作者浮窗只可补充同 handle 卡片的普通关系证据：`*-unfollow` 表示我已关注，`*-follow` 表示我未关注，`userFollowIndicator` 表示 TA 关注了我；取关控件存在但 follow indicator 不存在时可识别为我单向关注。不得跨作者复用浮窗证据，`hidden`、`inert`、`aria-hidden` 或样式隐藏的旧浮窗不得参与判断。
 20. 观察器运行但本地记录为零时，X 页面 dock 与 Side Panel 空状态必须明确提示：首页时间线和评论区需要用户悬停作者头像或 ID，由 X 显示关系浮窗后才能被动读取；不得让用户误以为观察器已扫描所有作者但没有结果。
 21. 页面识别采用混合实时机制：MutationObserver 响应新增节点、关键属性与关系文案变化，观察器运行且页面可见时每 2 秒进行一次兜底复扫，页面重新获得焦点或从后台恢复时立即复扫。复扫必须单航执行并复用签名去重，不得因轮询重复写历史；签名只能在 service worker 确认持久化后提交，使瞬时消息失败可以在后续复扫重试；后台隐藏页不做定期复扫。一个 X 标签页的新观察或档案页的确认、删除、导入、清空必须由 service worker 广播缓存失效，使其他已打开 X 标签页及时回标或移除本地已知关系。已打开的 Side Panel 与档案页必须监听设置存储变化，使当前 viewer 排除和观察开关跨扩展上下文即时一致。
 22. 未确认的关系变化必须尽量显示可归因的具体事件：当前已是 `mutual` 时一律显示“互关”。当前是我单向关注时默认显示“单向关注”；只有历史比对证明对方曾经关注我、现在我仍关注且对方不再关注才显示“对方取关”：`mutual → following_only` 或 `follows_you_only → following_only`。`mutual → follows_you_only` 显示“你已取关”，任意已知非 blocked 状态变为 `blocked_by` 显示“对方拉黑”。明确的 `following=false` 且 `followsYou=false` 是内部可持久化的 `none`：可覆盖旧的可见关系，但不得新建用户、不得显示徽标、不得计入概览，包括 `follows_you_only → none`。Who-to-follow / 跟隨誰等建议卡上只有 Follow 按钮时是 unknown，不是 none。双方同时变化、无法单方归因的切换保留通用“关系变化”，不得把用户自己的关注/取关误说成对方行为。X 页面观察 dock 只用一个“有变化”数字汇总所有未确认事件；Side Panel、页面徽标和档案记录显示具体事件。
 23. Side Panel 的互关、我单向关注、TA 关注了我、TA 拉黑了我分类数字必须是键盘可达的筛选按钮；变化提示也可筛选全部未确认变化。再次点击当前分类恢复全部最近观察，空分类显示明确空状态。点击具体用户整行必须由该用户手势在新标签页打开其标准 X Profile；档案库的头像、显示名和 @handle 也必须打开同一资料。不得自动打开、预取或遍历资料页。
-24. 可选时间线过滤默认关闭：彻底隐藏已静音账号（即使互关），以及隐藏扩展已经确认拉黑了你的账号。作用于首页、搜索、通知和帖子详情/评论区中的帖子单元格；个人主页、浮窗和关注列表保持可见。开关出现在 Chrome Options/选项页、Side Panel 和关系档案库，三处通过 `chrome.storage.local` 同步。过滤只改变当前浏览器显示，不点击静音/拉黑，不枚举完整名单，也不把静音列表写入关系数据库。
+24. 可选时间线过滤默认关闭：彻底隐藏已静音账号（即使互关），以及隐藏扩展已经确认拉黑了你的账号。作用于首页、搜索、通知和帖子详情/评论区中的帖子单元格；个人主页、浮窗和关注列表保持可见。开关出现在 Chrome Options/选项页、Side Panel 和关系档案库，三处通过 `chrome.storage.sync` 同步。过滤只改变当前浏览器显示，不点击静音/拉黑，不枚举完整名单，也不把静音列表写入关系数据库。
+25. 小型偏好使用 `chrome.storage.sync` 跟随用户启用的 Chrome Sync；未登录 Chrome、关闭同步或离线时仍作为本机设置工作。关系 users/observations 和当前 X `viewerHandle` 不同步：前者留在 IndexedDB，后者留在 `chrome.storage.local`。旧 local 设置只在 sync 无值时迁入，不能覆盖另一设备已有的 sync 设置。
+26. 提供默认关闭的自定义黑名单规则过滤：v1 支持 X handle 精确列表、显示名称文字/安全正则、当前帖子正文文字/安全正则，每条规则可单独启停并设置 ISO 到期时间。规则在关系档案库本地编辑，以独立 JSON v1 上传/下载；导入必须经 Zod 严格校验，支持本地文件、公开 HTTPS JSON 与公开 Gist，默认按稳定规则 id 合并并可明确选择全量替换。规则文档只存 `chrome.storage.local`，不进入 Chrome Sync；小型总开关 `hideByFilterRules` 可同步。远程文件只在用户点击后读取一次，按来源申请 optional host permission，不后台订阅、不发送本地规则或帖子正文。内容只在本地当场匹配且不保存。过滤仍只改变允许页面中的 DOM 显示，不隐藏 Profile/HoverCard/UserCell/关注列表，不执行任何 X 账户操作。完整协议见 [自定义黑名单规则 v1](filter-rules.md)。
+27. 未完成当前同意版本时，X 页面展开 dock 的主按钮以及收起悬浮球旁的独立高对比按钮都必须显示“查看说明并同意”；工具栏 action 图标右键菜单也提供同名入口。所有入口只打开 Side Panel 的完整显著披露，打开失败时才回退到本地 dashboard，不得直接写入同意。完成同意后右键入口隐藏，内建“选项”菜单继续保留。
 
 ## 明确不做
 
@@ -41,7 +44,7 @@
 - 不点击任何 X 按钮；
 - 不关注、取关、拉黑、静音或执行任何其他 X 状态变更；
 - 不主动调用 X 私有网络接口，也不拦截网络；可以读取 X 已经为当前可见账号载入到页面 UI store 的关系字段；
-- 不上传云端。
+- 不把关系档案或 `viewerHandle` 上传云端；小型偏好可由 Chrome 自带的 Sync 服务同步，不经过开发者服务器。
 
 ## 验收标准
 
@@ -51,10 +54,12 @@
 - content script 不直接写页面 origin 的 IndexedDB；观察通过 service worker 写入扩展数据库。
 - 已知关系变化创建历史并标记 changed；内部 unknown 在持久化前被丢弃，旧 unknown 数据自动清理。
 - 管理页可完成确认变化、查看历史、导出、导入、删除单个记录和清空全部本地数据。
-- 生产 Manifest 仅匹配 `https://x.com/*`，且不包含 `tabs`、`scripting`、`cookies` 或 `webRequest` 权限。
+- 自定义规则的三种类型、启停、到期与 OR 语义有单元测试；无效/未知字段、重复 id/handle、不安全正则、超过 1 MiB 的文件、非 HTTPS URL、多 JSON Gist 和被拒绝的 host permission 都必须安全失败且不覆盖现有规则。
+- 生产 Manifest 仅匹配 `https://x.com/*`，常驻 API 权限只有 `contextMenus`、`storage`、`sidePanel`，且不包含 `tabs`、`scripting`、`cookies` 或 `webRequest` 权限。
+- 远程规则导入只能通过 `https://*/*` optional host permission 在用户手势中按来源授权；未授权时扩展其余功能不受影响。
 - 所有自动检查、构建校验和 skill 校验通过。
 - `en`、`ja`、`zh_CN` Manifest 语言目录完整；三种运行时语言的关系标签、首次披露、操作提示和时间格式均可用且没有明显文案溢出。
-- X 页面 dock 的完整面板与悬浮球可双向切换，键盘可达，并在浅色、暗黑和窄屏下保持可用。
+- X 页面 dock 的完整面板与悬浮球可双向切换，键盘可达，并在浅色、暗黑和窄屏下保持可用；未同意时展开面板、收起状态和 action 右键菜单均有明确入口，且入口不能绕过披露直接同意。
 - 评论区卡片本身没有关系提示时，匹配作者的完整浮窗仍可补全 ordinary relationship；不匹配的浮窗不得改变该卡片结果。
 - MutationObserver 漏掉节点复用、属性更新或异步浮窗时，2 秒可见页兜底复扫能够恢复标注；多个触发同时发生时不并发扫描、不重复写 observation，未确认的消息仍可重试，扩展上下文失效后停止全部 Observer、定时器与焦点/Chrome 事件监听。
 - 关系变化从已有 `previousRelationship`、`currentRelationship` 和 `hasChanged` 动态推导三类可归因事件，不改变数据库 schema；确认变化后页面恢复显示当前基础关系，dock 的变化总数相应减少。

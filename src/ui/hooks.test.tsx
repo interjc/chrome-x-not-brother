@@ -2,11 +2,11 @@ import { act, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ObserverSettings } from "../domain/types";
-import { SETTINGS_KEY } from "../storage/settings";
+import { LOCAL_SETTINGS_KEY, SETTINGS_KEY } from "../storage/settings";
 import { useObserverSettings } from "./hooks";
 
 const initialSettings: ObserverSettings = {
-  consentVersion: 1,
+  consentVersion: 3,
   observerEnabled: true,
   showBadges: true,
   dockCollapsed: false,
@@ -14,6 +14,7 @@ const initialSettings: ObserverSettings = {
   uiLocale: "auto",
   hideMutedAccounts: false,
   hideBlockedByAccounts: false,
+  hideByFilterRules: false,
   sidePanelTab: "status",
 };
 
@@ -39,10 +40,17 @@ describe("useObserverSettings", () => {
       areaName: string,
     ) => void = () => undefined;
     const removeListener = vi.fn();
+    let syncedSettings = { ...initialSettings, viewerHandle: undefined };
+    let localSettings = { viewerHandle: initialSettings.viewerHandle };
     vi.stubGlobal("chrome", {
       storage: {
         local: {
-          get: vi.fn().mockResolvedValue({ [SETTINGS_KEY]: initialSettings }),
+          get: vi.fn(async () => ({ [LOCAL_SETTINGS_KEY]: localSettings })),
+          set: vi.fn().mockResolvedValue(undefined),
+          remove: vi.fn().mockResolvedValue(undefined),
+        },
+        sync: {
+          get: vi.fn(async () => ({ [SETTINGS_KEY]: syncedSettings })),
           set: vi.fn().mockResolvedValue(undefined),
         },
         onChanged: {
@@ -64,15 +72,30 @@ describe("useObserverSettings", () => {
     const nextSettings: ObserverSettings = {
       ...initialSettings,
       observerEnabled: false,
-      viewerHandle: "interjc",
     };
+    syncedSettings = { ...nextSettings, viewerHandle: undefined };
     await act(async () => {
       listener({
-        [SETTINGS_KEY]: { oldValue: initialSettings, newValue: nextSettings },
-      }, "local");
+        [SETTINGS_KEY]: { oldValue: initialSettings, newValue: syncedSettings },
+      }, "sync");
     });
 
     expect(states.at(-1)).toEqual({ settings: nextSettings, ready: true });
+
+    localSettings = { viewerHandle: "interjc" };
+    await act(async () => {
+      listener({
+        [LOCAL_SETTINGS_KEY]: {
+          oldValue: { viewerHandle: null },
+          newValue: localSettings,
+        },
+      }, "local");
+    });
+
+    expect(states.at(-1)).toEqual({
+      settings: { ...nextSettings, viewerHandle: "interjc" },
+      ready: true,
+    });
     await act(async () => root.unmount());
     expect(removeListener).toHaveBeenCalledOnce();
   });

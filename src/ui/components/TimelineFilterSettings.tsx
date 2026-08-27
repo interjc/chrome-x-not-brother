@@ -12,6 +12,11 @@ const FILTERS = [
     label: "hideBlockedByAccountsLabel",
     description: "hideBlockedByAccountsDescription",
   },
+  {
+    key: "hideByFilterRules",
+    label: "hideByFilterRulesLabel",
+    description: "hideByFilterRulesDescription",
+  },
 ] as const;
 
 export function TimelineFilterSettings({
@@ -19,12 +24,14 @@ export function TimelineFilterSettings({
   disabled = false,
   locale,
   detailed = false,
+  onEditFilterRules,
   onChange,
 }: {
   settings: ObserverSettings;
   disabled?: boolean;
   locale: AppLocale;
   detailed?: boolean;
+  onEditFilterRules?: () => void;
   onChange: <Key extends keyof ObserverSettings>(
     key: Key,
     value: ObserverSettings[Key],
@@ -36,19 +43,31 @@ export function TimelineFilterSettings({
     <div className={`timeline-filters${detailed ? " timeline-filters--detailed" : ""}`}>
       <span>{t("timelineFiltersHeading")}</span>
       {FILTERS.map((item) => (
-        <label key={item.key} title={t(item.description)}>
-          <input
-            checked={settings[item.key]}
-            disabled={disabled}
-            onChange={(event) => onChange(item.key, event.target.checked)}
-            type="checkbox"
-          />
-          <i />
-          <span>
-            <strong>{t(item.label)}</strong>
-            {detailed ? <small>{t(item.description)}</small> : null}
-          </span>
-        </label>
+        <div className="timeline-filters__item" key={item.key}>
+          <label title={t(item.description)}>
+            <input
+              checked={settings[item.key]}
+              disabled={disabled}
+              onChange={(event) => onChange(item.key, event.target.checked)}
+              type="checkbox"
+            />
+            <i />
+            <span>
+              <strong>{t(item.label)}</strong>
+              {detailed ? <small>{t(item.description)}</small> : null}
+            </span>
+          </label>
+          {item.key === "hideByFilterRules" && onEditFilterRules ? (
+            <button
+              className="timeline-filters__edit-rules"
+              type="button"
+              onClick={onEditFilterRules}
+            >
+              {t("editFilterRules")}
+              <span aria-hidden="true">↗</span>
+            </button>
+          ) : null}
+        </div>
       ))}
     </div>
   );

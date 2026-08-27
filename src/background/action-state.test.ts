@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_SETTINGS } from "../storage/settings";
+import { CURRENT_CONSENT_VERSION, DEFAULT_SETTINGS } from "../storage/settings";
 import { actionPresentation } from "./action-state";
 
 describe("toolbar action presentation", () => {
@@ -13,7 +13,7 @@ describe("toolbar action presentation", () => {
   it("shows ON only while the consented observer is active", () => {
     expect(actionPresentation({
       ...DEFAULT_SETTINGS,
-      consentVersion: 1,
+      consentVersion: CURRENT_CONSENT_VERSION,
       observerEnabled: true,
     }, "en")).toMatchObject({
       badgeText: "ON",
@@ -24,7 +24,7 @@ describe("toolbar action presentation", () => {
   it("distinguishes a user-paused observer from first-run setup", () => {
     const result = actionPresentation({
       ...DEFAULT_SETTINGS,
-      consentVersion: 1,
+      consentVersion: CURRENT_CONSENT_VERSION,
       observerEnabled: false,
     }, "ja");
     expect(result.badgeText).toBe("!");

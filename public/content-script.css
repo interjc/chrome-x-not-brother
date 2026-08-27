@@ -225,7 +225,8 @@
 }
 
 .xro-observer-panel__collapse:focus-visible,
-.xro-observer-panel__bubble:focus-visible {
+.xro-observer-panel__bubble:focus-visible,
+.xro-observer-panel__consent-action:focus-visible {
   outline: 3px solid #78bfea;
   outline-offset: 2px;
 }
@@ -235,6 +236,49 @@
   border: 0;
   box-shadow: none;
   width: auto;
+}
+
+.xro-observer-panel__launcher {
+  align-items: center;
+  display: flex;
+  gap: 9px;
+}
+
+.xro-observer-panel__consent-action {
+  align-items: center;
+  appearance: none;
+  background: #e9a83a;
+  border: 2px solid var(--xro-panel-ink);
+  border-radius: 999px;
+  box-shadow: 4px 4px 0 rgb(22 34 27 / 0.2);
+  color: #16221b;
+  cursor: pointer;
+  display: inline-flex;
+  font: 800 11px/1.2 "Avenir Next", "Hiragino Sans", "Microsoft YaHei", sans-serif;
+  min-height: 42px;
+  padding: 8px 14px;
+  transition: background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+  white-space: nowrap;
+}
+
+.xro-observer-panel__consent-action::before {
+  align-items: center;
+  background: #16221b;
+  border-radius: 50%;
+  color: #f7c86d;
+  content: "!";
+  display: inline-flex;
+  font: 900 11px/1 sans-serif;
+  height: 20px;
+  justify-content: center;
+  margin-inline-end: 7px;
+  width: 20px;
+}
+
+.xro-observer-panel__consent-action:hover {
+  background: #f7c86d;
+  box-shadow: 2px 2px 0 rgb(22 34 27 / 0.24);
+  transform: translate(2px, 2px);
 }
 
 .xro-observer-panel__bubble {
@@ -313,6 +357,8 @@
 .xro-observer-panel__action::after { content: "↗"; float: right; }
 .xro-observer-panel__action:hover { background: #daf783; }
 .xro-observer-panel__action:focus-visible { outline: 3px solid #78bfea; outline-offset: -3px; }
+.xro-observer-panel--needs-consent .xro-observer-panel__action { background: #e9a83a; }
+.xro-observer-panel--needs-consent .xro-observer-panel__action:hover { background: #f7c86d; }
 
 :root[data-xro-theme="dark"] .xro-badge--mutual { background: #183b25; color: #b8efa9; }
 :root[data-xro-theme="dark"] .xro-badge--following_only { background: #493817; color: #ffd77b; }
@@ -359,6 +405,7 @@
 @media (prefers-reduced-motion: reduce) {
   .xro-observer-panel__dot { animation: none !important; }
   .xro-observer-panel__bubble { transition: none; }
+  .xro-observer-panel__consent-action { transition: none; }
   [data-xro-hiding-tweet] {
     display: none !important;
     height: 0 !important;

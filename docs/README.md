@@ -12,6 +12,7 @@
 | [国际化设计](localization.md) | 中英日自动切换、词库边界、扩展语言与商店本地化 |
 | [技术架构](architecture.md) | 运行时数据流、模块边界和安全约束 |
 | [数据模型](data-model.md) | users、observations、合并和迁移规则 |
+| [自定义黑名单规则](filter-rules.md) | filter-rules JSON v1、匹配语义、限制与导入权限 |
 | [开发指南](development.md) | nvm、安装、构建、目录与日常流程 |
 | [测试指南](testing.md) | 自动检查和 Chrome 手工验收清单 |
 | [维护指南](maintenance.md) | X DOM 漂移、数据迁移与故障处置 |

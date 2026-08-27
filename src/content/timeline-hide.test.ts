@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { UserRecord } from "../domain/types";
+import { createEmptyFilterRuleSet } from "../domain/filter-rules";
+import { compileFilterRuleSet } from "../domain/filter-rule-matching";
 import {
   applyTimelineHiding,
   createMuteMemory,
@@ -193,6 +195,77 @@ describe("timeline hide DOM", () => {
     expect(
       doc.querySelector('[data-testid="cellInnerDiv"]')?.hasAttribute(HIDDEN_TWEET_ATTRIBUTE),
     ).toBe(true);
+  });
+
+  it("hides by handle, display name, or current post content rules", () => {
+    const doc = fixture(`
+      <div data-testid="cellInnerDiv">
+        <article data-testid="tweet">
+          <div data-testid="User-Name" data-handle="promoter"><a href="/Promoter">Promoter</a></div>
+          <div data-testid="tweetText">Limited GIVEAWAY today</div>
+        </article>
+      </div>`);
+    const filterRules = compileFilterRuleSet({
+      ...createEmptyFilterRuleSet(),
+      rules: [{
+        id: "content",
+        label: "Giveaways",
+        enabled: true,
+        expiresAt: null,
+        type: "content",
+        match: { mode: "regex", value: "giveaway\\s+today", caseSensitive: false },
+      }],
+    });
+
+    applyTimelineHiding({
+      root: doc,
+      candidates: [candidate(doc, "Promoter", { displayName: "Official Promoter" })],
+      hideMutedAccounts: false,
+      hideBlockedByAccounts: false,
+      filterRules,
+      pageUsers: new Map(),
+      records: new Map(),
+      muteMemory: createMuteMemory(),
+    });
+
+    expect(
+      doc.querySelector('[data-testid="cellInnerDiv"]')?.hasAttribute(HIDDEN_TWEET_ATTRIBUTE),
+    ).toBe(true);
+  });
+
+  it("reveals rule-hidden posts when custom filtering is disabled", () => {
+    const doc = fixture(`
+      <div data-testid="cellInnerDiv">
+        <article data-testid="tweet">
+          <div data-testid="User-Name" data-handle="alice"><a href="/Alice">Alice</a></div>
+        </article>
+      </div>`);
+    const alice = candidate(doc, "Alice");
+    const filterRules = compileFilterRuleSet({
+      ...createEmptyFilterRuleSet(),
+      rules: [{
+        id: "alice",
+        label: "Alice",
+        enabled: true,
+        expiresAt: null,
+        type: "user_handles",
+        handles: ["alice"],
+      }],
+    });
+    const commonInput = {
+      root: doc,
+      candidates: [alice],
+      hideMutedAccounts: false,
+      hideBlockedByAccounts: false,
+      pageUsers: new Map(),
+      records: new Map(),
+      muteMemory: createMuteMemory(),
+    };
+
+    applyTimelineHiding({ ...commonInput, filterRules });
+    expect(doc.querySelectorAll(`[${HIDDEN_TWEET_ATTRIBUTE}]`)).toHaveLength(1);
+    applyTimelineHiding(commonInput);
+    expect(doc.querySelectorAll(`[${HIDDEN_TWEET_ATTRIBUTE}]`)).toHaveLength(0);
   });
 
   it("hides listed muted or blocked-by authors immediately without animation", () => {

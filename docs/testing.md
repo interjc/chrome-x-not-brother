@@ -32,13 +32,17 @@ npm run skills:validate
 - observation 签名只在对应用户确认持久化后提交；未确认发送保持可重试，已确认的相同证据保持去重；
 - service worker 把数据变化广播到有 content script 的标签页并忽略无接收端标签页；档案页变更会使已打开 X 页清除本地关系缓存；
 - Side Panel 真实 React 组件中的分类按钮、`aria-pressed` 切换、同分类再次取消、变化筛选、筛选空状态、本人排除、标准 `https://x.com/<handle>` 新标签链接，以及语言选择器默认跟随浏览器并在手工切换后即时改写面板文案；
-- 已打开扩展页面通过共享 settings hook 接收其他上下文的 viewer handle、观察器和界面语言设置变化，并在卸载时移除监听；
+- 已打开扩展页面通过共享 settings hook 接收 `chrome.storage.sync` 偏好和 `chrome.storage.local` viewer handle 的变化，并在卸载时移除监听；旧 local 偏好迁移不覆盖已有 sync 值，sync 单项保持低于 8 KB；
 - 观察器总数为零时，dock 与 Side Panel 三语空状态把悬停说成补充路径；首条观察后 dock 恢复可见证据说明；
+- 未同意时，展开 dock 与收起悬浮球旁都有三语、键盘可达的显著披露入口；action 图标右键菜单项可打开 Side Panel、失败时回退 dashboard，完成同意后自动隐藏且不影响内建“选项”；
 - 首页时间线可从 `/handle/status/:id`、头像链接或带双向隔离符的 `@handle` 识别作者，证据不足时保持 unknown 且不把引用帖回退成外层作者；
 - 当前页 UI store、tweet 祖先 fiber，以及页面已完成的 TweetDetail 等 GraphQL 响应中的 `following` / `followed_by` / `blocked_by` / `muting` 可把首页和评论区 unknown 卡片提升为已知关系，并供可选时间线过滤使用；store 里已有查看者时仍要继续读回复作者；缺少完整布尔值不得编造；DOM 已可收集证据时 store 不得覆盖；
 - 可选时间线过滤默认关闭；打开后互关静音账号和本地已知 blocked-by 账号的首页帖子单元格被隐藏，个人主页/浮窗/UserCell 不隐藏；关闭过滤后单元格恢复；
+- 自定义规则 Zod schema 规范化 handle，拒绝未知字段、重复 id/handle、无效或可能灾难性回溯的正则和超限 JSON；handle、显示名、正文、启停与到期匹配正确，关闭总开关或规则到期后帖子恢复；
+- content script 仅通过 service worker 的 `filter-rules:get` 取得已校验规则快照；未同意或总开关关闭时后台拒绝返回，content bundle 不包含 Zod 或 `safe-regex2`；
+- 规则文件导入按稳定 id 合并或明确替换；公开 HTTPS/Gist URL 解析、单 JSON 选择、截断 Raw 文件、超时/响应大小/HTTP/非法 JSON 错误都安全失败；规则只写 `chrome.storage.local`；
 - CSV escaping 与 JSON schema validation；
-- Manifest 文件、最小权限和所需 build artifacts；
+- Manifest 文件、最小常驻权限、仅用于用户手势远程导入的 optional HTTPS host permission 和所需 build artifacts；
 - `en`、`ja`、`zh_CN` Manifest catalog、语言归一化、翻译占位符、关系与来源名称。
 
 ## Chrome 手工验收
@@ -46,8 +50,8 @@ npm run skills:validate
 使用专门测试配置，不提供账号凭据给开发工具。
 
 1. 加载 `dist/`，确认安装时只声明访问 `x.com`，并自动打开扩展自己的安装引导页。
-2. 同意前确认工具栏显示琥珀色 `!`；打开 X 并滚动，确认没有关系徽标且 IndexedDB 没有新增观察，同时页面 dock 提示尚未开启。
-3. 在引导页或 Side Panel 核对显著披露后主动同意；确认工具栏变为酸性黄 `ON`，刷新 X 后观察开始。
+2. 同意前确认工具栏显示琥珀色 `!`；打开 X 并滚动，确认没有关系徽标且 IndexedDB 没有新增观察，同时页面 dock 提示尚未开启。展开 dock 的主按钮应写明“查看说明并同意”；收起后旁边仍有独立高对比入口。两者用鼠标、Enter、Space 均能打开完整披露，但不会自动同意。
+3. 右键工具栏图标，确认“查看隐私说明并同意…”与 Chrome 内建“选项”同时存在；前者打开 Side Panel 披露。核对披露后主动同意，确认同意菜单项消失、内建“选项”仍在、工具栏变为酸性黄 `ON`，刷新 X 后观察开始。
 4. 打开 X 首页，确认自己关注的作者在无需悬停时出现单向关注或互关徽标；完全没有载入关系字段的卡片不得出现“未知”徽标，也不得进入最近观察。
 5. 打开自己的 following 页面，验证可见 UserCell 的 following 证据。
 6. 打开自己的 followers 页面，验证 follows-you 证据。
@@ -75,8 +79,10 @@ npm run skills:validate
 28. 在 DevTools 中观察一分钟：快速滚动、悬停、切换 X 内页时不得出现并发异常；同一关系和来源不得每 2 秒增加 observationCount，扩展重新加载失效后不再保留轮询或 focus/visibility 监听。
 29. 同时打开两个 X 标签页：在标签 A 识别新关系后，标签 B 最迟约 2 秒回标；在档案页确认变化或删除记录后，标签 B 的缓存结果及时更新。普通非 X 标签没有接收端时不得产生未捕获错误，也不得要求新增 `tabs` 权限。
 30. 在 Side Panel 和关系档案库页脚点击“发送反馈”，确认新标签页打开 `https://github.com/interjc/chrome-x-not-brother/issues`，且没有因此申请额外权限或发送本地观察数据。
-31. 侧栏默认在状态标签显示用户列表；切换到选项后出现语言、徽标和时间线过滤，状态列表被收起。右键工具栏图标选择 **选项**，确认侧栏打开并停在选项标签；两个时间线过滤默认关闭。打开“彻底隐藏已静音账号”后，首页互关但仍被静音的帖子消失，对方主页仍可打开；打开“隐藏拉黑了我的账号”后，本地已记录 blocked-by 的首页帖子以及帖子详情/评论区里该作者的回复都会消失。档案里已有的账号应立刻消失；第一次检测到的账号会先收起再隐藏。档案库的同一开关即时同步。
+31. 侧栏默认在状态标签显示用户列表；切换到选项后出现语言、徽标和时间线过滤，状态列表被收起。右键工具栏图标选择 **选项**，确认侧栏打开并停在选项标签；三个时间线过滤默认关闭。打开“彻底隐藏已静音账号”后，首页互关但仍被静音的帖子消失，对方主页仍可打开；打开“隐藏拉黑了我的账号”后，本地已记录 blocked-by 的首页帖子以及帖子详情/评论区里该作者的回复都会消失。档案里已有的账号应立刻消失；第一次检测到的账号会先收起再隐藏。档案库的同一开关即时同步。
+32. 从旧版本升级时，先在 `chrome.storage.local` 准备旧设置：若 sync 为空，确认偏好迁入 sync、`viewerHandle` 迁入新的 local key；若 sync 已有不同偏好，确认保留 sync 值。未登录 Chrome 或关闭同步时修改偏好仍应立即保存并在重启后保留；登录并启用 Chrome Sync 后由 Chrome 在其他配置恢复这些小型偏好，关系档案和 `viewerHandle` 不应出现。
+33. 在 Side Panel、Options 和档案库确认“编辑规则与查看教程”紧邻“应用自定义黑名单规则”开关；前两处点击后打开 `dashboard.html#filter-rules`，规则区自动展开、滚动且键盘焦点落在折叠标题，档案库内点击则原地完成相同行为。确认教程完整解释 handle、文字、正则、时效、Gist 合并和隐私，并且示例 JSON 可解析且通过 schema。随后添加三种规则并测试启停、大小写和未来/已过期时间；打开总开关后只隐藏允许页面的匹配帖子，Profile、HoverCard、UserCell 和关注列表不隐藏，正文不出现在 IndexedDB 或导出。下载规则 JSON 后清空并用文件恢复；再从只有一个 JSON 文件的公开 Gist 导入，确认 Chrome 只在点击后请求 GitHub host 权限。拒绝权限、使用 HTTP、超过 1 MiB、多个 JSON 文件或无效正则时，现有规则保持不变且出现可读错误。关闭总开关后全部规则隐藏结果恢复。
 
 ## 边界检查
 
-在 Chrome DevTools Network 和 X 页面行为中确认：扩展没有发起 X API 请求、没有自动滚动或导航、没有对 X 按钮触发 click、没有云端遥测或远程脚本。
+在 Chrome DevTools Network 和 X 页面行为中确认：扩展没有发起 X API 请求、没有自动滚动或导航、没有对 X 按钮触发 click、没有开发者云端遥测或远程脚本。只有用户点击远程规则导入时才访问已授权的公开 HTTPS/Gist 来源，且请求不含 X 数据或本地规则。Chrome 自带的设置同步不包含关系档案、规则文档或 `viewerHandle`。

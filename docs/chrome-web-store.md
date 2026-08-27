@@ -43,7 +43,7 @@ npm run package
 - `package.json` 与 `public/manifest.json` 版本完全一致，且高于已发布版本；
 - 包内没有源码映射、测试数据、真实 X 账号截图、开发缓存或秘密；
 - 没有远程脚本、混淆代码或运行时下载代码；
-- 权限仍只有 `storage`、`sidePanel` 和精确的 `https://x.com/*` content-script match；
+- 常驻 API 权限仍只有 `contextMenus`、`storage`、`sidePanel`，站点访问只有精确的 `https://x.com/*` content-script match；远程规则导入只声明未在安装时授予的 `https://*/*` optional host permission，并在用户点击加载后按来源请求；
 - `npm run validate:dist` 通过。
 
 官方的 [准备扩展](https://developer.chrome.com/docs/webstore/prepare/) 要求上传完整 ZIP，并建议在提交前以 unpacked 方式充分测试。当前 ZIP 远低于 2 GB 的上传上限。
@@ -55,7 +55,7 @@ npm run package
 1. 首次安装后观察器默认关闭，收集前显示显著披露；
 2. 用户必须主动点击“同意并开始”才会标注和写入 IndexedDB；
 3. 暂停后不再标注或收集；删除与清空确实移除本地数据；
-4. Network 面板没有开发者服务器、遥测、X API 或远程代码请求；
+4. Network 面板没有开发者服务器、遥测、X API 或远程代码请求；仅在用户点击远程规则导入时，才向已授权的公开 HTTPS/Gist 来源请求静态 JSON；
 5. 扩展没有自动滚动、导航、点击或任何关注/取关/拉黑/静音行为；
 6. 英语、日语、简体中文 X 界面只在证据足够时给出关系；
 7. “TA 拉黑了我”只在主动浏览时由明确平台提示、带同页对照的三项互动限制，或已加载的无关系计数浮窗机会式记录，不宣传为完整扫描。
@@ -85,6 +85,7 @@ npm run package
 - 支持互关、我单向关注、TA 关注了我、机会式 blocked-by 和变化；证据不足不标注或保存；
 - 本地 Side Panel 与关系档案库；
 - JSON/CSV 导出、JSON 合并导入和删除；
+- 本地自定义黑名单规则，以及由用户主动触发的公开 JSON/Gist 一次性导入；
 - 数据不发送给开发者；
 - 不自动滚动、不扫描整站、不调用 X API、不执行账户操作；
 - 识别结果取决于 X 当前显示的界面证据；证据不足时没有标注，也可能因 X 改版需要更新。
@@ -96,8 +97,10 @@ npm run package
 | 权限/访问 | Dashboard 中的说明 |
 | --- | --- |
 | `https://x.com/*` | 在用户主动浏览 X 时，读取当前页面已经显示的账号身份和关系提示，以注入本地关系徽标并形成观察记录。 |
-| `storage` | 在 `chrome.storage.local` 保存同意状态、观察器开关、徽标开关、dock 收起偏好、可选时间线过滤和用于排除本人的当前 handle。 |
+| `contextMenus` | 在工具栏 action 图标右键菜单中提供“查看隐私说明并同意”入口；完成当前同意后隐藏，不读取网页右键内容。 |
+| `storage` | 在 `chrome.storage.sync` 保存同意状态、观察器开关、徽标、语言、dock/侧栏状态和可选时间线过滤；当前 X handle 仅存 `chrome.storage.local` 用于排除本人，关系档案仍在 IndexedDB。 |
 | `sidePanel` | 在 Chrome 原生侧栏中显示本地关系概览和首次使用披露。 |
+| Optional `https://*/*` | 只在用户点击从公开 URL/Gist 加载规则后，按目标来源请求读取权限；安装时不授予，不用于后台访问、X 数据或远程代码。 |
 
 ### 商店链接
 
@@ -141,7 +144,7 @@ Dashboard 的 Additional fields 填这些公开 HTTPS 地址：
 - web browsing activity（仅限扩展功能所需的 `x.com` 来源 URL）；
 - 数据用途仅为扩展的单一用户可见功能；
 - 不出售、不用于广告、信用评估或与单一用途无关的用途；
-- 不传输观察记录给开发者或第三方；侧栏/档案库展示头像时浏览器可能请求 `unavatar.io/x/{handle}`，失败后再请求已保存的 X CDN URL；
+- 不传输观察记录给开发者或第三方；侧栏/档案库展示头像时浏览器可能请求 `unavatar.io/x/{handle}`，失败后再请求已保存的 X CDN URL；用户主动远程导入规则时，公开文件/GitHub host 会收到常规网络元数据，但不会收到 X 页面内容、本地关系或现有规则；
 - 遵守 Limited Use 要求。
 
 不要为了减少申报项目而漏报。Dashboard 选项和商店说明、扩展首次同意界面、[隐私政策](../terms/privacy.md) 必须相互一致。
@@ -170,7 +173,8 @@ https://interjc.github.io/chrome-x-not-brother/terms.html
 - **为什么保存来源 URL？** 为用户提供本地可核对的观察出处；不发送到外部。
 - **为什么需要用户名？** 用户必须知道徽标和历史对应哪个 X 账号。
 - **是否自动化 X？** 否。没有点击、滚动、导航、X API 或后台遍历代码。
-- **数据在哪里？** users/observations 在扩展 origin 的 IndexedDB；设置在 `chrome.storage.local`；没有后端。
+- **数据在哪里？** users/observations 在扩展 origin 的 IndexedDB，当前 X `viewerHandle` 和完整过滤规则在 `chrome.storage.local`；小型偏好及规则总开关在 `chrome.storage.sync`，由用户启用的 Chrome Sync 处理，未登录或关闭同步时仍保存在本机；没有开发者后端。
+- **为什么有 optional HTTPS host access？** 用户可以从自己指定的公开 JSON/Gist 导入规则；只有点击加载后才按来源请求，拒绝不影响其他功能，不保存订阅或后台刷新。
 - **如何删除？** 可删除单条、清空全部，或卸载扩展删除其 origin 数据。
 
 回答必须以当前代码为准。如果代码后来新增同步、遥测、AI、远程头像代理或 X API，必须先更新权限、同意流程、隐私政策和商店披露，再提交。

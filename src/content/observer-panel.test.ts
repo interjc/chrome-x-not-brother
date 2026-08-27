@@ -22,11 +22,18 @@ describe("observer panel", () => {
   });
 
   it("reuses one root while switching to consent guidance", () => {
+    const onOpen = vi.fn();
     renderObserverPanel(document, { state: "active", summary: null, locale: "en", collapsed: false }, () => undefined, () => undefined);
-    renderObserverPanel(document, { state: "needs-consent", summary: null, locale: "ja", collapsed: false }, () => undefined, () => undefined);
+    renderObserverPanel(document, { state: "needs-consent", summary: null, locale: "ja", collapsed: false }, onOpen, () => undefined);
 
     expect(document.querySelectorAll("[data-xro-overlay]")).toHaveLength(1);
     expect(document.querySelector("[data-xro-overlay]")?.textContent).toContain("まだ有効ではありません");
+    const consent = document.querySelector<HTMLButtonElement>(
+      ".xro-observer-panel__action",
+    );
+    expect(consent?.textContent).toContain("確認して同意");
+    consent?.click();
+    expect(onOpen).toHaveBeenCalledOnce();
     expect(document.querySelector("[data-xro-overlay]")?.textContent).not.toContain("Observed");
   });
 
@@ -85,5 +92,28 @@ describe("observer panel", () => {
 
     bubble?.click();
     expect(onCollapsedChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("keeps a prominent consent entry next to the collapsed floating button", () => {
+    const onOpen = vi.fn();
+    const onCollapsedChange = vi.fn();
+    const panel = renderObserverPanel(document, {
+      state: "needs-consent",
+      summary: null,
+      locale: "zh-CN",
+      collapsed: true,
+    }, onOpen, onCollapsedChange);
+
+    const consent = panel.querySelector<HTMLButtonElement>(
+      ".xro-observer-panel__consent-action",
+    );
+    const bubble = panel.querySelector<HTMLButtonElement>(".xro-observer-panel__bubble");
+    expect(consent?.textContent).toContain("同意");
+    expect(consent?.getAttribute("aria-label")).toContain("隐私说明");
+
+    consent?.click();
+    bubble?.click();
+    expect(onOpen).toHaveBeenCalledOnce();
+    expect(onCollapsedChange).toHaveBeenCalledWith(false);
   });
 });

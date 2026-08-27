@@ -1,6 +1,7 @@
 import type { RelationshipKind, SourceType, UserRecord } from "../domain/types";
+import type { CompiledFilterRuleSet } from "../domain/filter-rule-matching";
 import type { PageUserRelationship } from "./page-store";
-import type { ExtractedCandidate } from "./x-adapter";
+import { postTextForCandidate, type ExtractedCandidate } from "./x-adapter";
 
 export const HIDDEN_TWEET_ATTRIBUTE = "data-xro-hidden-tweet";
 export const HIDING_TWEET_ATTRIBUTE = "data-xro-hiding-tweet";
@@ -168,6 +169,7 @@ export function applyTimelineHiding(input: {
   candidates: ExtractedCandidate[];
   hideMutedAccounts: boolean;
   hideBlockedByAccounts: boolean;
+  filterRules?: CompiledFilterRuleSet | null;
   pageUsers: Map<string, PageUserRelationship>;
   records: Map<string, UserRecord>;
   muteMemory: MuteMemory;
@@ -178,27 +180,31 @@ export function applyTimelineHiding(input: {
     const current = desired.get(cell);
     desired.set(cell, current === undefined ? animate : current && animate);
   };
-  if (input.hideMutedAccounts || input.hideBlockedByAccounts) {
+  if (input.hideMutedAccounts || input.hideBlockedByAccounts || input.filterRules) {
     for (const candidate of input.candidates) {
       const userKey = candidate.observation.userKey;
       const pageUser = input.pageUsers.get(userKey);
       const alreadyKnown =
         input.muteMemory.has(userKey) || input.records.has(userKey);
       const muting = input.muteMemory.remember(userKey, pageUser?.muting ?? null);
-      if (
-        !shouldHideTimelineAuthor({
-          sourceType: candidate.observation.sourceType,
-          hideMutedAccounts: input.hideMutedAccounts,
-          hideBlockedByAccounts: input.hideBlockedByAccounts,
-          muting,
-          blockedBy: pageUser?.blockedBy ?? null,
-          observedRelationship: candidate.observation.relationship,
-          storedRelationship: input.records.get(userKey)?.currentRelationship,
-        })
-      ) continue;
+      const hiddenByRelationship = shouldHideTimelineAuthor({
+        sourceType: candidate.observation.sourceType,
+        hideMutedAccounts: input.hideMutedAccounts,
+        hideBlockedByAccounts: input.hideBlockedByAccounts,
+        muting,
+        blockedBy: pageUser?.blockedBy ?? null,
+        observedRelationship: candidate.observation.relationship,
+        storedRelationship: input.records.get(userKey)?.currentRelationship,
+      });
+      const matchingRule = input.filterRules?.match({
+        userKey,
+        displayName: candidate.observation.displayName,
+        contentText: postTextForCandidate(candidate.anchor),
+      }) ?? null;
+      if (!hiddenByRelationship && !matchingRule) continue;
       const cell = hidableTweetCell(candidate.anchor);
       if (!cell) continue;
-      const animate = !alreadyKnown;
+      const animate = Boolean(matchingRule) || !alreadyKnown;
       addCell(cell, animate);
       const context = orphanSocialContext(cell);
       if (context) addCell(context, animate);

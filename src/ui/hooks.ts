@@ -3,10 +3,9 @@ import { useCallback, useEffect, useState } from "react";
 import type { ObserverSettings, UserRecord } from "../domain/types";
 import { db } from "../storage/database";
 import {
-  coerceSettings,
   DEFAULT_SETTINGS,
   getSettings,
-  SETTINGS_KEY,
+  isSettingsStorageChange,
   updateSettings,
 } from "../storage/settings";
 
@@ -49,12 +48,18 @@ export function useObserverSettings(): {
       changes: Record<string, chrome.storage.StorageChange>,
       areaName: string,
     ): void => {
-      if (!active || areaName !== "local" || !changes[SETTINGS_KEY]) return;
-      const saved = changes[SETTINGS_KEY].newValue as
-        | Partial<ObserverSettings>
-        | undefined;
-      setSettings(coerceSettings(saved));
-      setSettingsReady(true);
+      if (!active || !isSettingsStorageChange(changes, areaName)) return;
+      void getSettings().then(
+        (next) => {
+          if (!active) return;
+          setSettings(next);
+          setSettingsReady(true);
+        },
+        (error: unknown) => {
+          if (!active) return;
+          console.error("Could not refresh Not Brother settings", error);
+        },
+      );
     };
 
     chrome.storage.onChanged.addListener(handleStorageChanged);

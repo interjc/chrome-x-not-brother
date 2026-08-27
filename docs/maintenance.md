@@ -40,7 +40,7 @@
 
 ## 扩展上下文失效
 
-在 `chrome://extensions` 重新加载开发版后，已经打开的 X 标签页仍可能短暂保留旧 content script。Chrome 会使旧脚本的扩展 API 上下文失效，典型日志是 `Extension context invalidated`，旧代码还可能继续访问缺失的 `chrome.storage.local`。
+在 `chrome://extensions` 重新加载开发版后，已经打开的 X 标签页仍可能短暂保留旧 content script。Chrome 会使旧脚本的扩展 API 上下文失效，典型日志是 `Extension context invalidated`，旧代码还可能继续访问缺失的 `chrome.storage.sync` / `chrome.storage.local`。
 
 content script 必须把这种情况视为生命周期结束：捕获 promise rejection、停止定时器、断开 MutationObserver，并移除旧徽标和观察 dock；不得把它作为普通运行时错误持续重试。开发者重新加载扩展后仍需刷新所有已打开的 X 标签页，注入新版本脚本。错误页保存的是历史记录，复验前先点击 Clear all，再刷新目标页。
 
@@ -53,6 +53,8 @@ content script 必须把这种情况视为生命周期结束：捕获 promise re
 如果读取的数据类型、用途、传输对象或保存位置发生实质变化，提高 `CURRENT_CONSENT_VERSION`，同步修改首次披露与隐私文档，并在新版本继续观察前重新取得用户同意。纯文案修正不得随意重置同意。
 
 `viewerHandle` 仅用于排除本人。修改账号识别逻辑时同时验证：扫描阶段不生成本人 observation、UI 过滤旧记录、service worker 删除已存本人数据。
+
+小型偏好属于 `chrome.storage.sync`，`viewerHandle` 属于 `chrome.storage.local`，users/observations 属于 IndexedDB。不要用切片方式把关系档案塞进 sync；保持单个设置项低于 8 KB、总量远低于 100 KB，并控制写入频率。未登录、关闭同步和离线不需要自建 fallback，Chrome 会让 sync 区域继续在本机工作。迁移旧 local 设置时，已有 sync 值优先，写入新区域成功后才能删除旧 key。
 
 ## 依赖
 

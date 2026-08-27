@@ -17,12 +17,12 @@ Python is managed through pyenv. The repository currently has no Python runtime 
 ## Architecture
 
 - `src/content/`: inspect already-rendered X DOM, read already-loaded page UI store relationship fields through `page-store.ts` and the main-world `page-bridge.ts`, pair display names and avatars to the same handle, combine semantic mutation events with a visible-page 2-second fallback rescan, serialize triggers, normalize evidence, discard internal unknown, inject badges, and send known observation drafts whose signatures are committed only after persistence succeeds.
-- `src/content/observer-panel.ts`: render the X-page state/summary dock, its accessible panel/floating-ball toggle, and forward its user gesture to Side Panel.
-- `src/background/`: persist messages, remove the signed-in viewer, expose summaries, show toolbar state, and initialize Chrome side-panel/onboarding behavior.
+- `src/content/observer-panel.ts`: render the X-page state/summary dock, its accessible panel/floating-ball toggle, the pre-consent disclosure CTA, and forward its user gesture to Side Panel.
+- `src/background/`: persist messages, remove the signed-in viewer, expose summaries, show toolbar state, initialize Chrome side-panel/onboarding behavior, and maintain the localized pre-consent action context-menu entry.
 - `src/domain/`: types, relationship resolution, data merge semantics, derived unfollowed-you/you-unfollowed/blocked-you presentation, mutual-always-mutual display, none-for-both-unfollowed, import, and export.
 - `src/i18n/`: type-checked English, Japanese, and Simplified Chinese runtime catalogs, locale resolution, relationship labels, and source labels.
-- `src/storage/`: IndexedDB access and local settings.
-- `src/ui/`: side panel, its pure filter model, user-gesture profile links, dashboard, Options page, shared components, presentation, and a shared storage-change-aware settings hook.
+- `src/storage/`: IndexedDB access, small Chrome-synced preferences, local viewer exclusion state, local filter-rule documents, and conflict-safe legacy settings migration.
+- `src/ui/`: side panel, its pure relationship filter model, user-gesture profile links, dashboard and custom-rule manager, Options page, shared components, presentation, and storage-change-aware settings/rule listeners.
 - `src/content/timeline-hide.ts`: opt-in Home/search/notification hiding of muted or known blocked-by tweet cells.
 - `public/`: manifest, `_locales` Manifest catalogs, extension HTML shells, content CSS, and icons.
 - `assets/branding/`: ImageGen source art used to derive Chrome icon sizes.

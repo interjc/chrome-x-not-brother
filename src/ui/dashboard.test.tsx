@@ -5,7 +5,7 @@ import type { ObserverSettings, UserRecord } from "../domain/types";
 const testState = vi.hoisted(() => ({
   users: [] as UserRecord[],
   settings: {
-    consentVersion: 1,
+    consentVersion: 3,
     observerEnabled: true,
     showBadges: true,
     dockCollapsed: false,
@@ -13,6 +13,7 @@ const testState = vi.hoisted(() => ({
     uiLocale: "zh-CN",
     hideMutedAccounts: false,
     hideBlockedByAccounts: false,
+    hideByFilterRules: false,
     sidePanelTab: "status",
   } as ObserverSettings,
 }));
@@ -79,9 +80,10 @@ function user(handle: string, displayName: string): UserRecord {
 
 describe("dashboard profile links", () => {
   beforeEach(async () => {
+    window.location.hash = "";
     testState.users = [user("thsottiaux", "Tibo")];
     testState.settings = {
-      consentVersion: 1,
+      consentVersion: 3,
       observerEnabled: true,
       showBadges: true,
       dockCollapsed: false,
@@ -89,6 +91,7 @@ describe("dashboard profile links", () => {
       uiLocale: "zh-CN",
       hideMutedAccounts: false,
       hideBlockedByAccounts: false,
+      hideByFilterRules: false,
       sidePanelTab: "status",
     };
     vi.stubGlobal("chrome", {
@@ -97,6 +100,17 @@ describe("dashboard profile links", () => {
         getManifest: () => ({ version: "0.4.9" }),
         sendMessage: vi.fn(),
       },
+      storage: {
+        local: {
+          get: vi.fn(async () => ({})),
+          set: vi.fn(async () => undefined),
+        },
+        onChanged: {
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+        },
+      },
+      permissions: { request: vi.fn(async () => true) },
     });
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     document.documentElement.lang = "";
@@ -117,5 +131,19 @@ describe("dashboard profile links", () => {
     );
     expect(person?.textContent).toContain("Tibo");
     expect(person?.textContent).toContain("@thsottiaux");
+  });
+
+  it("opens the blacklist editor in place from the nearby filter action", async () => {
+    const manager = document.querySelector<HTMLDetailsElement>("#filter-rules");
+    expect(manager?.open).toBe(false);
+
+    const editRules = document.querySelector<HTMLButtonElement>(
+      ".local-settings .timeline-filters__edit-rules",
+    );
+    await act(async () => editRules?.click());
+
+    expect(window.location.hash).toBe("#filter-rules");
+    expect(manager?.open).toBe(true);
+    expect(document.activeElement).toBe(manager?.querySelector("summary"));
   });
 });

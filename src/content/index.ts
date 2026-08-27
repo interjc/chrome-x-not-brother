@@ -1,4 +1,5 @@
 import type {
+  GetFilterRulesResponse,
   GetSummaryResponse,
   LookupUsersResponse,
   OpenSidePanelResponse,
@@ -18,13 +19,18 @@ import type {
   ObserverSettings,
   UserRecord,
 } from "../domain/types";
+import {
+  compileFilterRuleSet,
+  type CompiledFilterRuleSet,
+} from "../domain/filter-rule-matching";
 import { getDocumentLocale, resolveUiLocale, type AppLocale } from "../i18n";
 import {
   CURRENT_CONSENT_VERSION,
   getSettings,
-  SETTINGS_KEY,
+  isSettingsStorageChange,
   updateSettings,
 } from "../storage/settings";
+import { isFilterRulesStorageChange } from "../storage/filter-rule-keys";
 import {
   removeRelationshipBadge,
   removeRelationshipBadges,
@@ -87,19 +93,62 @@ let processScheduler: ProcessScheduler | null = null;
 let hideScheduler: ProcessScheduler | null = null;
 let extensionListenersRegistered = false;
 let pageStoreListenerRegistered = false;
+let filterRulesLoaded = false;
+let filterRulesLoading: Promise<void> | null = null;
+let compiledFilterRules: CompiledFilterRuleSet = compileFilterRuleSet({ rules: [] });
+
+function ensureFilterRulesLoaded(): Promise<void> {
+  if (filterRulesLoaded) return Promise.resolve();
+  if (filterRulesLoading) return filterRulesLoading;
+  filterRulesLoading = chrome.runtime.sendMessage({ type: "filter-rules:get" })
+    .then((response: GetFilterRulesResponse | { ok: false; error: string }) => {
+      if (!response.ok) throw new Error(response.error);
+      compiledFilterRules = compileFilterRuleSet(response.ruleSet);
+      filterRulesLoaded = true;
+    }).catch((error: unknown) => {
+      compiledFilterRules = compileFilterRuleSet({ rules: [] });
+      filterRulesLoaded = true;
+      throw error;
+    }).finally(() => {
+      filterRulesLoading = null;
+    });
+  return filterRulesLoading;
+}
 
 function handleStorageChanged(
   changes: Record<string, chrome.storage.StorageChange>,
   areaName: string,
 ): void {
-  if (areaName === "local" && changes[SETTINGS_KEY]) {
+  if (isSettingsStorageChange(changes, areaName)) {
     scheduleHide();
     scheduleProcess();
+  }
+  if (isFilterRulesStorageChange(changes, areaName)) {
+    filterRulesLoaded = false;
+    if (
+      !latestSettings?.hideByFilterRules ||
+      latestSettings.consentVersion < CURRENT_CONSENT_VERSION
+    ) {
+      compiledFilterRules = compileFilterRuleSet({ rules: [] });
+      scheduleHide();
+      return;
+    }
+    void ensureFilterRulesLoaded().then(() => {
+      scheduleHide();
+      scheduleProcess();
+    }).catch((error: unknown) => {
+      handleRuntimeError(error, "Could not refresh custom filter rules");
+      scheduleHide();
+    });
   }
 }
 
 function timelineHidingEnabled(settings: ObserverSettings | null): boolean {
-  return Boolean(settings?.hideMutedAccounts || settings?.hideBlockedByAccounts);
+  return Boolean(
+    settings?.hideMutedAccounts ||
+    settings?.hideBlockedByAccounts ||
+    settings?.hideByFilterRules
+  );
 }
 
 function handleRuntimeMessage(message: RuntimeMessage): false {
@@ -152,6 +201,7 @@ function applyHideNow(): void {
     candidates,
     hideMutedAccounts: settings.hideMutedAccounts,
     hideBlockedByAccounts: settings.hideBlockedByAccounts,
+    filterRules: settings.hideByFilterRules ? compiledFilterRules : null,
     pageUsers: latestPageUsers,
     records: recordCache,
     muteMemory,
@@ -185,6 +235,9 @@ function stopContentScript(): void {
   removeRelationshipBadges();
   clearTimelineHiding(document);
   muteMemory.clear();
+  filterRulesLoaded = false;
+  filterRulesLoading = null;
+  compiledFilterRules = compileFilterRuleSet({ rules: [] });
   latestPageUsers = new Map();
   removeObserverPanel(document);
 }
@@ -226,11 +279,29 @@ async function openSidePanel(): Promise<void> {
     const response = (await chrome.runtime.sendMessage({
       type: "sidepanel:open",
     })) as OpenSidePanelResponse;
-    if (!response.ok) showObserverPanelOpenHint(document, pageUiLocale());
+    if (!response.ok) await handleSidePanelOpenFailure();
   } catch (error) {
     if (isExtensionContextInvalidated(error)) stopContentScript();
-    else showObserverPanelOpenHint(document, pageUiLocale());
+    else await handleSidePanelOpenFailure();
   }
+}
+
+async function handleSidePanelOpenFailure(): Promise<void> {
+  if (
+    latestSettings &&
+    latestSettings.consentVersion < CURRENT_CONSENT_VERSION
+  ) {
+    try {
+      await chrome.runtime.sendMessage({ type: "dashboard:open" });
+      return;
+    } catch (error) {
+      if (isExtensionContextInvalidated(error)) {
+        stopContentScript();
+        return;
+      }
+    }
+  }
+  showObserverPanelOpenHint(document, pageUiLocale());
 }
 
 function renderPanel(settings: ObserverSettings): void {
@@ -347,6 +418,14 @@ async function processPage(): Promise<void> {
   const settings = await getSettings();
   if (stopped) return;
   latestSettings = settings;
+  if (settings.hideByFilterRules && !filterRulesLoaded) {
+    try {
+      await ensureFilterRulesLoaded();
+    } catch (error) {
+      handleRuntimeError(error, "Could not load custom filter rules");
+    }
+    if (stopped) return;
+  }
   renderPanel(settings);
   const hasConsent = settings.consentVersion >= CURRENT_CONSENT_VERSION;
   const hidingEnabled = timelineHidingEnabled(settings);
@@ -486,7 +565,7 @@ if (hasExtensionContext()) {
     window,
     delayMs: HIDE_DELAY_MS,
     task: async () => applyHideNow(),
-    onError: (error) => handleRuntimeError(error, "Could not hide muted or blocked posts"),
+    onError: (error) => handleRuntimeError(error, "Could not apply timeline filters"),
   });
 
   chrome.storage.onChanged.addListener(handleStorageChanged);

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ObserverSettings, UserRecord } from "../domain/types";
 
 const defaultSettings: ObserverSettings = {
-  consentVersion: 1,
+  consentVersion: 3,
   observerEnabled: true,
   showBadges: true,
   dockCollapsed: false,
@@ -11,6 +11,7 @@ const defaultSettings: ObserverSettings = {
   uiLocale: "auto",
   hideMutedAccounts: false,
   hideBlockedByAccounts: false,
+  hideByFilterRules: false,
   sidePanelTab: "status",
 };
 
@@ -18,7 +19,7 @@ const testState = vi.hoisted(() => ({
   users: [] as UserRecord[],
   sendMessage: vi.fn(),
   settings: {
-    consentVersion: 1,
+    consentVersion: 3,
     observerEnabled: true,
     showBadges: true,
     dockCollapsed: false,
@@ -26,6 +27,7 @@ const testState = vi.hoisted(() => ({
     uiLocale: "auto",
     hideMutedAccounts: false,
     hideBlockedByAccounts: false,
+    hideByFilterRules: false,
     sidePanelTab: "status",
   } as ObserverSettings,
 }));
@@ -165,10 +167,20 @@ describe("SidePanel interactions", () => {
     const checkboxes = [...document.querySelectorAll<HTMLInputElement>(
       ".timeline-filters input[type='checkbox']",
     )];
-    expect(checkboxes).toHaveLength(2);
+    expect(checkboxes).toHaveLength(3);
     expect(checkboxes.every((input) => !input.checked)).toBe(true);
     await act(async () => checkboxes[0]?.click());
     expect(checkboxes[0]?.checked).toBe(true);
+
+    const editRules = document.querySelector<HTMLButtonElement>(
+      ".timeline-filters__edit-rules",
+    );
+    expect(editRules?.textContent).toContain("Edit rules & view guide");
+    await act(async () => editRules?.click());
+    expect(testState.sendMessage).toHaveBeenCalledWith({
+      type: "dashboard:open",
+      section: "filter-rules",
+    });
   });
 
   it("defaults the language switcher to follow the browser language", async () => {

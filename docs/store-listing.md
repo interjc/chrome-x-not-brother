@@ -1,6 +1,6 @@
 # Chrome Web Store 三语文案
 
-本文提供 Not Brother 的 Chrome Web Store 可粘贴文案。提交者必须在每次发布前对照当前代码、权限、隐私政策和 Dashboard 字段复核；如果以后增加 X 账户操作、同步、遥测、AI 或远程服务，不得继续复用本文的“不执行账户操作”声明。
+本文提供 Not Brother 的 Chrome Web Store 可粘贴文案。提交者必须在每次发布前对照当前代码、权限、隐私政策和 Dashboard 字段复核；如果以后增加 X 账户操作、关系档案同步、遥测、AI 或远程服务，不得继续复用本文的“不执行账户操作”或“观察档案仅本地”声明。
 
 各语言的 Summary 必须与 `public/_locales/<locale>/messages.json` 中的 `extensionDescription` 完全一致，并保持在 132 个字符以内；构建校验会检查长度。
 
@@ -20,13 +20,21 @@ Not Brother is a local-first relationship observer for X. While you browse x.com
 
 The extension can identify mutual follows, accounts you follow that do not follow you back, accounts that follow you, opportunistic evidence that an account has blocked you, and changes between previously observed states. Mutual stays labeled mutual. One-way following stays labeled one-way unless history shows they unfollowed you. Newly blocked states get a specific label; if neither account follows the other, no badge is shown. The compact X-page panel keeps one aggregate change count. Insufficient evidence produces no label and no saved record.
 
-Use the Chrome side panel for a compact overview or open the Relationship Fieldbook to search, filter, sort, review changes, export JSON or CSV, merge a JSON backup, and delete local records. The observer panel on X can minimize to an NB floating button and retains its state locally.
+Use the Chrome side panel for a compact overview or open the Relationship Fieldbook to search, filter, sort, review changes, export JSON or CSV, merge a JSON backup, and delete local records. The observer panel on X can minimize to an NB floating button. Small preferences such as language, controls, and panel state can follow the user's Chrome Sync account; when signed out or sync is disabled, they remain on the current device. Relationship observations and the current X handle never sync.
 
-Not Brother only processes account identity and relationship hints rendered on the x.com page you are viewing. It does not auto-scroll, crawl profiles, read direct messages or cookies, call X APIs, click follow, unfollow, block, or mute controls, or send observation data to the developer. X interface changes can affect detection until the extension is updated.
+Optional custom blacklist rules can hide posts by exact X handle, display-name text, or post-content text/regular expression, with per-rule enablement and expiration. Rules are edited locally and can be imported from a local JSON file or, after an explicit site-permission prompt, fetched once from a public HTTPS JSON file or public Gist. The full rule document stays local and is separate from the relationship archive.
+
+Not Brother processes account identity and relationship hints rendered on the x.com page you are viewing. When you enable a custom content rule, it also matches the current visible post text locally without storing or transmitting that text. It does not auto-scroll, crawl profiles, read direct messages or cookies, call X APIs, click follow, unfollow, block, or mute controls, or send observation data to the developer. X interface changes can affect detection until the extension is updated.
 
 Not Brother is an independent extension and is not affiliated with, endorsed by, or sponsored by X Corp.
 
 Source code is available at https://github.com/interjc/chrome-x-not-brother. Report problems and ask for support on the repository Issues page.
+
+### Next release notes
+
+- Syncs small preferences through the user's enabled Chrome Sync account while keeping the relationship archive and current X handle local. Existing local preferences migrate without overwriting settings already present in Chrome Sync.
+- Adds local Zod-validated blacklist rules for handles, display names, and post content, with expiration, JSON file import/export, and one-time public HTTPS/Gist import behind optional per-site permission.
+- Makes first-run consent easier to find with a prominent entry beside the minimized NB button and an action-icon context-menu shortcut; both open the full disclosure before consent.
 
 ### Version 0.5.4 release notes
 
@@ -102,13 +110,20 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 扩展可以识别互相关注、我关注但对方没有关注我、对方关注了我、对方拉黑了我的机会式证据，以及前后观察状态的变化。已经互关就显示“互关”。我单向关注默认显示“单向关注”；只有跟历史比对确认对方取关，或对方拉黑，才用更具体的文案。双方都已取消关注时不显示徽标。X 页面概览仍只保留一个变化合计数字。证据不足时不会显示标签，也不会保存记录。
 
-你可以通过 Chrome 侧边栏查看简明概览，也可以打开关系档案库进行搜索、筛选、排序、核对变化、导出 JSON 或 CSV、合并 JSON 备份和删除本地记录。X 页面上的观察概览可收起为 NB 悬浮球，并在本机记住状态。
+你可以通过 Chrome 侧边栏查看简明概览，也可以打开关系档案库进行搜索、筛选、排序、核对变化、导出 JSON 或 CSV、合并 JSON 备份和删除本地记录。X 页面上的观察概览可收起为 NB 悬浮球。语言、开关和面板状态等小型偏好可跟随用户启用的 Chrome Sync；未登录或关闭同步时仍保存在当前设备。关系观察档案和当前 X handle 永不同步。
 
-不是兄弟只处理你当前正在查看的 x.com 页面已经渲染的账号身份与关系提示。它不会自动滚动或遍历资料页，不读取私信或 Cookie，不调用 X API，不点击关注、取关、拉黑或静音控件，也不会把观察数据发送给开发者。X 界面改版可能暂时影响识别，直到扩展完成适配。
+可选自定义黑名单规则可按 X handle 精确列表、显示名称文字或帖子内容文字/正则隐藏帖子，并支持逐条启停和到期时间。规则在本地编辑，可从本地 JSON 导入；在用户明确同意目标站点权限后，也可从公开 HTTPS JSON 或公开 Gist 读取一次。完整规则文档只留在本机，与关系档案分开。
+
+不是兄弟处理你当前正在查看的 x.com 页面已经渲染的账号身份与关系提示。只有你启用自定义内容规则时，才会在本地即时匹配当前可见帖子正文，且不保存或传输正文。它不会自动滚动或遍历资料页，不读取私信或 Cookie，不调用 X API，不点击关注、取关、拉黑或静音控件，也不会把观察数据发送给开发者。X 界面改版可能暂时影响识别，直到扩展完成适配。
 
 不是兄弟是独立开发的扩展，与 X Corp. 不存在隶属、认可或赞助关系。
 
 源码位于 https://github.com/interjc/chrome-x-not-brother。问题反馈与支持请使用仓库的 Issues 页面。
+
+### 下一版本更新说明
+
+- 小型偏好可通过用户启用的 Chrome Sync 同步，关系档案和当前 X handle 仍只保存在本机。旧 local 偏好迁移时不会覆盖 Chrome Sync 已有设置。
+- 未同意时，收起后的 NB 悬浮球旁会显示醒目入口，工具栏图标右键菜单也能打开完整隐私说明；入口不会直接代替用户同意。
 
 ### 0.5.4 更新说明
 
@@ -185,13 +200,20 @@ X に表示された関係の証拠へ注釈を付け、この Chrome プロフ�
 
 相互フォロー、自分だけがフォローしているアカウント、自分をフォローしているアカウント、相手からブロックされたことを示す状況的な証拠、以前の観察からの関係変化を識別できます。相互フォローはそのまま「相互」と表示します。片側のフォロー解除やブロックは具体的なラベルになり、双方ともフォローしていない場合はバッジを出しません。X ページの概要では一つの変化合計として表示します。証拠が足りない場合はラベルを表示せず、記録も保存しません。
 
-Chrome のサイドパネルでは概要を確認できます。関係アーカイブでは、検索、絞り込み、並べ替え、変化の確認、JSON または CSV のエクスポート、JSON バックアップの統合、ローカル記録の削除を行えます。X ページの観察概要は NB フローティングボタンに収納でき、その状態をローカルに保持します。
+Chrome のサイドパネルでは概要を確認できます。関係アーカイブでは、検索、絞り込み、並べ替え、変化の確認、JSON または CSV のエクスポート、JSON バックアップの統合、ローカル記録の削除を行えます。X ページの観察概要は NB フローティングボタンに収納できます。言語、スイッチ、パネル状態などの小さな設定は、有効な Chrome Sync で同期できます。未ログインまたは同期が無効な場合も現在の端末に保存されます。関係アーカイブと現在の X ハンドルは同期しません。
 
-兄貴じゃないが処理するのは、閲覧中の x.com ページに描画済みのアカウント情報と関係のヒントだけです。自動スクロール、プロフィール巡回、DM や Cookie の読み取り、X API の呼び出し、フォロー・フォロー解除・ブロック・ミュート操作、開発者への観察データ送信は行いません。X の画面構造が変わると、拡張機能が更新されるまで識別へ影響する場合があります。
+任意のカスタムブラックリストルールで、X ハンドルの完全一致、表示名、投稿内容の文字列／正規表現により投稿を隠せます。ルールごとに有効化と期限を設定できます。ローカル JSON から読み込めるほか、対象サイト権限を明示的に許可した後、公開 HTTPS JSON または公開 Gist を一度だけ取得できます。完全なルール文書はローカルだけに保存され、関係アーカイブとは別です。
+
+兄貴じゃないは、閲覧中の x.com ページに描画済みのアカウント情報と関係のヒントを処理します。カスタム内容ルールを有効にした場合だけ、表示中の投稿本文をローカル照合し、保存や送信はしません。自動スクロール、プロフィール巡回、DM や Cookie の読み取り、X API の呼び出し、フォロー・フォロー解除・ブロック・ミュート操作、開発者への観察データ送信は行いません。X の画面構造が変わると、拡張機能が更新されるまで識別へ影響する場合があります。
 
 兄貴じゃないは独立した拡張機能であり、X Corp. との提携、承認、スポンサー関係はありません。
 
 ソースコードは https://github.com/interjc/chrome-x-not-brother で公開しています。不具合報告とサポートはリポジトリの Issues ページをご利用ください。
+
+### 次回リリースの更新内容
+
+- 小さな設定をユーザーが有効にした Chrome Sync で同期し、関係アーカイブと現在の X ハンドルはローカルに保ちます。旧 local 設定の移行時も、Chrome Sync に既存の設定があれば上書きしません。
+- 未同意の場合、収納した NB ボタンの横に目立つ入口を表示し、ツールバーアイコンの右クリックメニューからも完全なプライバシー説明を開けます。入口だけで同意が確定することはありません。
 
 ### 0.5.4 更新内容
 
@@ -284,11 +306,19 @@ Not Brother runs only while the user actively browses x.com. It reads account na
 
 ### `storage`
 
-The extension uses `chrome.storage.local` to save the user's consent version, observer on/off state, page-badge preference, observer-panel minimized preference, optional timeline-filter preferences, and signed-in X handle used only to exclude the viewer from observations. Relationship records remain in the extension origin's local IndexedDB. No setting or observation is sent to the developer.
+The extension uses `chrome.storage.sync` to save small preferences: consent version, observer on/off state, page-badge preference, observer-panel minimized state, UI language, side-panel tab, and optional timeline-filter master switches. Chrome may sync them through the user's enabled Chrome Sync account; when signed out, sync is disabled, or offline, they remain available on the current device. The signed-in X handle and full custom-rule document stay in `chrome.storage.local`; relationship records remain in the extension origin's local IndexedDB. No setting, rule, or observation is sent to the developer.
+
+### `contextMenus`
+
+The extension adds one item to its own toolbar action menu so users who have not completed the current disclosure can find “Review privacy notice and agree.” Selecting it opens the full extension disclosure and does not inspect webpage context menus or record consent automatically. The item is hidden after consent.
 
 ### `sidePanel`
 
 The extension uses Chrome's side panel to show the prominent first-run data disclosure, observation controls, local relationship counts, recent observations, and a link to the full local archive.
+
+### Optional host access: `https://*/*`
+
+This is not granted at install. It lets a user explicitly import a rule snapshot from a public HTTPS JSON URL or public Gist. After the user clicks Load, Chrome requests access only to the required source. The extension makes no background subscription, sends no X page or local-rule data to that source, omits credentials, and does not use the permission for remote code. Denial leaves all other features working.
 
 ## Privacy practices worksheet
 
@@ -297,20 +327,20 @@ Dashboard 字段可能调整，提交时以实际界面为准。当前代码应�
 | Dashboard 类别 | 当前答案 | 说明 |
 | --- | --- | --- |
 | Personally identifiable information | Yes | X handle、显示名称和头像 URL 可能识别个人。 |
-| Website content | Yes | 读取 x.com 已显示的关系提示和账号区域。 |
+| Website content | Yes | 读取 x.com 已显示的关系提示和账号区域；启用内容规则时在本地即时匹配可见帖子正文但不保存。 |
 | Web history / browsing activity | Yes | 保存提供观察出处的当前 x.com 来源 URL。 |
 | Authentication information | No | 不读取密码、会话 Cookie 或 token。 |
-| Personal communications | No | 不读取私信或帖子正文。 |
+| Personal communications | No | 不读取私信；公开帖子正文属于上述 Website content，仅在用户启用规则时本地匹配且不保存。 |
 | Location, financial, health information | No | 功能不读取这些类别。 |
 | Data sale or advertising | No | 不出售数据，也不用于广告、信用或画像。 |
-| Data transfer | No developer/third-party transfer | 观察数据留在扩展本地存储；侧栏/档案库展示头像时浏览器可能请求 unavatar.io/x/{handle}，失败后再请求已保存的 X CDN URL。 |
+| Data transfer | Chrome preference sync and user-requested public rule fetches only; no developer transfer | 小型偏好可由 Chrome Sync 在用户浏览器间同步；关系观察、完整规则和 `viewerHandle` 留在本地。侧栏/档案库展示头像时浏览器可能请求 unavatar.io/x/{handle}，失败后再请求已保存的 X CDN URL。用户主动按 URL/Gist 导入时，浏览器只向公开来源请求规则文件，不发送 X 或本地数据。 |
 
 ## Reviewer notes
 
 可把下面的英语步骤粘贴到审核备注，并按提交版本调整：
 
 1. Install the extension. Its local onboarding page opens automatically, and observation remains disabled.
-2. Review the prominent disclosure and click “Agree and start local observation.”
+2. Open the disclosure from the onboarding page, the prominent X-page dock/floating entry, or the toolbar icon's “Review privacy notice and agree” context-menu item; then click “Agree and start local observation.” Opening an entry alone does not consent.
 3. Open x.com while signed in and browse normally. Relationship badges appear only where X renders sufficient evidence.
 4. Hover an author to let X display its standard hover card. The extension may use the matching card's visible follow indicators to annotate that author.
 5. Use the NB panel in the lower-right corner to open the side panel, or minimize it to a floating button and restore it.
@@ -326,7 +356,7 @@ Issues: https://github.com/interjc/chrome-x-not-brother/issues
 
 - Confirm all three descriptions advertise the same features and limitations.
 - Confirm the current version and release notes match `public/manifest.json`.
-- Confirm the permission justifications include every field stored in `chrome.storage.local`.
+- Confirm the permission justifications distinguish small preferences in `chrome.storage.sync`, local-only `viewerHandle`, and IndexedDB relationship records.
 - Confirm the public privacy policy URL is the GitHub Pages page `https://interjc.github.io/chrome-x-not-brother/privacy.html` and identifies the developer, contact method, and effective date.
 - Confirm Homepage URL is the GitHub repository and Support URL is the Issues page.
 - Remove every statement about “no account actions” before submission if the product later gains any X action shortcut, then update consent and privacy review first.

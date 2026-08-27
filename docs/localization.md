@@ -9,10 +9,10 @@ Not Brother 首版界面支持简体中文、英语和日语自动切换。国�
 | 表面 | 语言来源 | 原因 |
 | --- | --- | --- |
 | Manifest 名称、说明、Chrome 管理页 | Chrome `_locales` 解析 | 由 Chrome 在扩展启动前选择 |
-| Side Panel（状态/选项标签）、Relationship Fieldbook、Chrome 选项入口、工具栏运行时 title | 默认 `chrome.i18n.getUILanguage()`，可被设置里的 `uiLocale` 覆盖 | 与 Chrome 自身界面一致，并允许在侧栏选项标签手工切换 |
+| Side Panel（状态/选项标签）、Relationship Fieldbook、Chrome 选项/同意右键入口、工具栏运行时 title | 默认 `chrome.i18n.getUILanguage()`，可被设置里的 `uiLocale` 覆盖 | 与 Chrome 自身界面一致，并允许在侧栏选项标签手工切换 |
 | X 页面关系徽标、观察 dock | `uiLocale` 不是 `auto` 时用所选语言，否则用 X 文档的 `<html lang>`，缺失时回退 Chrome UI 语言 | 跟随浏览器时与宿主页面一致；手工切换后页面标签也一起改 |
 
-语言归一化规则：`zh-*` 使用 `zh-CN`，`ja-*` 使用 `ja`，`en-*` 使用 `en`；任何其他语言完整回退英语。Side Panel 与档案库提供界面语言选择器，默认选中“跟随浏览器语言”；选择英语、日语或简体中文后写入 `chrome.storage.local` 的 `uiLocale`。已打开的扩展页、工具栏 title、以及 X 页面上的关系徽标和观察 dock 都会即时切换。该偏好是展示设置，不写入 users/observations。旧设置缺少该字段时视为 `auto`。
+语言归一化规则：`zh-*` 使用 `zh-CN`，`ja-*` 使用 `ja`，`en-*` 使用 `en`；任何其他语言完整回退英语。Side Panel 与档案库提供界面语言选择器，默认选中“跟随浏览器语言”；选择英语、日语或简体中文后写入 `chrome.storage.sync` 的 `uiLocale`。已打开的扩展页、工具栏 title、以及 X 页面上的关系徽标和观察 dock 都会即时切换。该偏好是可同步的展示设置，不写入 users/observations；Chrome 未登录或关闭同步时仍保存在本机。旧设置缺少该字段时视为 `auto`。
 
 ## 两类词库
 
