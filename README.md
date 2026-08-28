@@ -126,9 +126,13 @@ X 页面右下角还有观察概览，可收成悬浮球。点「查看详情」
 
 导入框默认填入上面的社区示例地址，也可以一键重新填入。
 
-#### 共同分享拦截名单
+#### 共同分享拦截名单（Rules 配置分享站）
 
-规则适合公开协作。欢迎到 [chrome-x-not-brother-rules](https://github.com/interjc/chrome-x-not-brother-rules) 提交、复用或讨论拦截规则。扩展里的默认导入地址也指向该仓库。分享前请去掉个人账号、私密关键词和不该公开的内容。
+规则适合公开协作与共享。我们维护了专门的社区规则配置分享站：[chrome-x-not-brother-rules](https://github.com/interjc/chrome-x-not-brother-rules)（[https://github.com/interjc/chrome-x-not-brother-rules](https://github.com/interjc/chrome-x-not-brother-rules)）。
+
+- **规则分享与交流**：该仓库汇集了社区维护与推荐的各类预设规则集（例如营销推广号、批量关注/抽奖机器人、垃圾广告、特定领域高频噪音词等）。
+- **一键导入使用**：扩展内的默认导入地址（[filter-default.json](https://github.com/interjc/chrome-x-not-brother-rules/raw/refs/heads/main/rules/filter-default.json)）直接托管在该仓库中。你可以在该仓库中挑选适合自己的规则文件，复制其 GitHub Raw 链接，直接粘贴到扩展规则页的「加载地址」中一键导入。
+- **参与共建**：欢迎通过 Pull Request 分享你的实用规则集，或在 Issue 中交流过滤策略。分享前请务必去除个人账号、私密关键词与不宜公开的内容。
 
 #### 时间线上快速添加
 
@@ -156,6 +160,31 @@ X 页面右下角还有观察概览，可收成悬浮球。点「查看详情」
 
 - [隐私政策](https://interjc.github.io/chrome-x-not-brother/privacy.html)
 - [使用条款](https://interjc.github.io/chrome-x-not-brother/terms.html)
+
+## Agent Skills
+
+本项目内置了遵循 [Agent Skills](https://github.com/anthropics/skills) 标准的智能体技能（Skills），使 AI 编程助手（如 Antigravity、Claude Code、Cursor、Copilot 等）在参与扩展开发或协助编辑拦截规则时能够自动获得精准的架构约定与领域知识。
+
+### 包含的 Skills
+
+- [**`x-relationship-observer`**](skills/x-relationship-observer/SKILL.md)：面向「不是兄弟」扩展的开发、维护、调试、发版与测试。包含 X DOM 适配器约定、数据存储规范、本地隐私边界、混合复扫机制与发版质量检查清单。
+- [**`x-not-brother-rules`**](skills/x-not-brother-rules/SKILL.md)：面向拦截规则 JSON（`not-brother-filter-rules` v1）的阅读、解析、编写、安全正则校验与格式转换。协助用户或 AI 快速生成、检查并准备用于导入扩展的合法 JSON 配置文件。
+
+### 安装与使用
+
+推荐使用 `skills` CLI 工具一键添加本项目的 Skills 到你的 AI 助手：
+
+```bash
+npx skills add interjc/chrome-x-not-brother
+```
+
+也可以指定完整的 GitHub 仓库地址安装：
+
+```bash
+npx skills add https://github.com/interjc/chrome-x-not-brother
+```
+
+安装后，AI 助手在处理与本项目相关的代码开发或拦截规则编写时，会自动激活对应的 Skill 并遵循规范。
 
 ## 本地开发
 
