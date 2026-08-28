@@ -4,6 +4,8 @@
 
 `chrome.storage.sync` 保存同意版本、观察开关、页面徽标、观察 dock 的 `dockCollapsed` 展示偏好、插件界面语言 `uiLocale`、侧栏当前标签 `sidePanelTab`，以及默认关闭的 `hideMutedAccounts` / `hideBlockedByAccounts` / `hideByFilterRules`。这些小型偏好共用一个远低于 8 KB 单项上限的对象；users/observations 和规则文档不进入 sync。Chrome 未登录、关闭同步或离线时，`storage.sync` 仍在当前设备工作，Chrome 之后自行恢复账号同步。
 
+拦截计数（规则/静音/拉黑隐藏的帖子累计）保存在 `chrome.storage.local`，按登录 X handle 分命名空间：`notBrother.hideStats.v1.ns.{handle}`。只存整数，不存帖子正文或 status id。同一浏览会话内用页面内存里的 status id 去重后再累加。
+
 仅用于排除本人的 `viewerHandle` 单独保存在 `chrome.storage.local`，避免同一 Chrome 账号在不同设备登录不同 X 账号时串用排除对象。升级时若发现旧版 `chrome.storage.local` 设置：sync 尚无设置才把旧偏好复制过去；sync 已有设置时保留 sync 值；两种情况都把旧 `viewerHandle` 迁到新的 local key，确认写入后再删除旧对象。旧设置没有 `dockCollapsed` 时默认展开，没有 `uiLocale` 时默认 `auto`，没有 `sidePanelTab` 时默认状态页，没有时间线过滤字段时默认关闭。静音状态不写入 users/observations。
 
 从 0.4.0 起，`unknown` 只是 adapter/domain 的内部结果，不是数据库状态。content script 不发送它，service worker 和 repository 也会防御性拒绝；扩展启动和安装时清理旧版本遗留的 unknown users 与 observations。

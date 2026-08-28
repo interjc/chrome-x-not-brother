@@ -22,6 +22,14 @@ vi.mock("./hooks", async () => {
   const { useState } = await import("react");
   return {
     useUsers: () => ({ users: testState.users, loading: false }),
+    useFilterRuleStatus: () => ({
+      status: { applying: false, ruleCount: 0, activeRuleCount: 0 },
+      ready: true,
+    }),
+    useHideStats: () => ({
+      stats: { hiddenByRules: 0, hiddenByMuted: 0, hiddenByBlockedBy: 0 },
+      ready: true,
+    }),
     useObserverSettings: () => {
       const [settings, setSettingsState] = useState(testState.settings);
       return {
@@ -134,7 +142,7 @@ describe("dashboard profile links", () => {
     expect(person?.textContent).toContain("@thsottiaux");
   });
 
-  it("keeps archive, blacklist, and settings on separate pages", async () => {
+  it("keeps archive, rules, and options on separate pages", async () => {
     expect(document.querySelector("#dashboard-panel-archive")).toBeTruthy();
     expect(document.querySelector("#filter-rules")).toBeNull();
     expect(document.querySelector(".options-panel")).toBeNull();
@@ -157,7 +165,7 @@ describe("dashboard profile links", () => {
       .toBe("true");
   });
 
-  it("opens the blacklist editor from the settings filter action", async () => {
+  it("opens the rules editor from the options filter action", async () => {
     await act(async () => {
       window.location.hash = "#settings";
       window.dispatchEvent(new Event("hashchange"));
@@ -177,10 +185,10 @@ describe("dashboard profile links", () => {
 
     expect(window.location.hash).toBe("#filter-rules");
     const heading = document.querySelector("#filter-rules [data-filter-rules-focus]");
-    expect(heading?.textContent).toContain("自定义黑名单");
+    expect(heading?.textContent).toContain("拦截规则");
   });
 
-  it("asks before leaving unsaved blacklist edits", async () => {
+  it("asks before leaving unsaved rule edits", async () => {
     const confirm = vi.fn(() => false);
     vi.stubGlobal("confirm", confirm);
 

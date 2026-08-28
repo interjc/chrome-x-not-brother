@@ -24,6 +24,7 @@ import {
   resolveFilterRuleImportTarget,
   type FilterRuleImportErrorCode,
 } from "../../domain/filter-rule-import";
+import type { HideStats } from "../../domain/hide-stats";
 import { translate, type AppLocale, type MessageKey } from "../../i18n";
 import {
   getStoredFilterRuleSet,
@@ -31,6 +32,7 @@ import {
   saveFilterRuleSet,
 } from "../../storage/filter-rules";
 import { downloadFile } from "../format";
+import { InterceptStats } from "./InterceptStats";
 
 export const FILTER_RULES_EDITOR_HASH = "#filter-rules";
 
@@ -135,14 +137,18 @@ export function FilterRulesManager({
   enabled,
   disabled,
   standalone = false,
+  compact = false,
   viewerHandle = null,
+  hideStats = null,
   onEnabledChange,
 }: {
   locale: AppLocale;
   enabled: boolean;
   disabled: boolean;
   standalone?: boolean;
+  compact?: boolean;
   viewerHandle?: string | null;
+  hideStats?: HideStats | null;
   onEnabledChange: (enabled: boolean) => void;
 }) {
   const t = (key: MessageKey, values?: Record<string, string | number>) =>
@@ -385,6 +391,18 @@ export function FilterRulesManager({
                 ? t("filterRulesNamespace", { handle: viewerHandle.replace(/^@/, "") })
                 : t("filterRulesNamespaceUnknown")}
             </p>
+            {hideStats ? (
+              <InterceptStats
+                locale={locale}
+                stats={hideStats}
+                status={{
+                  applying: enabled,
+                  ruleCount: draft.rules.length,
+                  activeRuleCount: draft.rules.filter((rule) => rule.enabled).length,
+                }}
+                variant="header"
+              />
+            ) : null}
           </div>
           <label className="filter-rules-manager__master">
             <input
@@ -742,7 +760,7 @@ export function FilterRulesManager({
   if (standalone) {
     return (
       <section
-        className="filter-rules-manager filter-rules-manager--standalone"
+        className={`filter-rules-manager filter-rules-manager--standalone${compact ? " filter-rules-manager--compact" : ""}`}
         data-filter-rules-dirty={dirty ? "true" : undefined}
         id="filter-rules"
         ref={(node) => { manager.current = node; }}
@@ -754,7 +772,7 @@ export function FilterRulesManager({
 
   return (
     <details
-      className="filter-rules-manager"
+      className={`filter-rules-manager${compact ? " filter-rules-manager--compact" : ""}`}
       data-filter-rules-dirty={dirty ? "true" : undefined}
       id="filter-rules"
       ref={(node) => { manager.current = node; }}

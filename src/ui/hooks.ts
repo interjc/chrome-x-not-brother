@@ -1,7 +1,11 @@
 import { liveQuery } from "dexie";
 import { useCallback, useEffect, useState } from "react";
+import { filterRuleSetStatus, type FilterRuleSetStatus } from "../domain/filter-rule-matching";
+import { emptyHideStats, type HideStats } from "../domain/hide-stats";
 import type { ObserverSettings, UserRecord } from "../domain/types";
 import { db } from "../storage/database";
+import { getFilterRuleSet, isFilterRulesStorageChange } from "../storage/filter-rules";
+import { getHideStats, isHideStatsStorageChange } from "../storage/hide-stats";
 import {
   DEFAULT_SETTINGS,
   getSettings,
@@ -94,4 +98,81 @@ export function useObserverSettings(): {
   );
 
   return { settings, settingsReady, setSettings: patchSettings, setSetting };
+}
+
+export function useFilterRuleStatus(
+  viewerHandle: string | null | undefined,
+  applying: boolean,
+): { status: FilterRuleSetStatus | null; ready: boolean } {
+  const [status, setStatus] = useState<FilterRuleSetStatus | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const load = async (): Promise<void> => {
+      try {
+        const ruleSet = await getFilterRuleSet(viewerHandle);
+        if (!active) return;
+        setStatus(filterRuleSetStatus(ruleSet, applying));
+        setReady(true);
+      } catch {
+        if (!active) return;
+        setStatus(filterRuleSetStatus({ rules: [] }, applying));
+        setReady(true);
+      }
+    };
+    const handleStorageChanged = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string,
+    ): void => {
+      if (!active || !isFilterRulesStorageChange(changes, areaName, viewerHandle)) return;
+      void load();
+    };
+    chrome.storage.onChanged.addListener(handleStorageChanged);
+    void load();
+    return () => {
+      active = false;
+      chrome.storage.onChanged.removeListener(handleStorageChanged);
+    };
+  }, [applying, viewerHandle]);
+
+  return { status, ready };
+}
+
+export function useHideStats(
+  viewerHandle: string | null | undefined,
+): { stats: HideStats; ready: boolean } {
+  const [stats, setStats] = useState(emptyHideStats);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const load = async (): Promise<void> => {
+      try {
+        const next = await getHideStats(viewerHandle);
+        if (!active) return;
+        setStats(next);
+        setReady(true);
+      } catch {
+        if (!active) return;
+        setStats(emptyHideStats());
+        setReady(true);
+      }
+    };
+    const handleStorageChanged = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string,
+    ): void => {
+      if (!active || !isHideStatsStorageChange(changes, areaName, viewerHandle)) return;
+      void load();
+    };
+    chrome.storage.onChanged.addListener(handleStorageChanged);
+    void load();
+    return () => {
+      active = false;
+      chrome.storage.onChanged.removeListener(handleStorageChanged);
+    };
+  }, [viewerHandle]);
+
+  return { stats, ready };
 }

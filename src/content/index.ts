@@ -2,6 +2,7 @@ import type {
   GetFilterRulesResponse,
   GetFilterRulesStatusResponse,
   GetSummaryResponse,
+  IncrementHideStatsResponse,
   LookupUsersResponse,
   OpenSidePanelResponse,
   QuickAddFilterRuleResponse,
@@ -24,7 +25,13 @@ import type {
 import {
   compileFilterRuleSet,
   type CompiledFilterRuleSet,
+  type FilterRuleSetStatus,
 } from "../domain/filter-rule-matching";
+import {
+  emptyHideStats,
+  hideStatsHaveIncrements,
+  type HideStats,
+} from "../domain/hide-stats";
 import { getDocumentLocale, resolveUiLocale, translate, type AppLocale } from "../i18n";
 import {
   CURRENT_CONSENT_VERSION,
@@ -69,6 +76,7 @@ import {
   applyTimelineHiding,
   clearTimelineHiding,
   createMuteMemory,
+  type TimelineHideCount,
 } from "./timeline-hide";
 import {
   createQuickRuleSelectionWatcher,
@@ -112,7 +120,11 @@ let filterRulesLoading: Promise<void> | null = null;
 let filterRulesLoadingFor: string | null = null;
 let compiledFilterRules: CompiledFilterRuleSet = compileFilterRuleSet({ rules: [] });
 let compiledFilterRulesForViewer: string | null = null;
-let latestFilterStatus: ObserverPanelFilterRules | null = null;
+let latestFilterStatus: FilterRuleSetStatus | null = null;
+let latestHideStats: HideStats = emptyHideStats();
+let pageHiddenByRules = 0;
+const countedTweetIds = new Set<string>();
+let countedTweetIdsFor: string | null = null;
 const quickBlockedHandles = new Set<string>();
 let keywordWatcher: { refresh(): void; stop(): void } | null = null;
 let caretClickTimers: number[] = [];
@@ -240,12 +252,21 @@ async function quickAddFilterRule(
   }
 }
 
+function resetCountedTweetIdsIfNeeded(): void {
+  const viewer = currentViewerHandle() ?? "";
+  if (countedTweetIdsFor === viewer) return;
+  countedTweetIdsFor = viewer;
+  countedTweetIds.clear();
+}
+
 function dockFilterRules(settings: ObserverSettings): ObserverPanelFilterRules | null {
   if (settings.consentVersion < CURRENT_CONSENT_VERSION) return null;
   return {
     applying: settings.hideByFilterRules,
     ruleCount: latestFilterStatus?.ruleCount ?? 0,
     activeRuleCount: latestFilterStatus?.activeRuleCount ?? 0,
+    pageHiddenByRules,
+    lifetimeHiddenByRules: latestHideStats.hiddenByRules,
   };
 }
 
@@ -264,6 +285,7 @@ function refreshFilterStatus(): Promise<void> {
       if (requested !== (currentViewerHandle() ?? "")) return;
       if (!response.ok) throw new Error(response.error);
       latestFilterStatus = response.status;
+      latestHideStats = response.hideStats ?? emptyHideStats();
     }).catch((error: unknown) => {
       handleRuntimeError(error, "Could not read custom filter rule status");
     }).finally(() => {
@@ -384,6 +406,50 @@ function rememberPageUsers(users: Map<string, PageUserRelationship>): void {
   }
 }
 
+function revealAllHiddenTweets(): void {
+  clearTimelineHiding(document);
+  if (pageHiddenByRules === 0) return;
+  pageHiddenByRules = 0;
+  if (latestSettings) renderPanel(latestSettings);
+}
+
+function recordNewHides(count: TimelineHideCount): void {
+  pageHiddenByRules = count.pageHiddenByRules;
+  if (latestSettings) renderPanel(latestSettings);
+  resetCountedTweetIdsIfNeeded();
+  const delta = {
+    hiddenByRules: 0,
+    hiddenByMuted: 0,
+    hiddenByBlockedBy: 0,
+  };
+  const added: string[] = [];
+  for (const item of count.discoveries) {
+    if (!item.statusId || countedTweetIds.has(item.statusId)) continue;
+    countedTweetIds.add(item.statusId);
+    added.push(item.statusId);
+    if (item.byRules) delta.hiddenByRules += 1;
+    else if (item.byMuted) delta.hiddenByMuted += 1;
+    else if (item.byBlockedBy) delta.hiddenByBlockedBy += 1;
+  }
+  if (!hideStatsHaveIncrements(delta)) return;
+  void chrome.runtime.sendMessage({
+    type: "hide-stats:increment",
+    viewerHandle: currentViewerHandle(),
+    ...delta,
+  }).then((response: IncrementHideStatsResponse | { ok: false; error: string }) => {
+    if (stopped) return;
+    if (!response.ok) {
+      for (const id of added) countedTweetIds.delete(id);
+      return;
+    }
+    latestHideStats = response.hideStats;
+    if (latestSettings) renderPanel(latestSettings);
+  }).catch((error: unknown) => {
+    for (const id of added) countedTweetIds.delete(id);
+    handleRuntimeError(error, "Could not record timeline hide counts");
+  });
+}
+
 function applyHideNow(): void {
   if (stopped) return;
   const settings = latestSettings;
@@ -392,7 +458,7 @@ function applyHideNow(): void {
     settings.consentVersion < CURRENT_CONSENT_VERSION ||
     !timelineHidingEnabled(settings)
   ) {
-    clearTimelineHiding(document);
+    revealAllHiddenTweets();
     return;
   }
   const viewerHandle = viewerHandleFromDocument(document);
@@ -401,7 +467,7 @@ function applyHideNow(): void {
     (candidate) => candidate.observation.userKey !== viewerKey,
   );
   applyPageStoreRelationships(candidates, latestPageUsers);
-  applyTimelineHiding({
+  recordNewHides(applyTimelineHiding({
     root: document,
     candidates,
     hideMutedAccounts: settings.hideMutedAccounts,
@@ -410,7 +476,7 @@ function applyHideNow(): void {
     pageUsers: latestPageUsers,
     records: recordCache,
     muteMemory,
-  });
+  }));
 }
 
 function handlePageStoreUpdated(event: MessageEvent): void {
@@ -521,12 +587,21 @@ async function handleSidePanelOpenFailure(): Promise<void> {
 
 async function openFilterRules(): Promise<void> {
   try {
+    const response = (await chrome.runtime.sendMessage({
+      type: "sidepanel:open",
+      tab: "filter-rules",
+    })) as OpenSidePanelResponse;
+    if (response.ok) return;
+  } catch (error) {
+    handleRuntimeError(error, "Could not open the filter rules editor");
+  }
+  try {
     await chrome.runtime.sendMessage({
       type: "dashboard:open",
       section: "filter-rules",
     });
   } catch (error) {
-    handleRuntimeError(error, "Could not open the blacklist editor");
+    handleRuntimeError(error, "Could not open the filter rules editor");
   }
 }
 
@@ -668,14 +743,14 @@ async function processPage(): Promise<void> {
   const hidingEnabled = timelineHidingEnabled(settings);
   if (!hasConsent) {
     removeRelationshipBadges();
-    clearTimelineHiding(document);
+    revealAllHiddenTweets();
     removeQuickRuleActions();
     return;
   }
   syncQuickRuleUi();
   if (!settings.observerEnabled && !hidingEnabled) {
     removeRelationshipBadges();
-    clearTimelineHiding(document);
+    revealAllHiddenTweets();
     return;
   }
 

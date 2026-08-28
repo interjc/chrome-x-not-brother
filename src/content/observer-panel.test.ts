@@ -17,6 +17,7 @@ describe("observer panel", () => {
     expect(panel.textContent).toContain("观察中");
     expect(panel.textContent).toContain("12");
     expect(panel.dataset.xroVersion).toBe("0.4.7");
+    expect(panel.querySelector(".xro-observer-panel__action svg")).toBeTruthy();
     panel.querySelector<HTMLButtonElement>(".xro-observer-panel__action")?.click();
     expect(onOpen).toHaveBeenCalledOnce();
   });
@@ -158,36 +159,58 @@ describe("observer panel", () => {
       summary: { total: 4, followingOnly: 1, blockedBy: 0, changed: 0 },
       locale: "zh-CN",
       collapsed: false,
-      filterRules: { applying: true, ruleCount: 5, activeRuleCount: 3 },
+      filterRules: {
+        applying: true,
+        ruleCount: 5,
+        activeRuleCount: 3,
+        pageHiddenByRules: 7,
+        lifetimeHiddenByRules: 21,
+      },
     }, () => undefined, () => undefined, onOpenFilterRules);
 
     const filters = panel.querySelector<HTMLElement>(".xro-observer-panel__filters");
     expect(filters?.dataset.xroFilterApplying).toBe("true");
-    expect(filters?.textContent).toContain("自定义黑名单");
-    expect(filters?.textContent).toContain("应用中");
-    expect(filters?.textContent).toContain("3");
-    panel.querySelector<HTMLButtonElement>(".xro-observer-panel__filters-edit")?.click();
+    expect(filters?.textContent).toContain("拦截规则 · 生效 3 条/总 5 条");
+    expect(filters?.textContent).toContain("本页拦截 7");
+    expect(filters?.textContent).toContain("累计 21");
+    expect(filters?.querySelectorAll(".xro-observer-panel__filters-copy > *")).toHaveLength(2);
+    const edit = panel.querySelector<HTMLButtonElement>(".xro-observer-panel__filters-edit");
+    expect(edit?.textContent).toBe("");
+    expect(edit?.querySelector("svg")).toBeTruthy();
+    edit?.click();
     expect(onOpenFilterRules).toHaveBeenCalledOnce();
   });
 
-  it("keeps blacklist status on a paused dock and hides it before consent", () => {
+  it("keeps filter-rule status on a paused dock and hides it before consent", () => {
     const paused = renderObserverPanel(document, {
       state: "paused",
       summary: null,
       locale: "en",
       collapsed: false,
-      filterRules: { applying: false, ruleCount: 2, activeRuleCount: 0 },
+      filterRules: {
+        applying: false,
+        ruleCount: 2,
+        activeRuleCount: 0,
+        pageHiddenByRules: 0,
+        lifetimeHiddenByRules: 4,
+      },
     }, () => undefined, () => undefined, () => undefined);
-    expect(paused.textContent).toContain("Custom blacklist");
-    expect(paused.textContent).toContain("Off");
-    expect(paused.textContent).toContain("2");
+    expect(paused.textContent).toContain("Filter rules · 0 active / 2 total");
+    expect(paused.textContent).toContain("This page 0");
+    expect(paused.textContent).toContain("Total 4");
 
     renderObserverPanel(document, {
       state: "needs-consent",
       summary: null,
       locale: "zh-CN",
       collapsed: false,
-      filterRules: { applying: false, ruleCount: 2, activeRuleCount: 0 },
+      filterRules: {
+        applying: false,
+        ruleCount: 2,
+        activeRuleCount: 0,
+        pageHiddenByRules: 0,
+        lifetimeHiddenByRules: 4,
+      },
     }, () => undefined, () => undefined, () => undefined);
     expect(document.querySelector(".xro-observer-panel__filters")).toBeNull();
   });
@@ -198,7 +221,13 @@ describe("observer panel", () => {
       summary: null,
       locale: "zh-CN",
       collapsed: true,
-      filterRules: { applying: true, ruleCount: 4, activeRuleCount: 4 },
+      filterRules: {
+        applying: true,
+        ruleCount: 4,
+        activeRuleCount: 4,
+        pageHiddenByRules: 1,
+        lifetimeHiddenByRules: 9,
+      },
     }, () => undefined, () => undefined, () => undefined);
     expect(document.querySelector(".xro-observer-panel__filters")).toBeNull();
   });

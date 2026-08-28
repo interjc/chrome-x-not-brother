@@ -416,4 +416,57 @@ describe("timeline hide DOM", () => {
     const anchors = [...doc.querySelectorAll<HTMLElement>('[data-testid="User-Name"]')];
     expect(anchors.map((anchor) => hidableTweetCell(anchor))).toEqual([null, null, null]);
   });
+
+  it("counts tweet cells by hide reason and reads status ids without post text", () => {
+    const doc = fixture(`
+      <div data-testid="cellInnerDiv">
+        <article data-testid="tweet">
+          <div data-testid="User-Name" data-handle="promoter">
+            <a href="/Promoter">Promoter</a>
+          </div>
+          <a href="/Promoter/status/1234567890">permalink</a>
+          <div data-testid="tweetText">Limited GIVEAWAY today</div>
+        </article>
+      </div>
+      <div data-testid="cellInnerDiv">
+        <article data-testid="tweet">
+          <div data-testid="User-Name" data-handle="muted">
+            <a href="/Muted">Muted</a>
+          </div>
+          <a href="/Muted/status/987">permalink</a>
+        </article>
+      </div>`);
+    const filterRules = compileFilterRuleSet({
+      ...createEmptyFilterRuleSet(),
+      rules: [{
+        id: "content",
+        label: "Giveaways",
+        enabled: true,
+        expiresAt: null,
+        type: "content",
+        match: { mode: "regex", value: "giveaway\\s+today", caseSensitive: false },
+      }],
+    });
+    const muteMemory = createMuteMemory();
+    muteMemory.remember("muted", true);
+
+    const count = applyTimelineHiding({
+      root: doc,
+      candidates: [
+        candidate(doc, "Promoter", { displayName: "Official Promoter" }),
+        candidate(doc, "Muted"),
+      ],
+      hideMutedAccounts: true,
+      hideBlockedByAccounts: false,
+      filterRules,
+      pageUsers: new Map(),
+      records: new Map(),
+      muteMemory,
+    });
+
+    expect(count.pageHiddenTotal).toBe(2);
+    expect(count.pageHiddenByRules).toBe(1);
+    expect(count.pageHiddenByMuted).toBe(1);
+    expect(count.discoveries.map((item) => item.statusId).toSorted()).toEqual(["1234567890", "987"]);
+  });
 });

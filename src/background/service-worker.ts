@@ -2,6 +2,7 @@ import type {
   GetFilterRulesResponse,
   GetFilterRulesStatusResponse,
   GetSummaryResponse,
+  IncrementHideStatsResponse,
   LookupUsersResponse,
   OpenDashboardMessage,
   OpenSidePanelResponse,
@@ -35,6 +36,8 @@ import {
   updateSettings,
 } from "../storage/settings";
 import { getFilterRuleSet, saveFilterRuleSet } from "../storage/filter-rules";
+import { getHideStats, incrementHideStats } from "../storage/hide-stats";
+import { hideStatsHaveIncrements, type HideStatsDelta } from "../domain/hide-stats";
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
@@ -195,15 +198,47 @@ chrome.runtime.onMessage.addListener(
         .then(async (settings) => {
           const applying = settings.consentVersion >= CURRENT_CONSENT_VERSION &&
             settings.hideByFilterRules;
-          const ruleSet = await getFilterRuleSet(
-            message.viewerHandle ?? settings.viewerHandle,
-          );
-          return filterRuleSetStatus(ruleSet, applying);
+          const viewerHandle = message.viewerHandle ?? settings.viewerHandle;
+          const [ruleSet, hideStats] = await Promise.all([
+            getFilterRuleSet(viewerHandle),
+            getHideStats(viewerHandle),
+          ]);
+          return { status: filterRuleSetStatus(ruleSet, applying), hideStats };
         })
-        .then((status) => sendResponse({
+        .then((payload) => sendResponse({
           ok: true,
-          status,
+          ...payload,
         } satisfies GetFilterRulesStatusResponse))
+        .catch((error: unknown) => sendResponse({
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        }));
+      return true;
+    }
+
+    if (message.type === "hide-stats:increment") {
+      if (!sender.url?.startsWith("https://x.com/")) {
+        sendResponse({ ok: false, error: "Hide stats are accepted only from x.com" });
+        return false;
+      }
+      void getSettings()
+        .then(async (settings) => {
+          if (settings.consentVersion < CURRENT_CONSENT_VERSION) {
+            throw new Error("Observation consent is required");
+          }
+          const delta: HideStatsDelta = {};
+          if (message.hiddenByRules) delta.hiddenByRules = message.hiddenByRules;
+          if (message.hiddenByMuted) delta.hiddenByMuted = message.hiddenByMuted;
+          if (message.hiddenByBlockedBy) delta.hiddenByBlockedBy = message.hiddenByBlockedBy;
+          if (!hideStatsHaveIncrements(delta)) {
+            return getHideStats(message.viewerHandle ?? settings.viewerHandle);
+          }
+          return incrementHideStats(delta, message.viewerHandle ?? settings.viewerHandle);
+        })
+        .then((hideStats) => sendResponse({
+          ok: true,
+          hideStats,
+        } satisfies IncrementHideStatsResponse))
         .catch((error: unknown) => sendResponse({
           ok: false,
           error: error instanceof Error ? error.message : String(error),
@@ -216,6 +251,7 @@ chrome.runtime.onMessage.addListener(
         sendResponse({ ok: false, error: "Side panel requests require an active x.com tab" });
         return false;
       }
+      if (message.tab) void updateSettings({ sidePanelTab: message.tab });
       void chrome.sidePanel.open({ tabId: sender.tab.id }).then(
         () => sendResponse({ ok: true } satisfies OpenSidePanelResponse),
         (error: unknown) => sendResponse({

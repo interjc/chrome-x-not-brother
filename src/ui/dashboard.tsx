@@ -35,10 +35,11 @@ import {
   confirmLeaveFilterRulesEditor,
   revealFilterRulesEditor,
 } from "./components/FilterRulesManager";
+import { InterceptStats } from "./components/InterceptStats";
 import { OptionsPanel } from "./components/OptionsPanel";
 import { RelationshipPill } from "./components/RelationshipPill";
 import { absoluteTime, downloadFile, relativeTime } from "./format";
-import { useObserverSettings, useUsers } from "./hooks";
+import { useFilterRuleStatus, useHideStats, useObserverSettings, useUsers } from "./hooks";
 import { CURRENT_CONSENT_VERSION } from "../storage/settings";
 
 type Filter = "all" | "changed" | Exclude<RelationshipKind, "unknown" | "none">;
@@ -136,6 +137,11 @@ function Dashboard() {
     : [];
   const loading = usersLoading || !settingsReady;
   const hasConsent = settings.consentVersion >= CURRENT_CONSENT_VERSION;
+  const { status: filterStatus } = useFilterRuleStatus(
+    settings.viewerHandle,
+    hasConsent && settings.hideByFilterRules,
+  );
+  const { stats: hideStats } = useHideStats(settings.viewerHandle);
   const filters = filterOptions(locale);
   const [section, setSection] = useState<DashboardSection>(() =>
     dashboardSectionFromHash(window.location.hash));
@@ -353,6 +359,9 @@ function Dashboard() {
         <article className="tone-blocked"><span>BLOCKED BY</span><strong>{countFor(users, "blocked_by")}</strong><small>{t(locale, "statBlockedBy")}</small></article>
         <article className="tone-changed"><span>CHANGED</span><strong>{countFor(users, "changed")}</strong><small>{t(locale, "statChanged")}</small></article>
       </section>
+      {hasConsent ? (
+        <InterceptStats locale={locale} stats={hideStats} status={filterStatus} />
+      ) : null}
 
       <div className="fieldbook-layout">
         <aside className="filter-rail">
@@ -455,6 +464,7 @@ function Dashboard() {
           <FilterRulesManager
             disabled={!settingsReady || !hasConsent}
             enabled={settings.hideByFilterRules}
+            hideStats={hideStats}
             locale={locale}
             standalone
             viewerHandle={settings.viewerHandle}

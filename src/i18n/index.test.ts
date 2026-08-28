@@ -70,10 +70,10 @@ describe("runtime internationalization", () => {
     expect(translate("zh-CN", "quickRuleKeyword")).toContain("关键词");
     expect(translate("en", "quickRuleHandle")).toContain("Not Brother");
     expect(translate("ja", "quickRuleKeyword")).toContain("キーワード");
-    expect(translate("zh-CN", "dockFilterRulesLabel")).toContain("黑名单");
-    expect(translate("zh-CN", "dockFilterRulesApplying", { count: 3 })).toContain("3");
+    expect(translate("zh-CN", "dockFilterRulesLabel")).toContain("拦截");
+    expect(translate("zh-CN", "dockFilterRulesCounts", { active: 3, total: 5 })).toBe("生效 3 条/总 5 条");
     expect(translate("en", "dockFilterRulesEdit")).toContain("Edit");
-    expect(translate("ja", "dockFilterRulesIdle", { count: 2 })).toContain("未適用");
+    expect(translate("ja", "dockFilterRulesCounts", { active: 1, total: 4 })).toContain("1");
   });
 
   it("localizes the extension language switcher", () => {
@@ -87,7 +87,10 @@ describe("runtime internationalization", () => {
 
   it("localizes side panel status and options tabs", () => {
     expect(translate("zh-CN", "sideTabStatus")).toBe("状态");
+    expect(translate("zh-CN", "sideTabRules")).toBe("规则");
+    expect(translate("zh-CN", "dashboardSectionSettings")).toBe("选项");
     expect(translate("en", "sideTabOptions")).toBe("Options");
+    expect(translate("en", "dashboardSectionBlacklist")).toBe("Rules");
     expect(translate("ja", "sideTabOptions")).toBe("オプション");
   });
 
@@ -97,7 +100,7 @@ describe("runtime internationalization", () => {
     expect(translate("ja", "hideMutedAccountsLabel")).toContain("ミュート");
     expect(translate("zh-CN", "hideBlockedByAccountsLabel")).toContain("拉黑");
     expect(translate("en", "hideBlockedByAccountsDescription")).toContain("not a complete list");
-    expect(translate("zh-CN", "hideByFilterRulesLabel")).toContain("黑名单");
+    expect(translate("zh-CN", "hideByFilterRulesLabel")).toContain("拦截");
     expect(translate("zh-CN", "editFilterRules")).toContain("教程");
     expect(translate("zh-CN", "filterRulesExampleLoaded")).toContain("示例");
     expect(translate("zh-CN", "filterRulesNamespace", { handle: "alice" })).toContain("@alice");

@@ -74,7 +74,7 @@ flowchart LR
 
 - 与 service worker 同属扩展 origin，可以安全访问扩展 IndexedDB；
 - Dexie `liveQuery` 驱动 UI 数据更新；
-- Side Panel 用状态/选项两个标签分页：状态页是概览、分类筛选和用户列表；选项页是界面语言、页面徽标和时间线过滤。筛选不写数据库也不预取资料。Chrome 工具栏右键「选项」通过 `options_ui` 把 `sidePanelTab` 设为 options 并打开侧栏。dashboard 仍提供完整本地数据管理。扩展页通过共享 hook 同时订阅 sync 偏好和 local viewer 的 `chrome.storage.onChanged`。
+- Side Panel 用状态/规则/选项三个标签分页：状态页是概览、分类筛选和用户列表；规则页是拦截概览和当前账号的拦截规则编辑器；选项页是界面语言、页面徽标和时间线过滤。筛选不写数据库也不预取资料。Chrome 工具栏右键「选项」通过 `options_ui` 把 `sidePanelTab` 设为 options 并打开侧栏。dashboard 仍提供完整本地数据管理。扩展页通过共享 hook 同时订阅 sync 偏好、local viewer 和拦截计数的 `chrome.storage.onChanged`。
 - dashboard 的规则编辑器直接读写扩展 local storage；保存、文件导入和远程导入都先通过共享 Zod schema。远程 URL 仅在表单提交的用户手势内申请来源 host permission 并 fetch 一次；Gist 页面先读公开 Gist API，必要时只跟进 GitHub 返回的 Raw host。请求不带凭据、不跟随重定向、有超时与流式 1 MiB 上限。规则 URL 不持久化，因此没有后台订阅或自动刷新。
 
 ### Internationalization

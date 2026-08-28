@@ -16,10 +16,15 @@ import {
 import { Avatar } from "./components/Avatar";
 import { Brand } from "./components/Brand";
 import { Icon } from "./components/Icon";
+import {
+  confirmLeaveFilterRulesEditor,
+  FilterRulesManager,
+} from "./components/FilterRulesManager";
+import { InterceptStats } from "./components/InterceptStats";
 import { OptionsPanel } from "./components/OptionsPanel";
 import { RelationshipPill } from "./components/RelationshipPill";
 import { relativeTime } from "./format";
-import { useObserverSettings, useUsers } from "./hooks";
+import { useFilterRuleStatus, useHideStats, useObserverSettings, useUsers } from "./hooks";
 import {
   filterSidePanelUsers,
   SIDE_PANEL_SUMMARY_KINDS,
@@ -38,9 +43,16 @@ export function SidePanel() {
     translate(locale, key, values);
 
   const tab = settings.sidePanelTab;
+  const hasConsent = settings.consentVersion >= CURRENT_CONSENT_VERSION;
+  const applyingRules = hasConsent && settings.hideByFilterRules;
+  const { status: filterStatus } = useFilterRuleStatus(settings.viewerHandle, applyingRules);
+  const { stats: hideStats } = useHideStats(settings.viewerHandle);
   useEffect(() => {
     document.documentElement.lang = locale;
-    document.title = translate(locale, tab === "options" ? "optionsTitle" : "brandName");
+    document.title = translate(
+      locale,
+      tab === "options" ? "optionsTitle" : tab === "filter-rules" ? "filterRulesTitle" : "brandName",
+    );
   }, [locale, tab]);
   const users = settingsReady
     ? observedUsers.filter((user) =>
@@ -50,7 +62,6 @@ export function SidePanel() {
   const loading = usersLoading || !settingsReady;
   const changed = users.filter((user) => user.hasChanged).length;
   const changedText = changed.toLocaleString(locale);
-  const hasConsent = settings.consentVersion >= CURRENT_CONSENT_VERSION;
   const filteredUsers = filterSidePanelUsers(users, filter);
   const visibleUsers = filteredUsers.slice(0, filter === "all" ? 8 : 40);
   const filterLabel = filter === "all"
@@ -64,6 +75,11 @@ export function SidePanel() {
   }
 
   function selectTab(next: SidePanelTab): void {
+    if (
+      tab === "filter-rules" &&
+      next !== "filter-rules" &&
+      !confirmLeaveFilterRulesEditor(locale)
+    ) return;
     void setSetting("sidePanelTab", next);
   }
 
@@ -96,6 +112,17 @@ export function SidePanel() {
           {t("sideTabStatus")}
         </button>
         <button
+          aria-controls="side-panel-filter-rules"
+          aria-selected={tab === "filter-rules"}
+          className={`side-tab${tab === "filter-rules" ? " is-active" : ""}`}
+          id="side-tab-filter-rules"
+          onClick={() => selectTab("filter-rules")}
+          role="tab"
+          type="button"
+        >
+          {t("sideTabRules")}
+        </button>
+        <button
           aria-controls="side-panel-options"
           aria-selected={tab === "options"}
           className={`side-tab${tab === "options" ? " is-active" : ""}`}
@@ -118,8 +145,34 @@ export function SidePanel() {
           <OptionsPanel
             locale={locale}
             onChange={(key, value) => void setSetting(key, value)}
+            onEditFilterRules={() => selectTab("filter-rules")}
             settings={settings}
             settingsReady={settingsReady}
+          />
+        </div>
+      ) : tab === "filter-rules" ? (
+        <div
+          aria-labelledby="side-tab-filter-rules"
+          className="side-tab-panel"
+          id="side-panel-filter-rules"
+          role="tabpanel"
+        >
+          {hasConsent ? (
+            <InterceptStats
+              locale={locale}
+              stats={hideStats}
+              status={filterStatus}
+              variant="mini"
+            />
+          ) : null}
+          <FilterRulesManager
+            compact
+            disabled={!settingsReady || !hasConsent}
+            enabled={settings.hideByFilterRules}
+            locale={locale}
+            standalone
+            viewerHandle={settings.viewerHandle}
+            onEnabledChange={(enabled) => void setSetting("hideByFilterRules", enabled)}
           />
         </div>
       ) : (

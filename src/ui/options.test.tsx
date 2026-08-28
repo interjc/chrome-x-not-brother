@@ -75,7 +75,7 @@ describe("Options page", () => {
     });
     expect(document.body.textContent).toContain("彻底隐藏已静音账号");
     expect(document.body.textContent).toContain("隐藏拉黑了我的账号");
-    expect(document.body.textContent).toContain("应用自定义黑名单规则");
+    expect(document.body.textContent).toContain("应用自定义拦截规则");
     expect(document.body.textContent).toContain("编辑规则与查看教程");
     expect(document.querySelector(".language-switch")).not.toBeNull();
   });

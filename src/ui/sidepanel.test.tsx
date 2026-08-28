@@ -36,6 +36,14 @@ vi.mock("./hooks", async () => {
   const { useState } = await import("react");
   return {
     useUsers: () => ({ users: testState.users, loading: false }),
+    useFilterRuleStatus: () => ({
+      status: { applying: false, ruleCount: 2, activeRuleCount: 1 },
+      ready: true,
+    }),
+    useHideStats: () => ({
+      stats: { hiddenByRules: 4, hiddenByMuted: 1, hiddenByBlockedBy: 0 },
+      ready: true,
+    }),
     useObserverSettings: () => {
       const [settings, setSettingsState] = useState(testState.settings);
       return {
@@ -96,6 +104,18 @@ describe("SidePanel interactions", () => {
     vi.stubGlobal("chrome", {
       i18n: { getUILanguage: () => "en" },
       runtime: { sendMessage: testState.sendMessage },
+      storage: {
+        local: {
+          get: vi.fn(async () => ({})),
+          set: vi.fn(async () => undefined),
+          remove: vi.fn(async () => undefined),
+        },
+        onChanged: {
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+        },
+      },
+      permissions: { request: vi.fn(async () => true) },
     });
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     document.documentElement.lang = "";
@@ -159,6 +179,7 @@ describe("SidePanel interactions", () => {
     expect(recentProfileLinks()).toHaveLength(3);
     expect(document.querySelector(".language-switch")).toBeNull();
     expect(document.querySelector(".timeline-filters")).toBeNull();
+    expect(document.querySelector(".intercept-callout")).toBeNull();
 
     await act(async () => document.getElementById("side-tab-options")?.click());
 
@@ -177,10 +198,10 @@ describe("SidePanel interactions", () => {
     );
     expect(editRules?.textContent).toContain("Edit rules & view guide");
     await act(async () => editRules?.click());
-    expect(testState.sendMessage).toHaveBeenCalledWith({
-      type: "dashboard:open",
-      section: "filter-rules",
-    });
+    expect(document.getElementById("side-tab-filter-rules")?.getAttribute("aria-selected"))
+      .toBe("true");
+    expect(document.getElementById("filter-rules")).toBeTruthy();
+    expect(document.querySelector(".intercept-callout")?.textContent).toContain("Hidden by rules");
   });
 
   it("defaults the language switcher to follow the browser language", async () => {

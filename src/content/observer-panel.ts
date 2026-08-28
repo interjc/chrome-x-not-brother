@@ -8,6 +8,8 @@ export interface ObserverPanelFilterRules {
   applying: boolean;
   ruleCount: number;
   activeRuleCount: number;
+  pageHiddenByRules: number;
+  lifetimeHiddenByRules: number;
 }
 
 export interface ObserverPanelModel {
@@ -39,6 +41,24 @@ function element<K extends keyof HTMLElementTagNameMap>(
   const node = doc.createElement(tag);
   if (className) node.className = className;
   return node;
+}
+
+function svgIcon(doc: Document, paths: string[], className?: string): SVGSVGElement {
+  const svg = doc.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.8");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  if (className) svg.setAttribute("class", className);
+  for (const d of paths) {
+    const path = doc.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    svg.append(path);
+  }
+  return svg;
 }
 
 export function renderObserverPanel(
@@ -165,25 +185,33 @@ export function renderObserverPanel(
       filters.dataset.xroFilterApplying = "true";
     }
     const copy = element(doc, "div", "xro-observer-panel__filters-copy");
-    const label = element(doc, "strong");
-    label.textContent = translate(model.locale, "dockFilterRulesLabel");
-    const status = element(doc, "span");
-    status.textContent = translate(
+    const title = element(doc, "strong");
+    title.textContent = `${translate(model.locale, "dockFilterRulesLabel")} · ${translate(
       model.locale,
-      model.filterRules.applying ? "dockFilterRulesApplying" : "dockFilterRulesIdle",
+      "dockFilterRulesCounts",
       {
-        count: model.filterRules.applying
-          ? model.filterRules.activeRuleCount
-          : model.filterRules.ruleCount,
+        active: model.filterRules.applying ? model.filterRules.activeRuleCount : 0,
+        total: model.filterRules.ruleCount,
       },
-    );
-    copy.append(label, status);
+    )}`;
+    const hidden = element(doc, "span");
+    hidden.className = "xro-observer-panel__filters-hidden";
+    hidden.textContent = translate(model.locale, "dockFilterRulesHidden", {
+      page: model.filterRules.pageHiddenByRules,
+      total: model.filterRules.lifetimeHiddenByRules,
+    });
+    copy.append(title, hidden);
     filters.append(copy);
     if (onOpenFilterRules) {
       const edit = element(doc, "button", "xro-observer-panel__filters-edit");
       edit.type = "button";
-      edit.textContent = translate(model.locale, "dockFilterRulesEdit");
-      edit.setAttribute("aria-label", translate(model.locale, "dockFilterRulesEditAria"));
+      const editLabel = translate(model.locale, "dockFilterRulesEditAria");
+      edit.setAttribute("aria-label", editLabel);
+      edit.title = editLabel;
+      edit.append(svgIcon(doc, [
+        "M12 20h9",
+        "M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z",
+      ]));
       edit.addEventListener("click", onOpenFilterRules);
       filters.append(edit);
     }
@@ -192,11 +220,16 @@ export function renderObserverPanel(
 
   const button = element(doc, "button", "xro-observer-panel__action");
   button.type = "button";
-  button.textContent = translate(
+  const actionLabel = element(doc, "span", "xro-observer-panel__action-label");
+  actionLabel.textContent = translate(
     model.locale,
     model.state === "active"
       ? "dockViewDetails"
       : model.state === "needs-consent" ? "dockReviewConsent" : "dockOpenSidePanel",
+  );
+  button.append(
+    actionLabel,
+    svgIcon(doc, ["M4 6h16v12H4z", "M10 6v12"], "xro-observer-panel__action-icon"),
   );
   button.setAttribute(
     "aria-label",
@@ -218,10 +251,10 @@ export function showObserverPanelOpenHint(
   doc: Document,
   locale: AppLocale = getDocumentLocale(doc),
 ): void {
-  const button = doc.querySelector<HTMLButtonElement>(
-    `#${ROOT_ID} .xro-observer-panel__action`,
+  const label = doc.querySelector<HTMLElement>(
+    `#${ROOT_ID} .xro-observer-panel__action-label`,
   );
-  if (button) button.textContent = translate(locale, "dockToolbarHint");
+  if (label) label.textContent = translate(locale, "dockToolbarHint");
 }
 
 export function removeObserverPanel(doc: Document): void {

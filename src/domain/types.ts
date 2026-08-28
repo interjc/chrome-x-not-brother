@@ -90,7 +90,7 @@ export interface UserRecord {
 export const UI_LOCALE_PREFERENCES = ["auto", "en", "ja", "zh-CN"] as const;
 export type UiLocalePreference = (typeof UI_LOCALE_PREFERENCES)[number];
 
-export const SIDE_PANEL_TABS = ["status", "options"] as const;
+export const SIDE_PANEL_TABS = ["status", "filter-rules", "options"] as const;
 export type SidePanelTab = (typeof SIDE_PANEL_TABS)[number];
 
 export interface ObserverSettings {

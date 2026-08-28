@@ -164,6 +164,50 @@ export function clearTimelineHiding(root: ParentNode = document): void {
   }
 }
 
+export interface TimelineHideReasons {
+  byRules: boolean;
+  byMuted: boolean;
+  byBlockedBy: boolean;
+}
+
+export interface TimelineHideDiscovery extends TimelineHideReasons {
+  statusId: string | null;
+}
+
+export interface TimelineHideCount {
+  pageHiddenTotal: number;
+  pageHiddenByRules: number;
+  pageHiddenByMuted: number;
+  pageHiddenByBlockedBy: number;
+  discoveries: TimelineHideDiscovery[];
+}
+
+export function emptyTimelineHideCount(): TimelineHideCount {
+  return {
+    pageHiddenTotal: 0,
+    pageHiddenByRules: 0,
+    pageHiddenByMuted: 0,
+    pageHiddenByBlockedBy: 0,
+    discoveries: [],
+  };
+}
+
+const STATUS_ID_PATTERN = /\/(?:i\/web\/)?status\/(\d+)/;
+
+export function tweetStatusId(cell: HTMLElement): string | null {
+  for (const link of cell.querySelectorAll("a[href]")) {
+    const href = link.getAttribute("href") ?? "";
+    const match = STATUS_ID_PATTERN.exec(href);
+    if (match?.[1]) return match[1];
+  }
+  return null;
+}
+
+function isTweetArticleCell(cell: HTMLElement): boolean {
+  return cell.matches('article[data-testid="tweet"]') ||
+    Boolean(cell.querySelector('article[data-testid="tweet"]'));
+}
+
 export function applyTimelineHiding(input: {
   root?: ParentNode;
   candidates: ExtractedCandidate[];
@@ -173,12 +217,23 @@ export function applyTimelineHiding(input: {
   pageUsers: Map<string, PageUserRelationship>;
   records: Map<string, UserRecord>;
   muteMemory: MuteMemory;
-}): void {
+}): TimelineHideCount {
   const root = input.root ?? document;
   const desired = new Map<HTMLElement, boolean>();
-  const addCell = (cell: HTMLElement, animate: boolean): void => {
+  const reasons = new Map<HTMLElement, TimelineHideReasons>();
+  const addCell = (
+    cell: HTMLElement,
+    animate: boolean,
+    next: TimelineHideReasons,
+  ): void => {
     const current = desired.get(cell);
     desired.set(cell, current === undefined ? animate : current && animate);
+    const existing = reasons.get(cell);
+    reasons.set(cell, {
+      byRules: Boolean(existing?.byRules || next.byRules),
+      byMuted: Boolean(existing?.byMuted || next.byMuted),
+      byBlockedBy: Boolean(existing?.byBlockedBy || next.byBlockedBy),
+    });
   };
   if (input.hideMutedAccounts || input.hideBlockedByAccounts || input.filterRules) {
     for (const candidate of input.candidates) {
@@ -188,27 +243,26 @@ export function applyTimelineHiding(input: {
       const alreadyKnown =
         input.muteMemory.has(userKey) || input.records.has(userKey);
       const muting = input.muteMemory.remember(userKey, pageUser?.muting ?? null);
-      const hiddenByRelationship = shouldHideTimelineAuthor({
-        sourceType: candidate.observation.sourceType,
-        hideMutedAccounts: input.hideMutedAccounts,
-        hideBlockedByAccounts: input.hideBlockedByAccounts,
-        muting,
-        blockedBy: pageUser?.blockedBy ?? null,
-        observedRelationship: candidate.observation.relationship,
-        storedRelationship: input.records.get(userKey)?.currentRelationship,
-      });
+      const byMuted = input.hideMutedAccounts && muting === true;
+      const byBlockedBy = input.hideBlockedByAccounts && (
+        pageUser?.blockedBy === true ||
+        candidate.observation.relationship === "blocked_by" ||
+        input.records.get(userKey)?.currentRelationship === "blocked_by"
+      );
       const matchingRule = input.filterRules?.match({
         userKey,
         displayName: candidate.observation.displayName,
         contentText: postTextForCandidate(candidate.anchor),
       }) ?? null;
-      if (!hiddenByRelationship && !matchingRule) continue;
+      const byRules = Boolean(matchingRule);
+      if (!byMuted && !byBlockedBy && !byRules) continue;
       const cell = hidableTweetCell(candidate.anchor);
       if (!cell) continue;
-      const animate = Boolean(matchingRule) || !alreadyKnown;
-      addCell(cell, animate);
+      const animate = byRules || !alreadyKnown;
+      const next = { byRules, byMuted, byBlockedBy };
+      addCell(cell, animate, next);
       const context = orphanSocialContext(cell);
-      if (context) addCell(context, animate);
+      if (context) addCell(context, animate, next);
     }
   }
 
@@ -218,4 +272,18 @@ export function applyTimelineHiding(input: {
     if (node instanceof HTMLElement && !desired.has(node)) revealTweetCell(node);
   }
   for (const [cell, animate] of desired) collapseTweetCell(cell, animate);
+
+  const count = emptyTimelineHideCount();
+  for (const [cell, reason] of reasons) {
+    if (!isTweetArticleCell(cell)) continue;
+    count.pageHiddenTotal += 1;
+    if (reason.byRules) count.pageHiddenByRules += 1;
+    if (reason.byMuted) count.pageHiddenByMuted += 1;
+    if (reason.byBlockedBy) count.pageHiddenByBlockedBy += 1;
+    count.discoveries.push({
+      statusId: tweetStatusId(cell),
+      ...reason,
+    });
+  }
+  return count;
 }

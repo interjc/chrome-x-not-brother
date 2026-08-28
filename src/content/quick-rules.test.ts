@@ -96,7 +96,7 @@ describe("quick rule actions", () => {
       onAddKeyword,
     });
     const chip = document.querySelector<HTMLButtonElement>("[data-xro-quick-rule='keyword']");
-    expect(chip?.textContent).toContain("拉黑关键词");
+    expect(chip?.textContent).toContain("拦截关键词");
     chip?.click();
     expect(onAddKeyword).toHaveBeenCalledWith("Limited GIVEAWAY today");
 

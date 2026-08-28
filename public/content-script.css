@@ -340,22 +340,30 @@
 .xro-observer-panel__stats dd { font-family: Georgia, "Songti SC", serif; font-size: 20px; font-weight: 600; margin: 0; }
 
 .xro-observer-panel__action {
+  align-items: center;
   appearance: none;
   background: #c9ed67;
   border: 0;
   border-top: 1px solid var(--xro-panel-ink);
   color: #16221b;
   cursor: pointer;
-  display: block;
+  display: flex;
   font: inherit;
   font-size: 10px;
   font-weight: 800;
+  gap: 8px;
+  justify-content: space-between;
   padding: 10px 13px;
   text-align: left;
   width: 100%;
 }
 
-.xro-observer-panel__action::after { content: "↗"; float: right; }
+.xro-observer-panel__action-icon {
+  flex: none;
+  height: 15px;
+  width: 15px;
+}
+
 .xro-observer-panel__action:hover { background: #daf783; }
 .xro-observer-panel__action:focus-visible { outline: 3px solid #78bfea; outline-offset: -3px; }
 .xro-observer-panel--needs-consent .xro-observer-panel__action { background: #e9a83a; }
@@ -377,6 +385,13 @@
   min-width: 0;
 }
 
+.xro-observer-panel__filters-copy strong,
+.xro-observer-panel__filters-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .xro-observer-panel__filters-copy strong {
   font-size: 10px;
   font-weight: 800;
@@ -385,27 +400,32 @@
 .xro-observer-panel__filters-copy span {
   color: var(--xro-panel-muted);
   font-size: 9px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.xro-observer-panel__filters[data-xro-filter-applying] .xro-observer-panel__filters-copy span {
+.xro-observer-panel__filters[data-xro-filter-applying] .xro-observer-panel__filters-hidden {
   color: #3d6b1f;
 }
 
 .xro-observer-panel__filters-edit {
+  align-items: center;
   appearance: none;
   background: var(--xro-panel-deep);
   border: 1px solid var(--xro-panel-ink);
   color: var(--xro-panel-ink);
   cursor: pointer;
-  font: 800 9px/1.2 "Avenir Next", "Hiragino Sans", "Microsoft YaHei", sans-serif;
-  padding: 7px 8px;
-  white-space: nowrap;
+  display: inline-flex;
+  flex: none;
+  height: 28px;
+  justify-content: center;
+  padding: 0;
+  width: 28px;
 }
 
-.xro-observer-panel__filters-edit::after { content: "↗"; margin-inline-start: 4px; }
+.xro-observer-panel__filters-edit svg {
+  height: 14px;
+  width: 14px;
+}
+
 .xro-observer-panel__filters-edit:hover { background: #c9ed67; }
 .xro-observer-panel__filters-edit:focus-visible { outline: 3px solid #78bfea; outline-offset: 2px; }
 
@@ -444,7 +464,7 @@
   color: #16221b;
 }
 :root[data-xro-theme="dark"] .xro-observer-panel__bubble .xro-observer-panel__dot { border-color: #101713; }
-:root[data-xro-theme="dark"] .xro-observer-panel__filters[data-xro-filter-applying] .xro-observer-panel__filters-copy span {
+:root[data-xro-theme="dark"] .xro-observer-panel__filters[data-xro-filter-applying] .xro-observer-panel__filters-hidden {
   color: #b8efa9;
 }
 :root[data-xro-theme="dark"] .xro-observer-panel__filters-edit:hover {

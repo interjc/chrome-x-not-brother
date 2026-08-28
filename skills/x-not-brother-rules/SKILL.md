@@ -15,7 +15,7 @@ Read [references/schema.md](references/schema.md) before changing JSON.
 2. Summarize existing rules in plain language: target, match, enabled/expiration, and count.
 3. Make only the requested edits. Keep unrelated rules unchanged.
 4. Return one complete, valid JSON document. Do not emit a partial patch.
-5. Tell the user to import it in 不是兄弟 → 关系档案库 → **黑名单**, then choose **按 ID 更新** or **清空后覆盖**. Keep stable `id`s so update-by-id can replace existing rules; new ids are appended. For UI authoring, Gist / GitHub Raw / public HTTPS hosting, and the in-app import buttons, point humans to the root `README.md` section 自定义黑名单规则.
+5. Tell the user to import it in 不是兄弟 → 关系档案库 → **规则**, then choose **按 ID 更新** or **清空后覆盖**. Keep stable `id`s so update-by-id can replace existing rules; new ids are appended. For UI authoring, Gist / GitHub Raw / public HTTPS hosting, and the in-app import buttons, point humans to the root `README.md` section 自定义拦截规则.
 
 ## Editing rules
 
@@ -28,4 +28,4 @@ Read [references/schema.md](references/schema.md) before changing JSON.
 
 ## After writing JSON
 
-Remind the user to turn on **应用自定义黑名单规则** if they want timeline hiding, and that import applies only to the currently signed-in X account.
+Remind the user to turn on **应用自定义拦截规则** if they want timeline hiding, and that import applies only to the currently signed-in X account.

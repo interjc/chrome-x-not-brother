@@ -40,7 +40,7 @@ npm run dev
 - Chrome 清单本地化：`public/_locales/en|ja|zh_CN/messages.json`；
 - 数据结构与迁移：`src/storage/database.ts`；
 - 注入徽标：`src/content/badge.ts`、`public/content-script.css`；
-- X 页面观察 dock：`src/content/observer-panel.ts`、`public/content-script.css`；收起球贴右下角，Chat/Grok 上移选择器在 `x-adapter.ts`；同意后展开 dock 的黑名单状态走 `filter-rules:status`，编辑入口打开档案库；
+- X 页面观察 dock：`src/content/observer-panel.ts`、`public/content-script.css`；收起球贴右下角，Chat/Grok 上移选择器在 `x-adapter.ts`；同意后展开 dock 的拦截规则状态走 `filter-rules:status`，拦截累计走 `hide-stats:increment`，编辑入口打开侧栏规则页；
 - 工具栏状态与安装引导：`src/background/action-state.ts`、`src/background/service-worker.ts`；
 - Side Panel：`src/ui/sidepanel.tsx`；
 - 管理页：`src/ui/dashboard.tsx`；

@@ -1,6 +1,7 @@
-import type { ObservationDraft, ObservationSummary, UserRecord } from "./types";
+import type { ObservationDraft, ObservationSummary, SidePanelTab, UserRecord } from "./types";
 import type { FilterRuleSet } from "./filter-rules";
 import type { FilterRuleSetStatus } from "./filter-rule-matching";
+import type { HideStats } from "./hide-stats";
 
 export interface UpsertObservationsMessage {
   type: "observations:upsert";
@@ -43,6 +44,7 @@ export interface LookupUsersResponse {
 
 export interface OpenSidePanelMessage {
   type: "sidepanel:open";
+  tab?: SidePanelTab;
 }
 
 export interface OpenSidePanelResponse {
@@ -68,6 +70,20 @@ export interface GetFilterRulesStatusMessage {
 export interface GetFilterRulesStatusResponse {
   ok: true;
   status: FilterRuleSetStatus;
+  hideStats: HideStats;
+}
+
+export interface IncrementHideStatsMessage {
+  type: "hide-stats:increment";
+  viewerHandle?: string | null;
+  hiddenByRules?: number;
+  hiddenByMuted?: number;
+  hiddenByBlockedBy?: number;
+}
+
+export interface IncrementHideStatsResponse {
+  ok: true;
+  hideStats: HideStats;
 }
 
 export interface QuickAddFilterRuleMessage {
@@ -94,5 +110,6 @@ export type RuntimeMessage =
   | GetFilterRulesMessage
   | GetFilterRulesStatusMessage
   | QuickAddFilterRuleMessage
+  | IncrementHideStatsMessage
   | OpenSidePanelMessage
   | DataChangedMessage;

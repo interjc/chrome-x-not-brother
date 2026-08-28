@@ -1,13 +1,13 @@
-# 自定义黑名单规则 v1
+# 自定义拦截规则 v1
 
 本文定义 Not Brother 的 `not-brother-filter-rules` JSON v1。代码中的权威校验器是 `src/domain/filter-rules.ts`；导入文件必须通过 Zod 完整校验，未知字段也会被拒绝。
 
-面向安装用户的规则编写、界面编辑、导入导出，以及 Gist / GitHub Raw / 公开 HTTPS 托管说明写在仓库根目录 [README.md](../README.md#自定义黑名单规则)。
+面向安装用户的规则编写、界面编辑、导入导出，以及 Gist / GitHub Raw / 公开 HTTPS 托管说明写在仓库根目录 [README.md](../README.md#自定义拦截规则)。
 
 ## 行为边界
 
 - 总开关 `hideByFilterRules` 默认关闭，作为小型偏好保存在 `chrome.storage.sync`；规则文档不参与同步，只保存在当前 Chrome 配置的 `chrome.storage.local`，并按当前登录 X 账号的小写 handle 分命名空间：`notBrother.filterRules.v1.ns.{handle}`。切换 X 账号时，匹配和编辑都只使用该账号自己的规则。旧的未分命名空间文档会在首次识别到 handle 时迁入该账号。
-- 用户本地还没有任何规则文档时，档案库黑名单页会载入 [`config/filter-rules-default.json`](../config/filter-rules-default.json) 作为可编辑示例，不会自动打开总开关。导入处的示例地址是该文件在仓库 `main` 上的 Raw URL。规则编写教程默认收起。
+- 用户本地还没有任何规则文档时，档案库或侧栏规则页会载入 [`config/filter-rules-default.json`](../config/filter-rules-default.json) 作为可编辑示例，不会自动打开总开关。导入处的示例地址是该文件在仓库 `main` 上的 Raw URL。规则编写教程默认收起。
 - 任一启用且尚未过期的规则命中即隐藏帖子，规则之间是 OR；v1 的唯一动作是 `hide`，不点击 X 的静音、拉黑或其他控件。
 - 只处理首页、搜索、通知和帖子详情/评论区中当前已加载的帖子单元格。个人主页、HoverCard、UserCell、关注/粉丝列表保持可见。
 - 内容规则只读取当前候选帖子的可见正文用于当场匹配，不保存正文，不写观察历史，不向开发者或规则来源发送正文，也不额外请求 X 接口。
@@ -85,9 +85,9 @@ v1 用 X handle 作为公开、稳定且当前页面可确认的账号标识，�
 
 ## 编辑、导入和导出
 
-Side Panel、Chrome Options 页、X 页面展开的观察 dock 与关系档案库中，都提供自定义黑名单入口。Side Panel、Options 与 dock 的“编辑规则”打开 `dashboard.html#filter-rules`；档案库内则原地展开规则区、滚动到目标并把键盘焦点移到折叠标题。该入口不依赖开关是否已经启用，也不新增 Chrome 权限。dock 另外显示当前账号规则是否正在应用以及条数；条数来自 service worker 的 `filter-rules:status`，不把规则正文下发到 X 页面。未同意时 dock 不展示这一行。同意后，头像 HoverCard 名字旁的「不是兄弟！」、帖子右上角三个点菜单里的同一项，以及帖子正文划词「拉黑关键词」通过 `filter-rules:quick-add` 立即写入并保存对应 handle / contains 规则；若总开关关闭会一并打开。不点击 X 账号操作控件。
+Side Panel 的规则标签、Chrome Options 页、X 页面展开的观察 dock 与关系档案库中，都提供拦截规则入口。Side Panel 选项页的“编辑规则”切到规则标签；dock 的“编辑规则”优先打开侧栏规则页，失败才打开 `dashboard.html#filter-rules`；档案库内则原地打开规则页。该入口不依赖开关是否已经启用，也不新增 Chrome 权限。dock 另外显示当前账号规则是否正在应用、生效条数、本页拦截和累计拦截；条数来自 service worker 的 `filter-rules:status` 与 `hide-stats:increment`，不把规则正文或帖子正文下发到 X 页面。未同意时 dock 不展示这一行。同意后，头像 HoverCard 名字旁的「不是兄弟！」、帖子右上角三个点菜单里的同一项，以及帖子正文划词「拦截关键词」通过 `filter-rules:quick-add` 立即写入并保存对应 handle / contains 规则；若总开关关闭会一并打开。不点击 X 账号操作控件。
 
-关系档案库提供完整表单编辑器，以及默认收起的编写教程。教程说明三种匹配对象、contains 与安全正则、大小写、单条启停、失效时间、OR 语义、导入时的按 ID 更新/清空覆盖、内容隐私边界，并给出完整 JSON v1 示例。用户不需要手写 JSON 即可使用表单；也可用 `skills/x-not-brother-rules` 让 AI 阅读或改导出的 JSON。保存按钮贴在编辑区底部并使用主色；有未保存修改时离开黑名单页、关掉标签或后退会先确认。保存前对整个草稿运行 Zod 校验；校验失败时不覆盖已保存规则。导出使用浏览器 Blob 下载，不申请 `downloads` 权限。
+关系档案库提供完整表单编辑器，以及默认收起的编写教程。教程说明三种匹配对象、contains 与安全正则、大小写、单条启停、失效时间、OR 语义、导入时的按 ID 更新/清空覆盖、内容隐私边界，并给出完整 JSON v1 示例。用户不需要手写 JSON 即可使用表单；也可用 `skills/x-not-brother-rules` 让 AI 阅读或改导出的 JSON。保存按钮贴在编辑区底部并使用主色；有未保存修改时离开规则页、关掉标签或后退会先确认。保存前对整个草稿运行 Zod 校验；校验失败时不覆盖已保存规则。导出使用浏览器 Blob 下载，不申请 `downloads` 权限。
 
 导入支持：
 

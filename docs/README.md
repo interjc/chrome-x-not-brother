@@ -1,6 +1,6 @@
 # 开发者文档
 
-面向使用者的说明在仓库根目录 [README.md](../README.md)，其中「自定义黑名单规则」一节说明界面编写、导入导出和公开托管。本目录保存产品边界、架构、开发、测试、发布和商店文案。给编码代理的入口是 [AGENTS.md](../AGENTS.md) 与 [项目 skill](../skills/x-relationship-observer/SKILL.md)。阅读或改写导出的黑名单 JSON 用 [x-not-brother-rules](../skills/x-not-brother-rules/SKILL.md)。
+面向使用者的说明在仓库根目录 [README.md](../README.md)，其中「自定义拦截规则」一节说明界面编写、导入导出和公开托管。本目录保存产品边界、架构、开发、测试、发布和商店文案。给编码代理的入口是 [AGENTS.md](../AGENTS.md) 与 [项目 skill](../skills/x-relationship-observer/SKILL.md)。阅读或改写导出的规则 JSON 用 [x-not-brother-rules](../skills/x-not-brother-rules/SKILL.md)。
 
 ## 文档索引
 
@@ -12,7 +12,7 @@
 | [国际化设计](localization.md) | 中英日自动切换、词库边界、扩展语言与商店本地化 |
 | [技术架构](architecture.md) | 运行时数据流、模块边界和安全约束 |
 | [数据模型](data-model.md) | users、observations、合并和迁移规则 |
-| [自定义黑名单规则](filter-rules.md) | filter-rules JSON v1、匹配语义、限制与导入权限 |
+| [自定义拦截规则](filter-rules.md) | filter-rules JSON v1、匹配语义、限制与导入权限 |
 | [开发指南](development.md) | nvm、安装、构建、目录与日常流程 |
 | [测试指南](testing.md) | 自动检查和 Chrome 手工验收清单 |
 | [维护指南](maintenance.md) | X DOM 漂移、数据迁移与故障处置 |

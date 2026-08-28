@@ -37,7 +37,7 @@ describe("TimelineFilterSettings", () => {
       ".timeline-filters__edit-rules",
     );
     const item = button?.closest(".timeline-filters__item");
-    expect(item?.textContent).toContain("应用自定义黑名单规则");
+    expect(item?.textContent).toContain("应用自定义拦截规则");
     expect(button?.textContent).toContain("编辑规则与查看教程");
     expect(item?.querySelector("input")?.disabled).toBe(true);
     expect(button?.disabled).toBe(false);
