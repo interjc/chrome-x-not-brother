@@ -559,6 +559,7 @@ async function openSidePanel(): Promise<void> {
   try {
     const response = (await chrome.runtime.sendMessage({
       type: "sidepanel:open",
+      toggle: true,
     })) as OpenSidePanelResponse;
     if (!response.ok) await handleSidePanelOpenFailure();
   } catch (error) {

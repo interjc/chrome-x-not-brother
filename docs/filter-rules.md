@@ -7,7 +7,7 @@
 ## 行为边界
 
 - 总开关 `hideByFilterRules` 默认关闭，作为小型偏好保存在 `chrome.storage.sync`；规则文档不参与同步，只保存在当前 Chrome 配置的 `chrome.storage.local`，并按当前登录 X 账号的小写 handle 分命名空间：`notBrother.filterRules.v1.ns.{handle}`。切换 X 账号时，匹配和编辑都只使用该账号自己的规则。旧的未分命名空间文档会在首次识别到 handle 时迁入该账号。
-- 用户本地还没有任何规则文档时，档案库或侧栏规则页会载入 [`config/filter-rules-default.json`](../config/filter-rules-default.json) 作为可编辑示例，不会自动打开总开关。导入处的示例地址是该文件在仓库 `main` 上的 Raw URL。规则编写教程默认收起。
+- 用户本地还没有任何规则文档时，档案库或侧栏规则页会载入 [`config/filter-rules-default.json`](../config/filter-rules-default.json) 作为可编辑示例，不会自动打开总开关。导入处的默认地址是社区仓库 [chrome-x-not-brother-rules](https://github.com/interjc/chrome-x-not-brother-rules) 的 `rules/filter-default.json`。规则编写教程默认收起。
 - 任一启用且尚未过期的规则命中即隐藏帖子，规则之间是 OR；v1 的唯一动作是 `hide`，不点击 X 的静音、拉黑或其他控件。
 - 只处理首页、搜索、通知和帖子详情/评论区中当前已加载的帖子单元格。个人主页、HoverCard、UserCell、关注/粉丝列表保持可见。
 - 内容规则只读取当前候选帖子的可见正文用于当场匹配，不保存正文，不写观察历史，不向开发者或规则来源发送正文，也不额外请求 X 接口。

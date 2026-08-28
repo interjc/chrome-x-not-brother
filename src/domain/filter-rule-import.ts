@@ -66,11 +66,29 @@ export function resolveFilterRuleImportTarget(value: string): FilterRuleImportTa
       permissionOrigins: [`${GIST_API_ORIGIN}/*`, `${GIST_RAW_ORIGIN}/*`],
     };
   }
+  const githubRaw = githubRawFileUrl(url);
+  if (githubRaw) {
+    return {
+      kind: "json",
+      requestUrl: githubRaw.href,
+      permissionOrigins: [hostPermissionOrigin(githubRaw)],
+    };
+  }
   return {
     kind: "json",
     requestUrl: url.href,
     permissionOrigins: [hostPermissionOrigin(url)],
   };
+}
+
+function githubRawFileUrl(url: URL): URL | null {
+  if (url.hostname !== "github.com") return null;
+  const match = url.pathname.match(/^\/([^/]+)\/([^/]+)\/raw\/(.+)$/);
+  const owner = match?.[1];
+  const repo = match?.[2];
+  const rest = match?.[3];
+  if (!owner || !repo || !rest || rest.endsWith("/")) return null;
+  return new URL(`https://raw.githubusercontent.com/${owner}/${repo}/${rest}`);
 }
 
 const gistFileSchema = z.object({

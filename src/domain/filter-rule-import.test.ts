@@ -38,6 +38,17 @@ describe("remote filter rule import targets", () => {
     expect(() => resolveFilterRuleImportTarget("https://user:pass@example.com/rules.json"))
       .toThrow(FilterRuleImportError);
   });
+
+  it("rewrites GitHub repository raw links so fetch does not follow redirects", () => {
+    expect(resolveFilterRuleImportTarget(
+      "https://github.com/interjc/chrome-x-not-brother-rules/raw/refs/heads/main/rules/filter-default.json",
+    )).toEqual({
+      kind: "json",
+      requestUrl:
+        "https://raw.githubusercontent.com/interjc/chrome-x-not-brother-rules/refs/heads/main/rules/filter-default.json",
+      permissionOrigins: ["https://raw.githubusercontent.com/*"],
+    });
+  });
 });
 
 describe("remote filter rule fetch", () => {

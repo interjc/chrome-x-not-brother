@@ -45,6 +45,7 @@ export interface LookupUsersResponse {
 export interface OpenSidePanelMessage {
   type: "sidepanel:open";
   tab?: SidePanelTab;
+  toggle?: boolean;
 }
 
 export interface OpenSidePanelResponse {

@@ -63,7 +63,7 @@ npm run build
 - **规则**：拦截概览（生效规则数和累计拦截）、当前登录账号的拦截规则编辑器。
 - **选项**：界面语言、是否显示页面徽标、时间线过滤。右键工具栏图标选择 **选项**，会直接打开这一页。
 
-X 页面右下角还有观察概览，可收成悬浮球。点「查看详情」同样打开侧栏。同意后，展开的概览会显示拦截规则是否正在应用、有多少条生效规则、本页拦截和累计拦截，并可用「编辑规则」打开侧栏规则页。尚未同意时，悬浮球旁保留醒目的同意入口。
+X 页面右下角还有观察概览，可收成悬浮球。点「查看详情」打开侧栏，再点一次收起。同意后，展开的概览会显示拦截规则是否正在应用、有多少条生效规则、本页拦截和累计拦截，并可用「编辑规则」打开侧栏规则页。尚未同意时，悬浮球旁保留醒目的同意入口。
 
 ### 时间线过滤
 
@@ -121,10 +121,14 @@ X 页面右下角还有观察概览，可收成悬浮球。点「查看详情」
 | 方式 | 怎么用 | 注意 |
 | --- | --- | --- |
 | [GitHub Gist](https://gist.github.com/) | 新建 **公开** Gist，文件用 `.json`。导入时可填 Gist 页面地址、Gist API 地址，或该文件的 Raw 地址。 | 一个 Gist 里有多个 JSON 时，请改用目标文件的 Raw 地址。私有 Gist 不支持。 |
-| GitHub Raw 文件 | 把 JSON 放进公开仓库，复制 `raw.githubusercontent.com` 链接。 | 仓库自带示例：[config/filter-rules-default.json](https://raw.githubusercontent.com/interjc/chrome-x-not-brother/refs/heads/main/config/filter-rules-default.json) |
+| GitHub Raw 文件 | 把 JSON 放进公开仓库，复制 Raw 链接。 | 社区默认示例：[filter-default.json](https://github.com/interjc/chrome-x-not-brother-rules/raw/refs/heads/main/rules/filter-default.json) |
 | 其他公开 HTTPS 地址 | 任何能直接返回一份 JSON 的 `https://` 网址，例如自己的站点或对象存储公开链接。 | 必须可匿名打开、不跳转、不要求登录。不支持私有网盘、需要 Cookie 或 token 的地址。 |
 
-导入框也可以一键填入上面的仓库示例地址。
+导入框默认填入上面的社区示例地址，也可以一键重新填入。
+
+#### 共同分享拦截名单
+
+规则适合公开协作。欢迎到 [chrome-x-not-brother-rules](https://github.com/interjc/chrome-x-not-brother-rules) 提交、复用或讨论拦截规则。扩展里的默认导入地址也指向该仓库。分享前请去掉个人账号、私密关键词和不该公开的内容。
 
 #### 时间线上快速添加
 

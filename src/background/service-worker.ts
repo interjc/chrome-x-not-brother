@@ -38,6 +38,14 @@ import {
 import { getFilterRuleSet, saveFilterRuleSet } from "../storage/filter-rules";
 import { getHideStats, incrementHideStats } from "../storage/hide-stats";
 import { hideStatsHaveIncrements, type HideStatsDelta } from "../domain/hide-stats";
+import {
+  closeExtensionSidePanel,
+  hydrateTrackedSidePanels,
+  isTrackedSidePanelOpen,
+  rememberSidePanelClosed,
+  rememberSidePanelOpen,
+  watchSidePanelVisibility,
+} from "./side-panel-visibility";
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
@@ -52,6 +60,8 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 void purgeUnknownObservations();
 void initializeActionState();
+watchSidePanelVisibility();
+void hydrateTrackedSidePanels();
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== CONSENT_CONTEXT_MENU_ID) return;
@@ -247,13 +257,30 @@ chrome.runtime.onMessage.addListener(
     }
 
     if (message.type === "sidepanel:open") {
-      if (!sender.url?.startsWith("https://x.com/") || sender.tab?.id === undefined) {
+      const tab = sender.tab;
+      if (!sender.url?.startsWith("https://x.com/") || tab?.id === undefined) {
         sendResponse({ ok: false, error: "Side panel requests require an active x.com tab" });
         return false;
       }
       if (message.tab) void updateSettings({ sidePanelTab: message.tab });
-      void chrome.sidePanel.open({ tabId: sender.tab.id }).then(
-        () => sendResponse({ ok: true } satisfies OpenSidePanelResponse),
+      if (message.toggle && isTrackedSidePanelOpen(tab.windowId)) {
+        void closeExtensionSidePanel(tab).then(
+          () => {
+            rememberSidePanelClosed(tab.windowId);
+            sendResponse({ ok: true } satisfies OpenSidePanelResponse);
+          },
+          (error: unknown) => sendResponse({
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          } satisfies OpenSidePanelResponse),
+        );
+        return true;
+      }
+      void chrome.sidePanel.open({ tabId: tab.id }).then(
+        () => {
+          rememberSidePanelOpen(tab.windowId);
+          sendResponse({ ok: true } satisfies OpenSidePanelResponse);
+        },
         (error: unknown) => sendResponse({
           ok: false,
           error: error instanceof Error ? error.message : String(error),
