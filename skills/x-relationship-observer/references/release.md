@@ -10,7 +10,7 @@ npm ci
 npm run release
 ```
 
-Use `npm run release -- --skip-pages` only when GitHub Pages cannot be reached. The uploadable archive is `output/not-brother-<version>.zip`; `artifacts/` keeps historical copies.
+Use `npm run release -- --skip-pages` only when GitHub Pages cannot be reached. The uploadable archive is `artifacts/not-brother-<version>.zip`. Each `npm run package` deletes previous `not-brother-*.zip` files in `artifacts/` (and leftover copies in `output/`) before writing the new archive.
 
 6. Load `dist/` unpacked in a clean Chrome profile and execute `docs/testing.md`.
 7. Inspect the ZIP; it must contain `manifest.json` at the archive root.

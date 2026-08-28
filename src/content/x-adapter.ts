@@ -296,6 +296,27 @@ function containingOverlay(element: Element): Element | null {
     element.closest("#layers");
 }
 
+const MEDIA_VIEWER_SELECTOR =
+  '[data-testid="swipe-to-dismiss"], [data-testid="videoPlayer"], [data-testid="videoComponent"]';
+
+export function mediaLightboxTweetFrom(
+  element: HTMLElement,
+  href: string = location.href,
+): HTMLElement | null {
+  const dialog = element.closest<HTMLElement>('[aria-modal="true"], [role="dialog"]');
+  if (!dialog) return null;
+  const article = element.closest<HTMLElement>(TWEET_SELECTOR);
+  if (!article || !dialog.contains(article)) return null;
+  if (dialog.querySelector(MEDIA_VIEWER_SELECTOR)) return article;
+  try {
+    const path = new URL(href, "https://x.com").pathname;
+    if (/\/status\/[^/]+\/(?:photo|video|media)\//i.test(path)) return article;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 function actionableEngagementLayers(doc: Document): Set<Element | "page"> {
   const layers = new Set<Element | "page">();
   for (const surface of doc.querySelectorAll<HTMLElement>(

@@ -248,6 +248,37 @@ describe("relationship badge", () => {
     expect(root.textContent).toBe("@Alice");
   });
 
+  it("places a photo-lightbox conversation badge under the avatar", () => {
+    const root = document.createElement("div");
+    root.innerHTML = `
+      <div role="dialog" aria-modal="true">
+        <div data-testid="swipe-to-dismiss"></div>
+        <article data-testid="tweet">
+          <div class="avatar-column">
+            <a href="/Alice" data-testid="Tweet-User-Avatar">
+              <div data-testid="UserAvatar-Container-Alice">
+                <img src="https://pbs.twimg.com/profile_images/1.jpg" alt="">
+              </div>
+            </a>
+          </div>
+          <div data-testid="User-Name">
+            <a href="/Alice"><span>Alice Example</span></a>
+            <a href="/Alice"><span>@Alice</span></a>
+          </div>
+        </article>
+      </div>
+    `;
+    const named = root.querySelector<HTMLElement>("[data-testid='User-Name']")!;
+    setRelationshipBadge(named, "mutual", "Alice", "zh-CN");
+
+    const stack = root.querySelector(".avatar-column");
+    expect(stack?.classList.contains("xro-user-card-avatar-stack")).toBe(true);
+    expect(stack?.querySelector("a + [data-xro-badge='mutual']")).not.toBeNull();
+    expect(root.querySelector("[data-testid='User-Name'] [data-xro-badge]")).toBeNull();
+    expect(root.querySelector("[data-xro-badge]")?.classList.contains("xro-badge--user-card"))
+      .toBe(true);
+  });
+
   it("does not badge tweet-body @mentions on a mention-heavy article", () => {
     const article = document.createElement("article");
     article.setAttribute("data-testid", "tweet");

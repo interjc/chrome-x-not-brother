@@ -1,9 +1,12 @@
 import { zipSync } from "fflate";
-import { copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { runNpm } from "./run.mjs";
 
 const root = process.cwd();
+const artifactsDir = path.join(root, "artifacts");
+const zipPattern = /^not-brother-.+\.zip$/;
+
 runNpm("run", "build");
 runNpm("run", "validate:dist");
 
@@ -18,15 +21,27 @@ async function collect(directory, prefix = "") {
   return entries;
 }
 
+async function removeOldZips(directory) {
+  let names;
+  try {
+    names = await readdir(directory);
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+      return;
+    }
+    throw error;
+  }
+  for (const name of names) {
+    if (zipPattern.test(name)) await unlink(path.join(directory, name));
+  }
+}
+
 const packageJson = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
 const zipName = `not-brother-${packageJson.version}.zip`;
 const archive = zipSync(await collect(path.join(root, "dist")), { level: 9 });
-await mkdir(path.join(root, "artifacts"), { recursive: true });
-await mkdir(path.join(root, "output"), { recursive: true });
-const artifactPath = path.join(root, "artifacts", zipName);
-const uploadPath = path.join(root, "output", zipName);
+await mkdir(artifactsDir, { recursive: true });
+await removeOldZips(artifactsDir);
+await removeOldZips(path.join(root, "output"));
+const artifactPath = path.join(artifactsDir, zipName);
 await writeFile(artifactPath, archive);
-await copyFile(artifactPath, uploadPath);
 console.log(`Created ${path.relative(root, artifactPath)}`);
-console.log(`Upload copy ${path.relative(root, uploadPath)}`);
-

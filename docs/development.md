@@ -63,7 +63,7 @@ npm run validate:dist
 npm run skills:validate
 ```
 
-准备商店更新包时用 `npm run release`。它会检查、打包，并把可上传 ZIP 写到 `output/`。升版本用 `npm run version:bump -- patch`。细节见 [发布指南](release.md)。
+准备商店更新包时用 `npm run release`。它会检查、打包，并把可上传 ZIP 写到 `artifacts/`（每次只保留当前版）。升版本用 `npm run version:bump -- patch`。细节见 [发布指南](release.md)。
 
 创建或大改项目 skill 时，还应按 `skill-creator` 的要求使用其官方 `quick_validate.py` 做一次校验。该上游脚本需要 Python 与 PyYAML；常规仓库检查使用无额外 Python 依赖的 `npm run skills:validate`。
 

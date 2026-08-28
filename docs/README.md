@@ -62,7 +62,7 @@ npm run test:coverage     # coverage report
 npm run build             # production extension in dist/
 npm run validate:dist     # manifest, permissions, files
 npm run skills:validate   # project skill structure
-npm run package           # ZIP in artifacts/ and output/
+npm run package           # ZIP in artifacts/ (replaces previous not-brother-*.zip)
 npm run version:bump -- patch   # 同步升版本并插入商店更新说明标题
-npm run release           # 完整本地发布构建；上传 output/not-brother-<version>.zip
+npm run release           # 完整本地发布构建；上传 artifacts/not-brother-<version>.zip
 ```

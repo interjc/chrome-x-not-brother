@@ -50,7 +50,7 @@ npm run validate:dist
 npm run skills:validate
 ```
 
-Use `npm run package` only when preparing a loadable release archive.
+Use `npm run package` only when preparing a loadable release archive. Write the ZIP only to `artifacts/`, and delete previous `not-brother-*.zip` files there (and any leftover copies in `output/`) before creating the new one.
 
 ## Architecture rules
 

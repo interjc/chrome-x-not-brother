@@ -1,6 +1,10 @@
 import type { DisplayRelationship, RelationshipKind } from "../domain/types";
 import { relationshipPresentation, type AppLocale } from "../i18n";
-import { iterateOutsideUserContent, USER_NAME_SELECTOR } from "./x-adapter";
+import {
+  iterateOutsideUserContent,
+  mediaLightboxTweetFrom,
+  USER_NAME_SELECTOR,
+} from "./x-adapter";
 
 const BADGE_ATTRIBUTE = "data-xro-badge";
 const BADGE_ROW_ATTRIBUTE = "data-xro-badge-row";
@@ -27,6 +31,10 @@ function isAvatarIdentity(element: Element): boolean {
 
 function userCardFrom(element: HTMLElement): HTMLElement | null {
   return element.closest<HTMLElement>(USER_CARD_SELECTOR);
+}
+
+function compactAvatarCard(element: HTMLElement): HTMLElement | null {
+  return userCardFrom(element) ?? mediaLightboxTweetFrom(element);
 }
 
 function isProfileLink(link: HTMLAnchorElement, handle: string): boolean {
@@ -293,7 +301,7 @@ export function setRelationshipBadge(
   locale: AppLocale,
   currentRelationship?: RelationshipKind,
 ): void {
-  const card = userCardFrom(anchor);
+  const card = compactAvatarCard(anchor);
   const searchRoot = card ?? anchor;
   const existing = searchRoot.querySelector<HTMLElement>(`[${BADGE_ATTRIBUTE}]`);
   const badge = existing ?? document.createElement("span");
@@ -331,10 +339,12 @@ export function setRelationshipBadge(
   );
   if (card && (!existing || misplaced)) {
     if (existing && misplaced) existing.remove();
-    if (!placeUserCardBadge(card, badge, handle) && identity && !isAvatarIdentity(identity)) {
-      identity.insertAdjacentElement("afterend", badge);
-    } else if (!badge.isConnected && !isAvatarIdentity(anchor)) {
-      anchor.append(badge);
+    if (!placeUserCardBadge(card, badge, handle)) {
+      if (identity && !isAvatarIdentity(identity)) {
+        identity.insertAdjacentElement("afterend", badge);
+      } else if (!isAvatarIdentity(anchor)) {
+        anchor.append(badge);
+      }
     }
   } else if (!card && (!existing || misplaced)) {
     if (existing && misplaced) {
@@ -363,7 +373,7 @@ export function removeRelationshipBadges(root: ParentNode = document): void {
 }
 
 export function removeRelationshipBadge(anchor: HTMLElement): void {
-  const root = userCardFrom(anchor) ?? anchor;
+  const root = compactAvatarCard(anchor) ?? anchor;
   for (const badge of root.querySelectorAll(`[${BADGE_ATTRIBUTE}]`)) badge.remove();
   const marked = root.matches(`[${IDENTITY_ATTRIBUTE}]`)
     ? [root, ...root.querySelectorAll<HTMLElement>(`[${IDENTITY_ATTRIBUTE}]`)]

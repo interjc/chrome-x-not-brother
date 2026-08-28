@@ -3,6 +3,7 @@ import {
   handleFromHoverCard,
   hoverCardQuickRuleAnchor,
   isInsideXUserAuthoredContent,
+  mediaLightboxTweetFrom,
   openTweetMoreMenu,
   scanXDocument,
   sourceTypeFromUrl,
@@ -31,6 +32,37 @@ describe("sourceTypeFromUrl", () => {
       new URL("https://x.com/Someone/status/123/photo/1"),
       "viewer",
     )).toBe("thread");
+  });
+});
+
+describe("mediaLightboxTweetFrom", () => {
+  it("identifies tweets inside a photo lightbox conversation", () => {
+    const doc = fixture(`
+      <div role="dialog" aria-modal="true">
+        <div data-testid="swipe-to-dismiss"></div>
+        <article data-testid="tweet">
+          <div data-testid="User-Name"><a href="/Alice">@Alice</a></div>
+        </article>
+      </div>
+      <article data-testid="tweet">
+        <div data-testid="User-Name"><a href="/Timeline">@Timeline</a></div>
+      </article>`);
+    const overlay = doc.querySelector<HTMLElement>("[role='dialog'] [data-testid='User-Name']")!;
+    const timeline = doc.querySelectorAll<HTMLElement>("[data-testid='User-Name']")[1]!;
+    expect(mediaLightboxTweetFrom(overlay)?.getAttribute("data-testid")).toBe("tweet");
+    expect(mediaLightboxTweetFrom(timeline)).toBeNull();
+  });
+
+  it("treats dialog tweets as lightbox conversation on a photo URL", () => {
+    const doc = fixture(`
+      <div role="dialog" aria-modal="true">
+        <article data-testid="tweet">
+          <div data-testid="User-Name"><a href="/Alice">@Alice</a></div>
+        </article>
+      </div>`);
+    const named = doc.querySelector<HTMLElement>("[data-testid='User-Name']")!;
+    expect(mediaLightboxTweetFrom(named, "https://x.com/Someone/status/123/photo/1")).not.toBeNull();
+    expect(mediaLightboxTweetFrom(named, "https://x.com/home")).toBeNull();
   });
 });
 

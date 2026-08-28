@@ -10,7 +10,7 @@
 - 使用条款：https://interjc.github.io/chrome-x-not-brother/terms.html
 - 商店 Homepage 是 GitHub 仓库，Support 是 Issues。
 - 类别是 **Productivity**。
-- 上传用的 ZIP 在 gitignore 的 `output/`；`artifacts/` 保留历史包。
+- 上传用的 ZIP 只写在 gitignore 的 `artifacts/not-brother-<version>.zip`。每次打包会先删掉该目录里旧的 `not-brother-*.zip`。
 
 源稿在 `terms/`，对外 HTML 在 `pages/`。改了条款或隐私后必须同步这两处，推到 `main`，等 Actions 里 `Deploy GitHub Pages` 变绿，再用无痕窗口确认公开页。
 
@@ -41,7 +41,7 @@ npm run release
 
 5. 上传文件是：
 
-`output/not-brother-<version>.zip`
+`artifacts/not-brother-<version>.zip`
 
 不要手压 `dist/`。解压后根目录必须直接是 `manifest.json`。
 
@@ -62,10 +62,10 @@ npm run release
 | `npm run build` | 产出 `dist/` |
 | `npm run validate:dist` | 检查 dist、权限、商店 URL、版本文案 |
 | `npm run skills:validate` | 检查项目 skill |
-| `npm run package` | 构建、校验，并把 ZIP 写到 `artifacts/` 和 `output/` |
+| `npm run package` | 构建、校验，删除旧 ZIP，并把当前版写到 `artifacts/` |
 | `npm run verify:pages` | 请求公开隐私政策和条款页 |
 | `npm run version:bump -- patch` | 同步升版本并插入商店更新说明标题 |
-| `npm run release` | 完整本地发布构建；上传 `output/not-brother-<version>.zip` |
+| `npm run release` | 完整本地发布构建；上传 `artifacts/not-brother-<version>.zip` |
 
 对应文件在 `scripts/`：`build.mjs`、`validate-dist.mjs`、`package.mjs`、`verify-pages.mjs`、`bump-version.mjs`、`release.mjs`。
 
@@ -80,4 +80,4 @@ npm run release
 
 ## 回滚
 
-保留 `artifacts/` 里的上一版 ZIP。回滚前让用户导出 JSON。装回旧包后确认 schema 还能读。不要靠静默清空 IndexedDB 当常规回滚。
+每次打包只保留当前版 ZIP。回滚前让用户导出 JSON，再用 git 历史或商店后台取旧包。装回旧包后确认 schema 还能读。不要靠静默清空 IndexedDB 当常规回滚。

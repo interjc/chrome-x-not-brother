@@ -36,6 +36,16 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 - Adds local Zod-validated blacklist rules for handles, display names, and post content, with expiration, JSON file import/export, and one-time public HTTPS/Gist import behind optional per-site permission.
 - Makes first-run consent easier to find with a prominent entry beside the minimized NB button and an action-icon context-menu shortcut; both open the full disclosure before consent.
 
+### Version 0.5.7 release notes
+
+- In the photo lightbox conversation, relationship badges sit under the avatar, like user-recommendation cards, so names are not squeezed.
+
+### Version 0.5.6 release notes
+
+- Adds a Rules tab in the Side Panel for local filter rules and intercept counts. Fieldbook Settings is now Options.
+- The X dock shows active/total rules and how many posts were hidden. View details opens or closes the Side Panel.
+- Default remote import uses the community rules list. Share lists at the chrome-x-not-brother-rules repository.
+
 ### Version 0.5.5 release notes
 
 - Splits the Fieldbook into Archive, Blacklist, and Settings. Custom rules stay on this Chrome profile, namespaced by the signed-in X account. Imports can update matching rule ids or clear-and-replace, and leaving unsaved edits warns first.
@@ -130,6 +140,16 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 - 小型偏好可通过用户启用的 Chrome Sync 同步，关系档案和当前 X handle 仍只保存在本机。旧 local 偏好迁移时不会覆盖 Chrome Sync 已有设置。
 - 未同意时，收起后的 NB 悬浮球旁会显示醒目入口，工具栏图标右键菜单也能打开完整隐私说明；入口不会直接代替用户同意。
+
+### 0.5.7 更新说明
+
+- 看大图时的对话列表把关系标签放在头像下方，避免把名字挤掉。
+
+### 0.5.6 更新说明
+
+- 侧栏增加「规则」页，可编辑拦截规则并查看拦截统计。档案库「设置」改为「选项」。
+- X 悬浮窗显示生效/总规则数和拦截帖子数。「查看详情」可打开或收起侧栏。
+- 默认远程导入指向社区规则仓库，欢迎在 chrome-x-not-brother-rules 共同分享名单。
 
 ### 0.5.5 更新说明
 
@@ -226,6 +246,16 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 
 - 小さな設定をユーザーが有効にした Chrome Sync で同期し、関係アーカイブと現在の X ハンドルはローカルに保ちます。旧 local 設定の移行時も、Chrome Sync に既存の設定があれば上書きしません。
 - 未同意の場合、収納した NB ボタンの横に目立つ入口を表示し、ツールバーアイコンの右クリックメニューからも完全なプライバシー説明を開けます。入口だけで同意が確定することはありません。
+
+### 0.5.7 更新内容
+
+- 画像ビューアの会話では関係バッジをアバターの下に置き、名前が潰れないようにしました。
+
+### 0.5.6 更新内容
+
+- サイドパネルに「ルール」タブを追加し、非表示ルールの編集と件数を確認できます。アーカイブの「設定」は「オプション」に改名しました。
+- X のドックに有効/全ルール数と非表示にした投稿数を表示します。「詳細を見る」でサイドパネルを開閉できます。
+- 既定のリモート読み込み先をコミュニティルール倉庫に変更しました。chrome-x-not-brother-rules でリストを共有できます。
 
 ### 0.5.5 更新内容
 

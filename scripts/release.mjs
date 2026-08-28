@@ -14,7 +14,7 @@ runNpm("run", "package");
 
 const packageJson = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
 const zipName = `not-brother-${packageJson.version}.zip`;
-const uploadZip = path.join(root, "output", zipName);
+const uploadZip = path.join(root, "artifacts", zipName);
 await access(uploadZip);
 
 if (skipPages) {
