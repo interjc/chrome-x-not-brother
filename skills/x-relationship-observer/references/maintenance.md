@@ -64,6 +64,8 @@ After copy changes, check the 420px side panel, dashboard, toolbar titles, injec
 
 When an unpacked extension is reloaded, existing X tabs retain an orphaned content script whose Chrome extension APIs are invalid. Treat `Extension context invalidated` or missing `chrome.storage.sync` / `chrome.storage.local` as lifecycle termination: catch pending promises, stop timers, disconnect MutationObserver, and remove injected UI. Do not retry or log repeated warnings. Refresh the X tab after reloading the extension to inject the new content script.
 
+A `Could not read observation summary` warning whose cause is `the message channel closed before a response was received` is a Manifest V3 service-worker wakeup (or another X tab returning `false` from `runtime.onMessage`). Handle only `data:changed` in the content-script listener; do not `return false` for other runtime messages. Retry summary/lookup/upsert/rule-status `sendMessage` a few times on a closed channel. Do not retry context invalidation.
+
 The injected dock exposes the running candidate version through its read-only `data-xro-version` attribute. Confirm it matches the intended package after refreshing X before accepting live-page results.
 
 If badges destabilize X or produce false labels:

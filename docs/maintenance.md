@@ -46,6 +46,8 @@
 
 content script 必须把这种情况视为生命周期结束：捕获 promise rejection、停止定时器、断开 MutationObserver，并移除旧徽标和观察 dock；不得把它作为普通运行时错误持续重试。开发者重新加载扩展后仍需刷新所有已打开的 X 标签页，注入新版本脚本。错误页保存的是历史记录，复验前先点击 Clear all，再刷新目标页。
 
+若错误页出现 `Could not read observation summary`，且原因为 `A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received`，这是 Manifest V3 service worker 刚被唤醒、或其它 X 标签页的 `runtime.onMessage` 误把通道关掉时的瞬时失败，不是关系识别错误。content script 只处理 `data:changed`，其它 runtime 消息不得 `return false`；向 service worker 读取摘要、查找用户、写入观察和规则状态时，对关闭的消息通道做有限次重试。扩展上下文失效仍立即停机。
+
 ## 数据库
 
 任何 schema 变化都必须使用新的 Dexie version 和迁移。不得在升级时静默清空数据库。破坏性迁移需要明确发布说明和用户备份步骤。

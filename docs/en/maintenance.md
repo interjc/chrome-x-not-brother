@@ -46,6 +46,8 @@ After reloading a development build on `chrome://extensions`, already-open X tab
 
 The content script must treat this as end of life: catch promise rejections, stop timers, disconnect MutationObserver, and remove old badges and the observer dock. Do not keep retrying it as an ordinary runtime error. Developers still need to refresh every already-open X tab after reloading the extension so the new script injects. Error pages keep history; click Clear all before re-checking a target page.
 
+If the Errors page shows `Could not read observation summary` with `A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received`, that is a transient Manifest V3 wakeup (or another X tab's `runtime.onMessage` closing the port), not a relationship-recognition failure. The content script must handle only `data:changed` and must not `return false` for other runtime messages. Summary, user lookup, observation upsert, and rule-status calls retry a closed message channel a few times. Extension-context invalidation still stops immediately.
+
 ## Database
 
 Any schema change must use a new Dexie version and a migration. Do not silently wipe the database on upgrade. Breaking migrations need explicit release notes and a user backup step.

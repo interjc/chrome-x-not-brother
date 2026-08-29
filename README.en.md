@@ -128,9 +128,13 @@ The rule document does not use Chrome Sync. To move a list between computers, or
 
 The import field is prefilled with the community example URL above. You can refill it in one click.
 
-#### Sharing filter lists
+#### Sharing filter lists (community rules site)
 
-Rules are meant for public collaboration. Contributions, reuse, and discussion live in [chrome-x-not-brother-rules](https://github.com/interjc/chrome-x-not-brother-rules). The extension's default import URL also points at that repository. Strip personal accounts, private keywords, and anything that should not be public before sharing.
+Rules are meant for public collaboration and sharing. Community presets live in [chrome-x-not-brother-rules](https://github.com/interjc/chrome-x-not-brother-rules).
+
+- **Share and discuss**: that repository collects community-maintained lists (marketing and promo accounts, mass-follow or giveaway bots, spam ads, domain-specific high-noise keywords, and similar).
+- **One-click import**: the extension's default import URL ([filter-default.json](https://github.com/interjc/chrome-x-not-brother-rules/raw/refs/heads/main/rules/filter-default.json)) is hosted there. Pick a rules file, copy its GitHub Raw link, and paste it into **Load URL** on the Rules page.
+- **Contribute**: pull requests and issues are welcome. Strip personal accounts, private keywords, and anything that should not be public before sharing.
 
 #### Quick add from the timeline
 
@@ -158,6 +162,31 @@ The extension only reads account names, handles, avatars, and relationship hints
 
 - [Privacy policy](https://interjc.github.io/chrome-x-not-brother/privacy.html)
 - [Terms of use](https://interjc.github.io/chrome-x-not-brother/terms.html)
+
+## Agent Skills
+
+This repository ships [Agent Skills](https://github.com/anthropics/skills) so coding assistants (Antigravity, Claude Code, Cursor, Copilot, and similar) can pick up the architecture rules and domain knowledge when they work on the extension or help edit filter rules.
+
+### Included skills
+
+- [`x-relationship-observer`](skills/x-relationship-observer/SKILL.md): development, maintenance, debugging, release, and testing of Not Brother. Covers X DOM adapter conventions, storage rules, local privacy boundaries, the hybrid rescan, and the release checklist.
+- [`x-not-brother-rules`](skills/x-not-brother-rules/SKILL.md): reading, parsing, writing, safe-regex checks, and format conversion for `not-brother-filter-rules` v1 JSON. Helps a person or an assistant produce a valid JSON file ready to import.
+
+### Install and use
+
+Add this project's skills to your assistant with the `skills` CLI:
+
+```bash
+npx skills add interjc/chrome-x-not-brother
+```
+
+Or pass the full GitHub URL:
+
+```bash
+npx skills add https://github.com/interjc/chrome-x-not-brother
+```
+
+After install, the assistant should activate the matching skill when it works on this codebase or on filter-rule JSON.
 
 ## Local development
 

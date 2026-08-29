@@ -55,6 +55,7 @@ import {
   hasExtensionContext,
   isExtensionContextInvalidated,
 } from "./extension-context";
+import { sendRuntimeMessage } from "./runtime-message";
 import {
   createPeriodicRescanController,
   type PeriodicRescanController,
@@ -220,12 +221,14 @@ async function quickAddFilterRule(
     : value.trim();
   if (!clipped) return;
   try {
-    const response = await chrome.runtime.sendMessage({
+    const response = await sendRuntimeMessage<
+      QuickAddFilterRuleResponse | { ok: false; error: string }
+    >({
       type: "filter-rules:quick-add",
       kind,
       value: clipped,
       viewerHandle: currentViewerHandle(),
-    }) as QuickAddFilterRuleResponse | { ok: false; error: string };
+    });
     if (!response.ok) throw new Error(response.error);
     if (kind === "handle") quickBlockedHandles.add(response.value.toLowerCase());
     latestFilterStatus = response.status;
@@ -277,11 +280,13 @@ function refreshFilterStatus(): Promise<void> {
     return filterStatusLoading;
   }
   filterStatusLoadingFor = requested;
-  filterStatusLoading = chrome.runtime.sendMessage({
+  filterStatusLoading = sendRuntimeMessage<
+    GetFilterRulesStatusResponse | { ok: false; error: string }
+  >({
     type: "filter-rules:status",
     viewerHandle,
   })
-    .then((response: GetFilterRulesStatusResponse | { ok: false; error: string }) => {
+    .then((response) => {
       if (requested !== (currentViewerHandle() ?? "")) return;
       if (!response.ok) throw new Error(response.error);
       latestFilterStatus = response.status;
@@ -307,11 +312,13 @@ function ensureFilterRulesLoaded(): Promise<void> {
   }
   const requested = viewerHandle;
   filterRulesLoadingFor = viewerHandle;
-  filterRulesLoading = chrome.runtime.sendMessage({
+  filterRulesLoading = sendRuntimeMessage<
+    GetFilterRulesResponse | { ok: false; error: string }
+  >({
     type: "filter-rules:get",
     viewerHandle,
   })
-    .then((response: GetFilterRulesResponse | { ok: false; error: string }) => {
+    .then((response) => {
       if (requested !== currentViewerHandle()) return;
       if (!response.ok) throw new Error(response.error);
       compiledFilterRules = compileFilterRuleSet(response.ruleSet);
@@ -378,16 +385,20 @@ function timelineHidingEnabled(settings: ObserverSettings | null): boolean {
   );
 }
 
-function handleRuntimeMessage(message: RuntimeMessage): false {
-  if (message.type === "data:changed") {
-    recordCache.clear();
-    requestedUserKeys.clear();
-    if (latestSettings?.observerEnabled || timelineHidingEnabled(latestSettings)) {
-      scheduleHide();
-      scheduleProcess();
-    }
-    if (latestSettings) void refreshSummary();
+function handleRuntimeMessage(
+  message: RuntimeMessage,
+  _sender: chrome.runtime.MessageSender,
+  sendResponse: (response?: unknown) => void,
+): boolean | void {
+  if (message.type !== "data:changed") return;
+  recordCache.clear();
+  requestedUserKeys.clear();
+  if (latestSettings?.observerEnabled || timelineHidingEnabled(latestSettings)) {
+    scheduleHide();
+    scheduleProcess();
   }
+  if (latestSettings) void refreshSummary();
+  sendResponse({ ok: true });
   return false;
 }
 
@@ -432,11 +443,11 @@ function recordNewHides(count: TimelineHideCount): void {
     else if (item.byBlockedBy) delta.hiddenByBlockedBy += 1;
   }
   if (!hideStatsHaveIncrements(delta)) return;
-  void chrome.runtime.sendMessage({
+  void sendRuntimeMessage<IncrementHideStatsResponse | { ok: false; error: string }>({
     type: "hide-stats:increment",
     viewerHandle: currentViewerHandle(),
     ...delta,
-  }).then((response: IncrementHideStatsResponse | { ok: false; error: string }) => {
+  }).then((response) => {
     if (stopped) return;
     if (!response.ok) {
       for (const id of added) countedTweetIds.delete(id);
@@ -640,9 +651,11 @@ async function refreshSummary(): Promise<void> {
   if (summaryRefreshInFlight) return;
   summaryRefreshInFlight = true;
   try {
-    const response = (await chrome.runtime.sendMessage({
+    const response = await sendRuntimeMessage<
+      GetSummaryResponse | { ok: false; error: string }
+    >({
       type: "summary:get",
-    })) as GetSummaryResponse | { ok: false; error: string };
+    });
     if (stopped) return;
     if (response.ok) {
       latestSummary = response.summary;
@@ -702,10 +715,12 @@ async function hydrateRecordCache(candidates: ExtractedCandidate[]): Promise<voi
   if (userKeys.length === 0) return;
   for (const userKey of userKeys) requestedUserKeys.add(userKey);
   try {
-    const response = (await chrome.runtime.sendMessage({
+    const response = await sendRuntimeMessage<
+      LookupUsersResponse | { ok: false; error: string }
+    >({
       type: "users:lookup",
       userKeys,
-    })) as LookupUsersResponse | { ok: false; error: string };
+    });
     if (!response.ok) {
       for (const userKey of userKeys) requestedUserKeys.delete(userKey);
       return;
@@ -798,9 +813,9 @@ async function processPage(): Promise<void> {
     viewerHandle,
   };
   try {
-    const response = (await chrome.runtime.sendMessage(message)) as
-      | UpsertObservationsResponse
-      | { ok: false; error: string };
+    const response = await sendRuntimeMessage<
+      UpsertObservationsResponse | { ok: false; error: string }
+    >(message);
     if (response.ok) {
       observationSignatures.markPersisted(observations, response.users);
       for (const user of response.users) recordCache.set(user.key, user);

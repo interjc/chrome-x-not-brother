@@ -36,6 +36,11 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 - Adds local Zod-validated blacklist rules for handles, display names, and post content, with expiration, JSON file import/export, and one-time public HTTPS/Gist import behind optional per-site permission.
 - Makes first-run consent easier to find with a prominent entry beside the minimized NB button and an action-icon context-menu shortcut; both open the full disclosure before consent.
 
+### Version 0.5.9 release notes
+
+- Fixes a Chrome warning that could appear on X pages when the background worker was waking up, so the dock summary loads more reliably.
+- English README now covers community filter-rule sharing and how to install this project's Agent Skills.
+
 ### Version 0.5.8 release notes
 
 - Adds an English README and contributor documentation. The default README stays Chinese.
@@ -145,6 +150,11 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 - 小型偏好可通过用户启用的 Chrome Sync 同步，关系档案和当前 X handle 仍只保存在本机。旧 local 偏好迁移时不会覆盖 Chrome Sync 已有设置。
 - 未同意时，收起后的 NB 悬浮球旁会显示醒目入口，工具栏图标右键菜单也能打开完整隐私说明；入口不会直接代替用户同意。
+
+### 0.5.9 更新说明
+
+- 修复浏览 X 时后台刚唤醒可能导致的观察摘要读取失败和 Chrome 错误页警告，悬浮窗统计更稳定。
+- 英文 README 补上社区规则分享和 Agent Skills 安装说明。
 
 ### 0.5.8 更新说明
 
@@ -256,6 +266,11 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 
 - 小さな設定をユーザーが有効にした Chrome Sync で同期し、関係アーカイブと現在の X ハンドルはローカルに保ちます。旧 local 設定の移行時も、Chrome Sync に既存の設定があれば上書きしません。
 - 未同意の場合、収納した NB ボタンの横に目立つ入口を表示し、ツールバーアイコンの右クリックメニューからも完全なプライバシー説明を開けます。入口だけで同意が確定することはありません。
+
+### 0.5.9 更新内容
+
+- バックグラウンド起動直後に観察サマリーが読めず Chrome のエラーページに警告が出ることがあった問題を修正し、ドックの集計を安定させました。
+- 英語 README にコミュニティルールの共有と Agent Skills の導入手順を追記しました。
 
 ### 0.5.8 更新内容
 
