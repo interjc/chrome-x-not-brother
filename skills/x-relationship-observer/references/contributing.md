@@ -22,6 +22,6 @@ Feature requests must stay inside annotation and local collection. Do not implem
 2. Change the smallest owning module. Keep X selectors and localized evidence text in `src/content/x-adapter.ts`.
 3. Route every user-visible runtime string through `src/i18n/` with complete `en`, `ja`, and `zh-CN` catalogs. Update all three `public/_locales` catalogs when Manifest metadata changes.
 4. Run `npm run check`, `npm run build`, `npm run validate:dist`, and `npm run skills:validate`. Maintainers preparing a store update use `npm run release`.
-5. Update the matching files under `docs/` and these skill references when behavior or workflow changes.
+5. Update the matching files under `docs/` and, when counterparts exist, `docs/en/` or root `README.en.md`, plus these skill references, when behavior or workflow changes.
 
 Do not add the `tabs`, `scripting`, `cookies`, `webRequest`, or `<all_urls>` permissions. Content scripts must not use the page origin's IndexedDB.

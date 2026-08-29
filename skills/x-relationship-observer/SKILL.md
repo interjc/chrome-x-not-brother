@@ -25,7 +25,7 @@ Preserve the extension's narrow contract: annotate relationship evidence already
 5. Store data only under the extension origin; content scripts send observations to the service worker.
 6. Do not add automated scrolling, profile traversal, new private API/GraphQL calls, or X account-action clicks. Reading `following` / `followed_by` / `blocked_by` / `muting` already loaded into the current page UI store, tweet fibers, or GraphQL responses the page itself already completed is allowed. Optional hiding of muted, known blocked-by, or custom-rule-matching authors/posts on Home, search, notifications, and threads must default off. Never persist a mute list or post text.
 7. Run `npm run check`, `npm run build`, `npm run validate:dist`, and `npm run skills:validate` before handoff.
-8. Update the matching human documentation under `docs/` when behavior or workflow changes.
+8. Update the matching human documentation under `docs/` when behavior or workflow changes. When an English counterpart exists under `docs/en/` or root `README.en.md`, keep that translation current in the same change.
 9. Keep observation disabled until the current prominent-disclosure consent version has been accepted.
 10. Exclude the signed-in viewer in scanning, persistence, summaries, and recent UI.
 11. Keep generic unavailable-post text and user-authored content from triggering blocked-by.

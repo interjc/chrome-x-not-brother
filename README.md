@@ -1,5 +1,7 @@
 # 不是兄弟 / Not Brother
 
+**简体中文** · [English](README.en.md)
+
 Not Brother（中文名：不是兄弟；日文名：兄貴じゃない）是一款面向 X 的 Chrome 扩展。你正常浏览 `x.com` 时，它会在已经出现的账号旁边标出关系，并把观察记录保存在当前 Chrome 配置里，方便以后发现互关、取关或拉黑变化。
 
 关系档案只留在本机，不会上传。语言、开关和面板状态等小型偏好可通过 Chrome 账号同步；未登录 Chrome 或关闭同步时仍保存在当前设备。它不会替你关注、取关、拉黑或静音，也不会自动滚动或打开别人的资料。
@@ -179,7 +181,7 @@ npm run validate:dist     # 校验清单和权限
 npm run package           # 打出可加载的 ZIP
 ```
 
-开发约定、目录说明和发布流程见 [docs/](docs/README.md)。给代理或自动化工具的仓库规则在 [AGENTS.md](AGENTS.md)。
+开发约定、目录说明和发布流程见 [docs/](docs/README.md)。英文文档从 [README.en.md](README.en.md) 和 [docs/en/](docs/en/README.md) 进入。给代理或自动化工具的仓库规则在 [AGENTS.md](AGENTS.md)。
 
 ## 参与贡献
 

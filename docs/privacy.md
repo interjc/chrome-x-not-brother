@@ -1,5 +1,7 @@
 # 隐私说明
 
+**简体中文** · [English](en/privacy.md)
+
 面向用户和 Chrome Web Store 的公开 HTML 在 [pages/](../pages/)，由 GitHub Pages 发布。源稿在 [terms/](../terms/)：
 
 - [隐私政策](../terms/privacy.md)

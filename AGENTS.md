@@ -83,4 +83,4 @@ Use `npm run package` only when preparing a loadable release archive. Write the 
 
 ## Documentation
 
-Update the relevant file under `docs/` and the matching project skill reference under `skills/x-relationship-observer/references/` when behavior or workflow changes. Keep the documentation index in `docs/README.md` accurate. Keep the root `README.md` written for people who install and use the extension.
+Update the relevant file under `docs/` and the matching project skill reference under `skills/x-relationship-observer/references/` when behavior or workflow changes. When an English counterpart exists under `docs/en/` or root `README.en.md`, keep that translation current in the same change. Keep the documentation index in `docs/README.md` accurate. Keep the root `README.md` written for people who install and use the extension, with `README.en.md` as the English entry.

@@ -48,4 +48,4 @@ For mention-heavy status threads, keep a fixture whose `tweetText` contains a la
 
 Never place credentials in the extension. The current release has no X API or AI integration.
 
-For issue reports and pull requests, follow `docs/contributing.md` and keep user feedback on `https://github.com/interjc/chrome-x-not-brother/issues`.
+For issue reports and pull requests, follow `docs/contributing.md` or `docs/en/contributing.md` and keep user feedback on `https://github.com/interjc/chrome-x-not-brother/issues`. Installer docs default to root `README.md` (Chinese) with `README.en.md` as the English entry.

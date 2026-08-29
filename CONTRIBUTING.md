@@ -3,8 +3,9 @@
 Not Brother is open source at [interjc/chrome-x-not-brother](https://github.com/interjc/chrome-x-not-brother).
 
 - Feedback and support: [GitHub Issues](https://github.com/interjc/chrome-x-not-brother/issues)
-- Full contribution guide (中文): [docs/contributing.md](docs/contributing.md)
-- Development setup: [docs/development.md](docs/development.md)
+- Full contribution guide: [简体中文](docs/contributing.md) · [English](docs/en/contributing.md)
+- Development setup: [简体中文](docs/development.md) · [English](docs/en/development.md)
+- User README: [简体中文](README.md) · [English](README.en.md)
 
 这个扩展默认标注并收集 `x.com` 上已经出现的关系证据；可选时间线过滤默认关闭。不要添加自动滚动、资料遍历、X 私有接口或关注 / 取关 / 拉黑 / 静音等账号操作。
 

@@ -1,0 +1,91 @@
+# Testing
+
+[简体中文](../testing.md) · **English**
+
+## Automated checks
+
+```bash
+npm run typecheck
+npm run test
+npm run test:coverage
+npm run build
+npm run validate:dist
+npm run skills:validate
+```
+
+Automated tests must at least cover:
+
+- English, Japanese, and Simplified Chinese relationship copy;
+- mutual, following-only, follows-you-only, blocked-by, and internal unknown staying out of collection;
+- `UserName` and thread `User-Name` author structures;
+- signed-in viewer exclusion, explicit thread blocked-by, all-three interaction restrictions plus a same-layer baseline, count-less hover cards as independent evidence, and generic unavailable / user-authored false-positive guards;
+- toolbar `ON` / `!` states, and the X-page observer dock's full panel / floating-ball toggle; after consent the expanded dock shows filter-rule applying status, this-page / lifetime intercepts, and an edit entry; that row is absent before consent or while collapsed to the ball;
+- known relationship changes;
+- `following_only → mutual` and `follows_you_only → mutual` displaying mutual; first-seen or non-unfollow-history `following_only` displaying following-only; `mutual → following_only` and `follows_you_only → following_only` displaying they-unfollowed; `follows_you_only → none` and other explicit neither-following showing no badge; `mutual → follows_you_only` and known-normal `→ blocked_by` displaying you-unfollowed and they-blocked-you; simultaneous both-side changes staying generic changed, then restoring the base relationship after review;
+- Who-to-follow suggestion cards with only a Follow button staying unknown, never none or they-unfollowed; Follows you on those cards may still collect follows-you-only;
+- unknown not overwriting a known relationship, not displaying, not sending, and legacy unknown being purged;
+- a single disabled repost, missing engagement controls (even with a normal same-page baseline), empty testid shells, scroll `pointer-events: none`, `aria-hidden` virtualized cells, photo overlays borrowing the timeline behind them, all-three restricted without a same-layer baseline, and a normal hover card that still has counts, none of which may be blocked-by;
+- a confirmed local blocked-by re-annotating a same-handle card that currently lacks fresh evidence;
+- a same-handle fully loaded hover card using follow/unfollow and `userFollowIndicator` to complete ordinary relationships, without leaking to another author;
+- thread badges inserted immediately before the visible `@handle`, never after the timestamp; falling back behind the display name only when no handle is visible; timestamp-less post-detail `User-Name` keeping X's display name and `@handle` on one row and the relationship label on the next, with 1–2px between the left edge and the display name; removing a badge also clears local row/stack classes and does not change `@handle`/date structure that already has a time ancestor;
+- UserCell badges under the avatar, not in the display-name row;
+- a 2-second fallback rescan on visible enabled pages, pause while hidden, immediate rescan on visibility/focus restore, no extra timers on repeated start, and listener teardown on stop;
+- observation signatures committed only after the matching user is confirmed persisted; unconfirmed sends stay retryable; confirmed identical evidence stays deduplicated;
+- the service worker broadcasting data changes to tabs that have a content script and ignoring tabs without a receiver; fieldbook mutations clearing local relationship caches on already-open X pages;
+- real React Side Panel category buttons, `aria-pressed` toggling, same-category clear, changed filtering, filtered empty state, viewer exclusion, standard `https://x.com/<handle>` new-tab links, and the language switcher defaulting to follow-the-browser then rewriting panel copy immediately after a manual choice;
+- an already-open extension page receiving `chrome.storage.sync` preference and `chrome.storage.local` viewer-handle changes through the shared settings hook, and removing listeners on unmount; legacy local preference migration not overwriting existing sync values; each sync item staying under 8 KB;
+- zero-observation empty-state copy in all three languages treating hover as a fallback; after the first observation the dock returning to visible-evidence copy;
+- before consent, a three-language, keyboard-reachable disclosure entry on the expanded dock and beside the collapsed ball; the action-icon context-menu item opening Side Panel, with dashboard fallback, then hiding after consent without affecting built-in Options;
+- Home timeline author identity from `/handle/status/:id`, avatar links, or bidi-wrapped `@handle`; insufficient evidence staying unknown; quoted inner cards not falling back to the outer author;
+- mention-heavy status threads identifying only authors, never in-post mention handles; platform blocked notices still excluding `tweetText`; scans must not degrade by cloning whole tweets or walking mention links;
+- after consent, HoverCard **Not Brother!** next to the name, the same item at the top of the tweet `caret` menu, and tweet-text **Hide keyword**, saving the matching rule immediately without treating a hover-card author as an in-post mention; the entry is absent before consent, on the viewer's own hover card, or on the viewer's own posts;
+- current-page UI store, tweet-ancestor fibers, and already-completed TweetDetail-style GraphQL responses promoting Home and thread unknown cards with `following` / `followed_by` / `blocked_by` / `muting` for optional timeline filters; keep reading reply authors when the viewer is already in the store; missing complete booleans must not be invented; store fills must not override already-collectable DOM evidence;
+- optional timeline filters default off; when on, Home tweet cells from muted mutual follows and locally known blocked-by accounts hide; profile / hover card / UserCell stay visible; turning filters off restores cells;
+- custom-rule Zod schema normalizing handles and rejecting unknown fields, duplicate id/handle, invalid or catastrophic regex, and over-limit JSON; handle, display-name, content, enablement, and expiry matching correctly; posts restoring after the master switch is off or a rule expires;
+- content script obtaining a validated snapshot only through service worker `filter-rules:get`; background refusing the snapshot before consent or while the master switch is off; the content bundle containing neither Zod nor `safe-regex2`;
+- rule-file import asking update-by-id versus clear-and-replace; same id replaced in full, missing ids appended; public HTTPS/Gist URL parsing, single-JSON selection, truncated Raw files, timeout/size/HTTP/invalid-JSON failures all failing safely; rules written only under the signed-in account namespace in `chrome.storage.local`;
+- CSV escaping and JSON schema validation;
+- Manifest files, minimum persistent permissions, optional HTTPS host permission used only for user-gesture remote import, and required build artifacts;
+- `en`, `ja`, `zh_CN` Manifest catalogs, locale normalization, translation placeholders, and relationship and source names.
+
+## Chrome manual acceptance
+
+Use a dedicated test profile. Do not give account credentials to development tools.
+
+1. Load `dist/`. Confirm install only declares access to `x.com`, and that the extension's own onboarding page opens.
+2. Before consent, confirm the toolbar shows amber `!`. Open X and scroll: no relationship badges, no new IndexedDB observations, and the page dock says observation is not enabled. The expanded-dock primary button should read **Review & agree**; after collapse, a separate high-contrast entry remains beside it. Mouse, Enter, and Space all open the full disclosure and do not consent automatically.
+3. Right-click the toolbar icon. Confirm **Review privacy notice and agree…** exists alongside Chrome's built-in **Options**. The former opens the Side Panel disclosure. After reviewing and consenting, confirm the consent menu item disappears, built-in **Options** remains, the toolbar becomes acid-yellow `ON`, and observation starts after refreshing X.
+4. Open X Home. Authors you follow should get following-only or mutual badges without a hover. Cards with no loaded relationship fields must not show an Unknown badge and must not enter recent observations.
+5. Open your own following page and verify following evidence on visible UserCells.
+6. Open your own followers page and verify follows-you evidence.
+7. Set Chrome UI to English, Japanese, and Simplified Chinese in turn. Verify Side Panel, fieldbook, first-run disclosure, toolbar title, times, and confirm dialogs switch. Unsupported languages must fall back fully to English. In the Side Panel, confirm the language switcher defaults to **Match browser language**, then choose Japanese and English and confirm panel copy, `document.documentElement.lang`, an already-open fieldbook, and current X-page badges and dock all switch immediately. Choosing **Match browser language** again returns page labels to the X language.
+8. With the switcher on **Match browser language**, set X to a supported language different from Chrome and verify X-page badges and dock follow X, not Chrome.
+9. Open a test profile that shows an explicit blocked notice and verify the localized **Blocked you**.
+10. Open a post thread and verify `User-Name` authors with an explicit blocked-by platform notice are annotated.
+11. Find a reply author whose reply, repost, and like are all inoperable while another post on the same page has all three working. Verify a red `! Blocked you` enhanced badge appears before `@handle` and is archived, while `@handle` and the date keep X's native layout.
+12. Hover a known blocked-by author until the hover card is fully loaded. Verify missing following/follower links independently annotate and collect. After closing the card and refreshing, the local known record still re-annotates that reply ID.
+13. Confirm a single disabled repost, generic "This Post is unavailable", user-authored "blocked you" text, engagement buttons not yet rendered (even with a normal baseline on the page), empty-shell / `pointer-events` / `aria-hidden` cells in a scrolling photo viewer, all-three restricted without a same-layer baseline, and a normal hover card that still has counts, none of which annotate or collect.
+14. Confirm your own posts/replies have no badge, and that Side Panel recent observations and all statistics exclude you.
+15. Check the X-page dock status and four overview counts, plus the filter-rules row: with the master switch off it should show idle plus rule counts; with it on, applying, active-rule count, this-page intercepts, and lifetime intercepts. **Edit rules** should open the side panel Rules tab. The localized details button should open the current tab's Side Panel. Hover an author and click **Not Brother!** next to the name; that handle should appear in the rules and save immediately. Open a post's three-dot menu; the same top item should write that post's author. Select post text and choose **Hide keyword** to write a contains rule. None of these entries may click X block/mute buttons.
+16. Click the dock top-right `×`. Confirm it becomes an NB floating ball with the matching status dot, still in the bottom-right corner. X's Chat/Grok buttons should shift above the ball and not cover the timeline. After refreshing X it stays a ball. Click, Enter, and Space all restore the overview, and Chat/Grok return.
+17. Scroll normally for a minute. Confirm no duplicate badges, duplicate docks, obvious layout jumps, or console errors. Open a mention-heavy post detail and confirm the page stays scrollable, only post authors are badged, and in-post mentions have no badge.
+18. Check extension pages in light and dark system themes, then switch the X theme and check page badges, the full dock, and the floating ball.
+19. Open the Side Panel, check counts and the recent list, then activate the four category counts and the changed callout. Confirm list, title, `aria-pressed`, and filtered empty state, then restore all by activating the same category again. Use mouse, Enter, and Space on categories. Activate a user with click or keyboard and confirm only that `https://x.com/<handle>` profile opens in a new tab.
+20. Open the full fieldbook and test search, filter, sort, history, and change review. Confirm mutual overrides display, first following-only shows One-way, and They unfollowed / You unfollowed / They blocked you appear only when history comparison holds. Confirm neither-following accounts leave badges and overview counts, the dock still shows one changed total, and reviewing an event restores the current base relationship.
+21. Export JSON/CSV. Confirm there is no unknown, CSV relationship labels use the current extension language, then test a JSON merge import from that backup.
+22. Pause the observer. Confirm the toolbar becomes gray `!`, badges are removed, and collection stops; resume and confirm it continues.
+23. After exporting a backup, test deleting one record and clearing all local data.
+24. Keep an X tab open and reload the extension on `chrome://extensions`. Confirm the old script no longer repeats `reading 'local'` or uncaught `Extension context invalidated`, then refresh X and confirm the new script restores the dock and badges.
+25. In a thread, hover mutual, following-only, and not-followed authors until each hover card is fully loaded. Verify `*-unfollow` plus `userFollowIndicator` yields mutual, `*-unfollow` alone yields following-only, and another author's currently open hover card does not change the target reply's relationship.
+26. Start the observer with an empty database. Verify X-page dock and Side Panel empty states mention hovering the author on Home or in a thread. After hover produces the first credible observation, the dock returns to "only visible page evidence is recorded". Refresh Home or scroll away and back; a locally confirmed account should re-annotate without another hover.
+27. After reload and X refresh, confirm the dock root `data-xro-version` equals the candidate package version. Leave a relationship hover card open without further action and confirm a badge appears within about 2 seconds. Switch to another tab for more than 4 seconds and return: no periodic scan while hidden, immediate rescan on return.
+28. Watch DevTools for a minute: fast scroll, hover, and in-X navigation must not throw concurrent errors; the same relationship and source must not increment `observationCount` every 2 seconds; after an invalidating extension reload, polling and focus/visibility listeners must not remain.
+29. Open two X tabs. After tab A recognizes a new relationship, tab B re-annotates within about 2 seconds. After acknowledging a change or deleting a record in the fieldbook, tab B's cached result updates. Ordinary non-X tabs without a receiver must not throw, and must not require adding the `tabs` permission.
+30. Click **Send feedback** in the Side Panel and fieldbook footers. Confirm a new tab opens `https://github.com/interjc/chrome-x-not-brother/issues` without extra permissions or sending local observations.
+31. The side panel defaults to the Status tab user list. Switching to Options shows language, badges, and timeline filters, and hides the status list. Right-click the toolbar icon, choose **Options**, and confirm the side panel opens on Options. All three timeline filters default off. Turn on **Hide muted accounts completely**: Home posts from muted mutual follows disappear, and their profiles stay open. Turn on **Hide accounts that blocked you**: Home posts and thread replies from locally recorded blocked-by authors disappear. Accounts already in the archive vanish immediately; a newly detected account collapses first. The same switches in the fieldbook sync immediately.
+32. When upgrading from an older version, seed `chrome.storage.local` with old settings. If sync is empty, confirm preferences migrate into sync and `viewerHandle` into the new local key. If sync already has different preferences, confirm the sync values are kept. Changing preferences while signed out of Chrome or with sync off should still save immediately and survive restart. After signing in with Chrome Sync enabled, Chrome may restore those small preferences on other profiles; the relationship archive and `viewerHandle` must not appear there.
+33. On Side Panel Options, Options, and the fieldbook, confirm **Edit rules & view guide** sits beside **Apply custom filter rules**. Side Panel clicks switch to the Rules tab; fieldbook Options clicks open the Rules page. Confirm the guide fully explains handles, text, regex, expiry, update-by-id versus clear-and-replace, and privacy, and that the sample JSON parses and passes schema. Then add all three rule types and test enablement, case, and future/past expiry. With the master switch on, only matching posts on allowed surfaces hide; Profile, HoverCard, UserCell, and follow lists stay visible; post text does not appear in IndexedDB or exports. Download rule JSON, restore with clear-and-replace, then import from a public Gist that has one JSON file using update-by-id. Confirm same ids are replaced, new ids are appended, and Chrome asks for GitHub host access only after the click. Denying permission, using HTTP, exceeding 1 MiB, multiple JSON files, or an invalid regex leaves existing rules unchanged and shows a readable error. Turning the master switch off restores every rule-hidden post. Status, the fieldbook stats bar, and the dock should show active-rule count and lifetime intercepts.
+
+## Boundary checks
+
+In Chrome DevTools Network and on the X page, confirm the extension does not make X API requests, auto-scroll or navigate, click X buttons, or send developer-cloud telemetry or remote scripts. Only a user-clicked remote rule import visits an authorized public HTTPS/Gist source, and that request carries no X data or local rules. Chrome's own settings sync does not include the relationship archive, the rule document, or `viewerHandle`.

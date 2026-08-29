@@ -56,7 +56,7 @@ Load nvm, update intentionally, inspect release notes, run the complete check su
 
 ## Localization
 
-Keep user-visible runtime copy in `src/i18n/index.ts`; a new key must be translated in English, Japanese, and Simplified Chinese in the same change. Keep Chrome-owned metadata in the three matching `public/_locales` catalogs. X evidence phrases belong only in the adapter, not the UI catalog.
+Keep user-visible runtime copy in `src/i18n/index.ts`; a new key must be translated in English, Japanese, and Simplified Chinese in the same change. Keep Chrome-owned metadata in the three matching `public/_locales` catalogs. X evidence phrases belong only in the adapter, not the UI catalog. The Japanese follows-you short label is 被フォロー, not フォロー中, which is X's own Following control.
 
 After copy changes, check the 420px side panel, dashboard, toolbar titles, injected badge/dock, ARIA labels, relative dates, and CSV relationship labels. Unsupported locales must fall back to complete English copy.
 
@@ -72,4 +72,4 @@ If badges destabilize X or produce false labels:
 2. record page locale, URL shape, expected label, and observed label;
 3. reproduce with a sanitized fixture;
 4. fix and test the adapter;
-5. document the selector change in `docs/maintenance.md`.
+5. document the selector change in `docs/maintenance.md` and `docs/en/maintenance.md`.

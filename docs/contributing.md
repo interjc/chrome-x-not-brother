@@ -1,5 +1,7 @@
 # 贡献指南
 
+**简体中文** · [English](en/contributing.md)
+
 Not Brother 是开源软件。源码、议题和发布说明都在 [interjc/chrome-x-not-brother](https://github.com/interjc/chrome-x-not-brother)。
 
 - 反馈与支持：[GitHub Issues](https://github.com/interjc/chrome-x-not-brother/issues)
@@ -81,7 +83,7 @@ npm run skills:validate
 
 维护者打商店更新包时用 `npm run release`，见 [发布指南](release.md)。不要把手压的 `dist/` 文件夹上传到 Chrome Web Store。
 
-选择器、关系规则或 Side Panel 交互变化时，还要补测试并按 [测试指南](testing.md) 做相关手工步骤。行为或工作流变化时，同步更新 `docs/` 和 `skills/x-relationship-observer/references/` 中对应的说明，并保持 [文档索引](README.md) 准确。根目录 README 面向使用者，不要把开发者索引写回去。
+选择器、关系规则或 Side Panel 交互变化时，还要补测试并按 [测试指南](testing.md) 做相关手工步骤。行为或工作流变化时，同步更新 `docs/`，并在 `docs/en/` 或根目录 `README.en.md` 已有对应英文稿时一并更新，同时更新 `skills/x-relationship-observer/references/` 中对应的说明，并保持 [文档索引](README.md) 准确。根目录 README 面向使用者，不要把开发者索引写回去。
 
 不要为了方便新增 `tabs`、`scripting`、`cookies`、`webRequest` 或全站访问。内容脚本不得使用页面 origin 的 IndexedDB。
 

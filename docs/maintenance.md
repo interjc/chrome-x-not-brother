@@ -1,5 +1,7 @@
 # 维护指南
 
+**简体中文** · [English](en/maintenance.md)
+
 ## X DOM 漂移
 
 页面标注最可能因 X 的 DOM 和本地化文案变化失效。发现问题时：
@@ -68,4 +70,4 @@ content script 必须把这种情况视为生命周期结束：捕获 promise re
 
 ## 文档同步
 
-行为或流程变化时同步维护 `docs/`（含 [文档索引](README.md)）和 `skills/x-relationship-observer/references/` 对应工作流。根目录 README 保持使用者视角。
+行为或流程变化时同步维护 `docs/`（含 [文档索引](README.md)）、已有的英文对应稿（`docs/en/` 或根目录 `README.en.md`），以及 `skills/x-relationship-observer/references/` 对应工作流。根目录 README 保持使用者视角。

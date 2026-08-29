@@ -1,5 +1,7 @@
 # 技术架构
 
+**简体中文** · [English](en/architecture.md)
+
 ## 运行时数据流
 
 ```mermaid
@@ -50,7 +52,7 @@ flowchart LR
 - `hideByFilterRules` 打开且同意版本有效时，通过 `filter-rules:get` 向 service worker 请求当前登录 X 账号命名空间下、已由 Zod 校验的规则快照，再用不依赖 Zod 的轻量匹配器预编译 handle 集合、contains 与正则。切换账号时丢弃上一账号的编译快照。候选帖正文选择器仍封装在 `x-adapter.ts`；正文只作为内存中的当前匹配输入，不写档案或消息。每次匹配重新检查到期时间，2 秒复扫负责在规则到期后恢复节点；规则存储变化通过 `chrome.storage.onChanged` 使快照失效并复扫。同意后可在 HoverCard 名字旁、帖子三个点菜单和帖子正文划词处用 `filter-rules:quick-add` 立即保存一条 handle 或 contains 规则；内容脚本不直接写规则文档，也不点击 X 的拉黑/静音；
 - 页面主世界 `page-bridge.js` 只把上述已载入字段回传给隔离世界的观察器；DOM 证据优先，store / 已完成响应只填充内部 unknown；
 - 识别当前登录 handle 并在扫描阶段排除本人；
-- 插入观察状态/概览 dock；可同步的 `dockCollapsed` 设置控制完整面板或状态悬浮球，用户手势可恢复面板或通过 service worker 打开当前标签页的 Side Panel；悬浮球贴右下角，显示期间用 adapter 中的 Chat/Grok 抽屉选择器把原生按钮上移，不向内侧挡住时间线；同意后展开 dock 显示当前命名空间黑名单的应用状态和条数，编辑入口打开档案库 `#filter-rules`，不把规则正文放进 dock；
+- 插入观察状态/概览 dock；可同步的 `dockCollapsed` 设置控制完整面板或状态悬浮球，用户手势可恢复面板或通过 service worker 打开当前标签页的 Side Panel；悬浮球贴右下角，显示期间用 adapter 中的 Chat/Grok 抽屉选择器把原生按钮上移，不向内侧挡住时间线；同意后展开 dock 显示当前命名空间拦截规则的应用状态和条数，编辑入口打开侧栏规则页（失败时回退档案库 `#filter-rules`），不把规则正文放进 dock；
 - 对已确认持久化的发送签名去重；消息失败或 service worker 未返回对应用户时不提交签名，后续复扫会重试；
 - 所有扫描经过 180ms 合并与 single-flight 串行门控：扫描期间的新触发只排队一次补扫，定期复扫不会并发执行或重复追加相同历史；隐藏标签页暂停定期复扫；扩展上下文终止时移除 DOM Observer、计时器及页面/Chrome 事件监听；
 - 不调用 `fetch`，不打开 URL，不点击页面控制。

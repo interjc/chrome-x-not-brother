@@ -32,16 +32,16 @@ Do not paste passwords, cookies, export backups, or other people's account data 
 - 观察来源 URL 和页面类型；
 - 当前登录账号的小写 handle（`viewerHandle`），仅用于排除本人，不作为观察对象。
 
-扩展不保存帖子正文，不读取私信，不读取 cookies，不使用 X API，也不收集浏览器全局历史。只有你打开“应用自定义黑名单规则”且存在内容规则时，扩展才会读取当前候选帖子的可见正文，在内存中与 contains 或已安全校验的正则匹配；正文不会写入规则、关系档案、日志或导出，也不会发送给开发者或规则来源。证据不足的结果不保存。评论区互动按钮只用于当场判断是否全部不可用，不保存按钮内容或操作行为。
+扩展不保存帖子正文，不读取私信，不读取 cookies，不使用 X API，也不收集浏览器全局历史。只有你打开“应用自定义拦截规则”且存在内容规则时，扩展才会读取当前候选帖子的可见正文，在内存中与 contains 或已安全校验的正则匹配；正文不会写入规则、关系档案、日志或导出，也不会发送给开发者或规则来源。证据不足的结果不保存。评论区互动按钮只用于当场判断是否全部不可用，不保存按钮内容或操作行为。
 
-你可以自己创建黑名单规则，其中可能包含 X handle、显示名称匹配文字、内容关键词/正则、启用状态和到期时间。这些是你主动提供的本地配置，不是扩展自动收集的关系事实。
+你可以自己创建拦截规则，其中可能包含 X handle、显示名称匹配文字、内容关键词/正则、启用状态和到期时间。这些是你主动提供的本地配置，不是扩展自动收集的关系事实。
 
 ### 保存位置
 
 - 用户与观察记录保存在扩展 origin 的 IndexedDB；
 - 同意版本、观察开关、徽标开关、dock 收起偏好、界面语言、侧栏标签和三个可选时间线过滤总开关保存在 `chrome.storage.sync`；用户登录 Chrome 并启用同步时，Chrome 可通过该 Chrome 账号在浏览器间同步这些小型偏好；未登录、关闭同步或离线时，它们仍保存在当前设备；
 - `viewerHandle` 单独保存在 `chrome.storage.local`，不会随 Chrome 账号同步；
-- 完整黑名单规则文档单独保存在 `chrome.storage.local`，不进入 Chrome Sync，也不与关系档案备份混合；
+- 完整拦截规则文档单独保存在 `chrome.storage.local`，不进入 Chrome Sync，也不与关系档案备份混合；
 - 扩展没有开发者服务器、扩展账号系统或遥测。关系观察数据不会进入 Chrome Sync，也不会发送给开发者；设置同步由 Chrome 提供。
 
 侧栏和档案库展示头像时，优先使用观察时保存的 X CDN 头像 URL；没有保存地址时才按 handle 请求公开头像（`https://unavatar.io/x/{handle}`）。这只用于显示，观察记录仍只保存在本地。
@@ -60,7 +60,7 @@ Do not paste passwords, cookies, export backups, or other people's account data 
 
 ### 你的控制
 
-你可以随时暂停观察、隐藏页面徽标、打开或关闭可选时间线过滤、编辑/导入/导出/清空本地黑名单规则、收起或展开观察 dock、导出 JSON/CSV、删除单个用户及其历史、清空全部本地档案，或卸载扩展以删除其 origin 数据。时间线过滤只改变当前浏览器的显示，不保存静音名单，也不对 X 执行静音或拉黑。
+你可以随时暂停观察、隐藏页面徽标、打开或关闭可选时间线过滤、编辑/导入/导出/清空本地拦截规则、收起或展开观察 dock、导出 JSON/CSV、删除单个用户及其历史、清空全部本地档案，或卸载扩展以删除其 origin 数据。时间线过滤只改变当前浏览器的显示，不保存静音名单，也不对 X 执行静音或拉黑。
 
 ### 政策更新
 
@@ -87,16 +87,16 @@ The extension stores only the minimum information already loaded for visible acc
 - source URL and page type;
 - the signed-in account's lowercase handle (`viewerHandle`), used only to exclude the viewer and never stored as an observation.
 
-It does not save post text, read direct messages or cookies, call X APIs, or collect browser-wide history. Only when you enable “Apply custom blacklist rules” and have a content rule does it read visible text from the current candidate post and compare it in memory with a contains matcher or a safety-checked regular expression. Post text is not written to rules, the relationship archive, logs, or exports, and is not sent to the developer or a rule source. Insufficient evidence is discarded. Reply, repost, and like controls are inspected only to decide whether they are all unavailable; their labels and click actions are not stored.
+It does not save post text, read direct messages or cookies, call X APIs, or collect browser-wide history. Only when you enable “Apply custom filter rules” and have a content rule does it read visible text from the current candidate post and compare it in memory with a contains matcher or a safety-checked regular expression. Post text is not written to rules, the relationship archive, logs, or exports, and is not sent to the developer or a rule source. Insufficient evidence is discarded. Reply, repost, and like controls are inspected only to decide whether they are all unavailable; their labels and click actions are not stored.
 
-You may create blacklist rules containing X handles, display-name match text, content keywords or regular expressions, enabled state, and expiration times. These are local settings you provide, not relationship facts collected automatically by the extension.
+You may create filter rules containing X handles, display-name match text, content keywords or regular expressions, enabled state, and expiration times. These are local settings you provide, not relationship facts collected automatically by the extension.
 
 ### Where it is stored
 
 - Users and observations stay in IndexedDB under the extension origin;
 - consent version, observer state, badge preference, dock-collapsed preference, UI language, side-panel tab, and the three optional timeline-filter master switches are stored in `chrome.storage.sync`; when the user is signed in to Chrome with sync enabled, Chrome may sync these small preferences between browsers through that Chrome account; when signed out, sync is disabled, or the browser is offline, they remain available on the current device;
 - `viewerHandle` stays separately in `chrome.storage.local` and is not synced through the Chrome account;
-- the full blacklist rule document stays separately in `chrome.storage.local`, does not enter Chrome Sync, and is separate from relationship archive backups;
+- the full filter-rule document stays separately in `chrome.storage.local`, does not enter Chrome Sync, and is separate from relationship archive backups;
 - the extension has no developer server, extension account system, or telemetry. Relationship observations do not enter Chrome Sync and are not sent to the developer; preference sync is provided by Chrome.
 
 Side Panel and Fieldbook display avatars from the stored X CDN URL captured for that handle, then request a public image (`https://unavatar.io/x/{handle}`) only if none is stored. That request is only for display; observation records stay local.
@@ -115,7 +115,7 @@ For a remote import, the browser contacts the public-file host directly. Gist im
 
 ### Your controls
 
-You can pause observation, hide page badges, turn optional timeline filters on or off, edit/import/export/clear local blacklist rules, collapse or expand the observer dock, export JSON or CSV, delete one local record, clear the archive, or uninstall the extension to delete its origin data. Timeline filters only change what this browser shows; they do not save a mute list or mute/block anyone on X.
+You can pause observation, hide page badges, turn optional timeline filters on or off, edit/import/export/clear local filter rules, collapse or expand the observer dock, export JSON or CSV, delete one local record, clear the archive, or uninstall the extension to delete its origin data. Timeline filters only change what this browser shows; they do not save a mute list or mute/block anyone on X.
 
 ### Changes
 

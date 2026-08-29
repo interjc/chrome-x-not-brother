@@ -1,5 +1,7 @@
 # 自定义拦截规则 v1
 
+**简体中文** · [English](en/filter-rules.md)
+
 本文定义 Not Brother 的 `not-brother-filter-rules` JSON v1。代码中的权威校验器是 `src/domain/filter-rules.ts`；导入文件必须通过 Zod 完整校验，未知字段也会被拒绝。
 
 面向安装用户的规则编写、界面编辑、导入导出，以及 Gist / GitHub Raw / 公开 HTTPS 托管说明写在仓库根目录 [README.md](../README.md#自定义拦截规则)。

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  APP_LOCALES,
   getDocumentLocale,
+  MESSAGE_KEYS,
   normalizeLocale,
   resolveUiLocale,
   relationshipPresentation,
@@ -126,5 +128,22 @@ describe("runtime internationalization", () => {
     expect(translate("zh-CN", "dockHoverHint")).toContain("悬停");
     expect(translate("en", "dockHoverHint")).toContain("Hover");
     expect(translate("ja", "dockHoverHint")).toContain("カーソル");
+  });
+
+  it("keeps the same substitution placeholders in every catalog", () => {
+    const names = (text: string) =>
+      [...text.matchAll(/\{([a-zA-Z0-9_]+)\}/g)].map((match) => match[1]);
+    for (const key of MESSAGE_KEYS) {
+      const zh = names(translate("zh-CN", key));
+      for (const locale of APP_LOCALES) {
+        expect(names(translate(locale, key)), `${locale}.${key}`).toEqual(zh);
+      }
+    }
+  });
+
+  it("does not reuse X's Japanese Following control as the follows-you badge", () => {
+    expect(relationshipPresentation("ja", "follows_you_only").shortLabel).toBe("被フォロー");
+    expect(relationshipPresentation("ja", "follows_you_only").label).toBe("フォローされています");
+    expect(relationshipPresentation("ja", "following_only").shortLabel).toBe("片方向");
   });
 });

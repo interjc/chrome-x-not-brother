@@ -1,5 +1,7 @@
 # 开发指南
 
+**简体中文** · [English](en/development.md)
+
 ## 前提
 
 - Google Chrome 116+；

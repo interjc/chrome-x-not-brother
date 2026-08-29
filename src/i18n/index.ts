@@ -728,7 +728,7 @@ const ja = {
   relationshipFollowingOnlyShort: "片方向",
   relationshipFollowingOnlyDescription: "あなたはフォロー中ですが、現在の証拠では相手はあなたをフォローしていません",
   relationshipFollowsYouOnlyLabel: "フォローされています",
-  relationshipFollowsYouOnlyShort: "フォロー中",
+  relationshipFollowsYouOnlyShort: "被フォロー",
   relationshipFollowsYouOnlyDescription: "相手はあなたをフォロー中ですが、あなたは現在フォローしていません",
   relationshipBlockedByLabel: "ブロックされています",
   relationshipBlockedByShort: "ブロック",
@@ -914,7 +914,7 @@ const ja = {
   filterRulesTooLarge: "ルール JSON が 1 MiB の上限を超えています",
   filterRulesGistAmbiguous: "この Gist には複数の JSON があります。対象ファイルの Raw URL を使ってください。",
   filterRulesGistMissing: "この Gist に読み込めるルール JSON がありません",
-  filterRulesInvalidImport: "読み込み失敗：Not Brother filter-rules v1 の JSON ではありません",
+  filterRulesInvalidImport: "読み込み失敗：兄貴じゃないのフィルタルール v1 JSON ではありません",
   actionActiveTitle: "兄貴じゃない · 観察中",
   actionPausedTitle: "兄貴じゃない · 一時停止中、クリックして開く",
   actionSetupTitle: "兄貴じゃない · クリックして設定を完了し観察を開始",
@@ -922,6 +922,9 @@ const ja = {
 } satisfies Catalog;
 
 const catalogs: Record<AppLocale, Catalog> = { en, ja, "zh-CN": zhCN };
+
+export const APP_LOCALES: readonly AppLocale[] = ["en", "ja", "zh-CN"];
+export const MESSAGE_KEYS = Object.keys(zhCN) as MessageKey[];
 
 export function normalizeLocale(value: string | null | undefined): AppLocale {
   const locale = value?.trim().toLowerCase().replaceAll("_", "-") ?? "";
