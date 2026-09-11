@@ -67,4 +67,41 @@ describe("observation signature tracker", () => {
     };
     expect(tracker.filterUnsent([changed])).toEqual([changed]);
   });
+
+  it("admits corrected identity metadata even when relationship evidence is unchanged", () => {
+    const tracker = createObservationSignatureTracker();
+    const stale = {
+      ...observation("alice"),
+      displayName: "Alice",
+      avatarUrl: "https://pbs.twimg.com/profile_images/1/stale_x96.jpg",
+    };
+    tracker.markPersisted([stale], [{
+      ...user(stale),
+      displayName: stale.displayName,
+      avatarUrl: stale.avatarUrl,
+    }]);
+
+    const corrected = {
+      ...stale,
+      avatarUrl: "https://pbs.twimg.com/profile_images/1/alice_x96.jpg",
+    };
+    expect(tracker.filterUnsent([corrected])).toEqual([corrected]);
+  });
+
+  it("does not resend when a later DOM pass temporarily omits persisted identity metadata", () => {
+    const tracker = createObservationSignatureTracker();
+    const complete = {
+      ...observation("alice"),
+      displayName: "Alice",
+      avatarUrl: "https://pbs.twimg.com/profile_images/1/alice_x96.jpg",
+    };
+    tracker.markPersisted([complete], [{
+      ...user(complete),
+      displayName: complete.displayName,
+      avatarUrl: complete.avatarUrl,
+    }]);
+
+    const incomplete = { ...complete, displayName: null, avatarUrl: null };
+    expect(tracker.filterUnsent([incomplete])).toEqual([]);
+  });
 });

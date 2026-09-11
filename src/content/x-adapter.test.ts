@@ -194,6 +194,85 @@ describe("scanXDocument", () => {
     expect(candidates.some((candidate) => candidate.observation.relationship === "blocked_by")).toBe(true);
   });
 
+  it("lets an explicit Simplified Chinese blocked notice override follows-you", () => {
+    const doc = fixture(`<main data-testid="primaryColumn">
+      <div data-testid="UserName">
+        <span>271828</span>
+        <span data-testid="userFollowIndicator">关注了你</span>
+        <span>@RUIXUANLIU2190</span>
+      </div>
+      <section>
+        <h2>@RUIXUANLIU2190 已屏蔽你</h2>
+        <p>你可以查看公开帖子，但无法与它们互动。</p>
+      </section>
+    </main>`);
+
+    const candidate = scanXDocument(doc, "https://x.com/RUIXUANLIU2190", 100)[0];
+    expect(candidate?.observation).toMatchObject({
+      handle: "RUIXUANLIU2190",
+      relationship: "blocked_by",
+    });
+    expect(candidate?.observation.evidence).toEqual([
+      "blocked-notice",
+      "follows-you-label",
+    ]);
+  });
+
+  it.each([
+    ["en", "@TargetUser has blocked you", "You can view public posts, but you cannot interact with them."],
+    ["ja", "@TargetUserさんにブロックされています", "公開ポストは表示できますが、反応することはできません。"],
+    ["zh-CN", "@TargetUser 已屏蔽你", "你可以查看公开帖子，但无法与它们互动。"],
+    ["zh-TW", "@TargetUser 已封鎖你", "你可以查看公開貼文，但無法與其互動。"],
+  ])("recognizes a post-less blocked profile in %s", (_locale, heading, detail) => {
+    const doc = fixture(`<main data-testid="primaryColumn">
+      <div data-testid="UserName"><span>Target</span><span>@TargetUser</span></div>
+      <section><h2>${heading}</h2><p>${detail}</p></section>
+    </main>`);
+
+    const candidates = scanXDocument(doc, "https://x.com/TargetUser", 100);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.observation).toMatchObject({
+      handle: "TargetUser",
+      relationship: "blocked_by",
+      evidence: ["blocked-notice"],
+    });
+  });
+
+  it("does not treat profile identity text or an existing extension badge as platform evidence", () => {
+    const doc = fixture(`<main data-testid="primaryColumn">
+      <div data-testid="UserName">
+        <span>已屏蔽你</span><span>@OrdinaryUser</span>
+        <span data-xro-badge="follows_you_only">关注了你</span>
+      </div>
+      <div data-testid="UserDescription">个人简介里写着“已屏蔽你”</div>
+    </main>`);
+
+    const candidate = scanXDocument(doc, "https://x.com/OrdinaryUser", 100)[0];
+    expect(candidate?.observation.relationship).toBe("unknown");
+    expect(candidate?.observation.evidence).toEqual(["insufficient-evidence"]);
+  });
+
+  it("does not leak nested profile-feed evidence into the viewed account", () => {
+    const doc = fixture(`<main data-testid="primaryColumn">
+      <div data-testid="UserName"><span>Target</span><span>@TargetUser</span></div>
+      <div data-testid="cellInnerDiv">
+        <article data-testid="tweet">
+          <div data-testid="User-Name"><span>Other</span><span>@OtherUser</span></div>
+        </article>
+        <div>This post is from an account that has blocked you.</div>
+      </div>
+      <div data-testid="UserCell">
+        <div data-testid="UserName"><span>Suggested</span><span>@SuggestedUser</span></div>
+        <span data-testid="userFollowIndicator">Follows you</span>
+      </div>
+    </main>`);
+
+    const target = scanXDocument(doc, "https://x.com/TargetUser", 100)
+      .find((candidate) => candidate.observation.handle === "TargetUser");
+    expect(target?.observation.relationship).toBe("unknown");
+    expect(target?.observation.evidence).toEqual(["insufficient-evidence"]);
+  });
+
   it("keeps a timeline card unknown when it has no relationship evidence", () => {
     const doc = fixture(`<article data-testid="tweet">
       <div data-testid="UserName"><span>Alice Example</span><span>@Alice</span></div>
@@ -746,6 +825,56 @@ describe("scanXDocument", () => {
       displayName: "Alice Example",
       avatarUrl: "https://pbs.twimg.com/profile_images/1/alice_x96.jpg",
     });
+  });
+
+  it("uses the declared avatar src instead of a stale currentSrc from a recycled row", () => {
+    const doc = fixture(`${accountSwitcher()}<div data-testid="UserCell">
+      <div data-testid="UserAvatar-Container-Alice">
+        <a href="/Alice"><img src="https://pbs.twimg.com/profile_images/1/alice_normal.jpg" alt=""></a>
+      </div>
+      <div data-testid="UserName"><a href="/Alice">Alice</a><span>@Alice</span></div>
+    </div>`);
+    const image = doc.querySelector("img")!;
+    Object.defineProperty(image, "currentSrc", {
+      configurable: true,
+      value: "https://pbs.twimg.com/profile_images/2/previous-user_normal.jpg",
+    });
+
+    const [candidate] = scanXDocument(doc, "https://x.com/Viewer/following", 100);
+    expect(candidate?.observation.avatarUrl).toBe(
+      "https://pbs.twimg.com/profile_images/1/alice_x96.jpg",
+    );
+  });
+
+  it("ignores an unmatched first avatar and uses the image linked to the same handle", () => {
+    const doc = fixture(`${accountSwitcher()}<div data-testid="UserCell">
+      <div data-testid="Tweet-User-Avatar">
+        <a href="/Bob"><img src="https://pbs.twimg.com/profile_images/2/bob_normal.jpg" alt=""></a>
+      </div>
+      <div data-testid="UserAvatar-Container-Alice">
+        <a href="/Alice"><img src="https://pbs.twimg.com/profile_images/1/alice_normal.jpg" alt=""></a>
+      </div>
+      <div data-testid="UserName"><a href="/Alice">Alice</a><span>@Alice</span></div>
+    </div>`);
+
+    const alice = scanXDocument(doc, "https://x.com/Viewer/following", 100)
+      .find((item) => item.observation.handle === "Alice");
+    expect(alice?.observation.avatarUrl).toBe(
+      "https://pbs.twimg.com/profile_images/1/alice_x96.jpg",
+    );
+  });
+
+  it("keeps the avatar empty when no image can be bound to the candidate handle", () => {
+    const doc = fixture(`${accountSwitcher()}<div data-testid="UserCell">
+      <div data-testid="Tweet-User-Avatar">
+        <a href="/Bob"><img src="https://pbs.twimg.com/profile_images/2/bob_normal.jpg" alt=""></a>
+      </div>
+      <div data-testid="UserName"><a href="/Alice">Alice</a><span>@Alice</span></div>
+    </div>`);
+
+    const alice = scanXDocument(doc, "https://x.com/Viewer/following", 100)
+      .find((item) => item.observation.handle === "Alice");
+    expect(alice?.observation.avatarUrl).toBeNull();
   });
 
   it("does not take a quoted author's missing handle from the outer tweet avatar", () => {

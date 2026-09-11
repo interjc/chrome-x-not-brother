@@ -29,6 +29,13 @@ export const HOVER_CARD_SELECTOR = '[data-testid="HoverCard"]';
 export const TWEET_TEXT_SELECTOR = '[data-testid="tweetText"]';
 export const USER_CONTENT_SELECTOR =
   `${TWEET_TEXT_SELECTOR}, [data-testid="card.layoutLarge.media"]`;
+const OBSERVATION_SKIP_SELECTOR =
+  `${USER_CONTENT_SELECTOR}, [data-testid="UserDescription"], [data-xro-badge]`;
+const BLOCKED_NOTICE_SKIP_SELECTOR =
+  `${OBSERVATION_SKIP_SELECTOR}, ${USER_NAME_SELECTOR}`;
+const PROFILE_BLOCKED_NOTICE_SKIP_SELECTOR =
+  `${BLOCKED_NOTICE_SKIP_SELECTOR}, ${TWEET_SELECTOR}, ` +
+  `[data-testid="UserCell"], [data-testid="cellInnerDiv"]:has(${TWEET_SELECTOR})`;
 const SUGGESTION_DIRECTORY_LINK_SELECTOR =
   'a[href*="/i/connect_people"], a[href*="/i/related_users"]';
 const SUGGESTION_CHROME_SKIP_SELECTOR =
@@ -71,6 +78,7 @@ const FORMAT_CHARS = /[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g;
 const BLOCKED_PATTERNS = [
   /you(?:'|’)?re blocked/i,
   /has blocked you/i,
+  /@[A-Za-z0-9_]{1,15}\s+(?:has\s+)?blocked you/i,
   /(?:this|the) (?:post|tweet) is (?:from|by) an account (?:that|who) (?:has )?blocked you/i,
   /account (?:that|who) (?:has )?blocked you[^.]* (?:post|tweet)/i,
   /ブロックされています/u,
@@ -78,7 +86,7 @@ const BLOCKED_PATTERNS = [
   /このポストは[^。]*(?:あなたをブロック|ブロックされています)/u,
   /你已被(?:屏蔽|拉黑)/u,
   /已将你拉黑/u,
-  /已封鎖你/u,
+  /已(?:屏蔽|拉黑|封鎖)你/u,
   /(?:此|这)(?:帖子|貼文|贴文|則貼文|则贴文)[^。]*(?:屏蔽|拉黑|封鎖)了?你/u,
   /来自已(?:屏蔽|拉黑|封鎖)你的(?:账号|帳號)/u,
   /(?:此|这)(?:帖子|貼文|贴文|則貼文|则贴文)[^。]*(?:来自|來自)[^。]*(?:屏蔽|拉黑|封鎖)你/u,
@@ -137,7 +145,7 @@ export function* iterateOutsideUserContent<T extends Element>(
   root: Element,
   selector: string,
 ): Generator<T> {
-  yield* elementsMatching<T>(root, selector, USER_CONTENT_SELECTOR);
+  yield* elementsMatching<T>(root, selector, OBSERVATION_SKIP_SELECTOR);
 }
 
 function textExcluding(element: Element, skipSelector: string): string {
@@ -160,7 +168,16 @@ function textExcluding(element: Element, skipSelector: string): string {
 }
 
 function platformText(element: Element): string {
-  return textExcluding(element, USER_CONTENT_SELECTOR);
+  return textExcluding(element, OBSERVATION_SKIP_SELECTOR);
+}
+
+function blockedNoticeText(element: Element, skipNestedProfileContent = false): string {
+  return textExcluding(
+    element,
+    skipNestedProfileContent
+      ? PROFILE_BLOCKED_NOTICE_SKIP_SELECTOR
+      : BLOCKED_NOTICE_SKIP_SELECTOR,
+  );
 }
 
 function matchesAny(text: string, patterns: RegExp[]): boolean {
@@ -564,8 +581,15 @@ function relationshipFacts(
     ? [surface, supplementalSurface]
     : [surface];
   const text = relationshipSurfaces.map(platformText).join(" ");
+  const isProfileRoot = sourceType === "profile" &&
+    surface.matches('[data-testid="primaryColumn"]');
+  const blockText = relationshipSurfaces.map((area) =>
+    blockedNoticeText(area, isProfileRoot && area === surface)).join(" ");
+  const ordinaryText = isProfileRoot
+    ? platformText(firstDirect(surface, USER_NAME_SELECTOR) ?? surface)
+    : text;
   const evidence: EvidenceType[] = [];
-  const blockedByNotice = matchesAny(text, BLOCKED_PATTERNS);
+  const blockedByNotice = matchesAny(blockText, BLOCKED_PATTERNS);
   const blockedBy = blockedByNotice ||
     blockedByInteractionRestriction ||
     blockedByProfileSummaryRestriction;
@@ -576,9 +600,13 @@ function relationshipFacts(
   }
 
   const unfollowControl = relationshipSurfaces.some((area) =>
-    area.querySelector('[data-testid$="-unfollow"]'));
+    isProfileRoot && area === surface
+      ? firstDirect(area, '[data-testid$="-unfollow"]') !== null
+      : area.querySelector('[data-testid$="-unfollow"]'));
   const followControl = relationshipSurfaces.some((area) =>
-    area.querySelector('[data-testid$="-follow"]'));
+    isProfileRoot && area === surface
+      ? firstDirect(area, '[data-testid$="-follow"]') !== null
+      : area.querySelector('[data-testid$="-follow"]'));
   let following: boolean | null = null;
   if (unfollowControl) {
     following = true;
@@ -592,8 +620,10 @@ function relationshipFacts(
   }
 
   const followsYouLabel = relationshipSurfaces.some((area) =>
-    area.querySelector('[data-testid="userFollowIndicator"]')) ||
-    matchesAny(text, FOLLOWS_YOU_PATTERNS);
+    isProfileRoot && area === surface
+      ? firstDirect(area, '[data-testid="userFollowIndicator"]') !== null
+      : area.querySelector('[data-testid="userFollowIndicator"]')) ||
+    matchesAny(ordinaryText, FOLLOWS_YOU_PATTERNS);
   let followsYou: boolean | null = null;
   if (followsYouLabel) {
     followsYou = true;
@@ -643,32 +673,50 @@ function displayNameFromProfileLink(area: Element, handle: string): string | nul
 
 function profileImageUrlFrom(image: HTMLImageElement | null): string | null {
   if (!image) return null;
-  const src = image.currentSrc || image.getAttribute("src") || "";
-  const fromSrc = normalizeProfileImageUrl(src);
+  // X recycles timeline DOM. During an image source change, currentSrc can keep
+  // reporting the previously loaded account until the new resource finishes.
+  // The declared attributes change with the account identity and are safe to
+  // associate with the handle already read from the same DOM snapshot.
+  const fromSrc = normalizeProfileImageUrl(image.getAttribute("src"));
   if (fromSrc) return fromSrc;
   const srcset = image.getAttribute("srcset");
   if (!srcset) return null;
-  const last = srcset.split(",").at(-1)?.trim().split(/\s+/)[0];
-  return normalizeProfileImageUrl(last);
+  const candidates = srcset
+    .split(",")
+    .map((candidate) => candidate.trim().split(/\s+/)[0])
+    .filter((candidate): candidate is string => Boolean(candidate));
+  for (let index = candidates.length - 1; index >= 0; index -= 1) {
+    const normalized = normalizeProfileImageUrl(candidates[index]);
+    if (normalized) return normalized;
+  }
+  return null;
 }
 
 function avatarFromSurface(surface: Element, handle: string): string | null {
-  const container = firstDirect<HTMLElement>(surface, AVATAR_CONTAINER_SELECTOR);
-  const fromContainer = profileImageUrlFrom(container?.querySelector("img") ?? null);
-  if (fromContainer) return fromContainer;
-  const avatarLink = firstDirect<HTMLAnchorElement>(surface, AVATAR_LINK_SELECTOR);
-  const fromAvatarLink = profileImageUrlFrom(avatarLink?.querySelector("img") ?? null);
-  if (fromAvatarLink) return fromAvatarLink;
   const normalized = handle.toLowerCase();
+  for (const container of iterateOutsideUserContent<HTMLElement>(
+    surface,
+    AVATAR_CONTAINER_SELECTOR,
+  )) {
+    if (isInsideNestedSurface(container, surface)) continue;
+    for (const link of container.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+      if (handleFromHref(link.getAttribute("href"))?.toLowerCase() !== normalized) continue;
+      const url = profileImageUrlFrom(link.querySelector("img"));
+      if (url) return url;
+    }
+    const testId = container.getAttribute("data-testid") ?? "";
+    const containerHandle = testId.startsWith("UserAvatar-Container-")
+      ? testId.slice("UserAvatar-Container-".length).toLowerCase()
+      : null;
+    if (containerHandle === normalized) {
+      const url = profileImageUrlFrom(container.querySelector("img"));
+      if (url) return url;
+    }
+  }
   for (const link of iterateOutsideUserContent<HTMLAnchorElement>(surface, "a[href]")) {
     if (isInsideNestedSurface(link, surface)) continue;
     if (handleFromHref(link.getAttribute("href"))?.toLowerCase() !== normalized) continue;
     const url = profileImageUrlFrom(link.querySelector("img"));
-    if (url) return url;
-  }
-  for (const image of iterateOutsideUserContent<HTMLImageElement>(surface, "img")) {
-    if (isInsideNestedSurface(image, surface)) continue;
-    const url = profileImageUrlFrom(image);
     if (url) return url;
   }
   return null;
@@ -796,7 +844,13 @@ export function scanXDocument(
     );
 
   for (const area of doc.querySelectorAll<HTMLElement>(USER_NAME_SELECTOR)) {
-    const surface = relationshipSurfaceFor(area, sourceType);
+    let surface = relationshipSurfaceFor(area, sourceType);
+    if (sourceType === "profile") {
+      const primaryColumn = area.closest<HTMLElement>('[data-testid="primaryColumn"]');
+      if (primaryColumn && firstDirect(primaryColumn, USER_NAME_SELECTOR) === area) {
+        surface = primaryColumn;
+      }
+    }
     let handle = findHandle(area);
     if (!handle) {
       const primaryName = firstDirect<HTMLElement>(surface, USER_NAME_SELECTOR);
@@ -822,6 +876,6 @@ export function scanXDocument(
   }
 
   const profile = profileCandidate(doc, url, sourceType, observedAt, viewerHandle);
-  if (profile) candidates.push(profile);
+  if (profile && !seenAnchors.has(profile.anchor)) candidates.push(profile);
   return candidates;
 }

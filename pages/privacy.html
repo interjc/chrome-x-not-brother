@@ -56,7 +56,7 @@
         <li>完整拦截规则文档单独保存在 chrome.storage.local，不进入 Chrome Sync，也不与关系档案备份混合；</li>
         <li>扩展没有开发者服务器、扩展账号系统或遥测。关系观察数据不会进入 Chrome Sync，也不会发送给开发者；设置同步由 Chrome 提供。</li>
       </ul>
-      <p>侧栏和档案库展示头像时，优先使用观察时保存的 X CDN 头像 URL；没有保存地址时才按 handle 请求公开头像（https://unavatar.io/x/{handle}）。这只用于显示，观察记录仍只保存在本地。</p>
+      <p>侧栏和档案库优先显示观察时保存的 X CDN 头像 URL；没有保存地址或图片加载失败时才按 handle 请求公开头像（https://unavatar.io/x/{handle}），仍失败则显示本地生成的 handle 首字母。第三方请求只用于显示，观察记录仍只保存在本地。</p>
 
       <h3>权限</h3>
       <ul>
@@ -107,7 +107,7 @@
         <li>the full filter-rule document stays separately in chrome.storage.local, does not enter Chrome Sync, and is separate from relationship archive backups;</li>
         <li>the extension has no developer server, extension account system, or telemetry. Relationship observations do not enter Chrome Sync and are not sent to the developer; preference sync is provided by Chrome.</li>
       </ul>
-      <p>Side Panel and Fieldbook display avatars from the stored X CDN URL captured for that handle, then request a public image (https://unavatar.io/x/{handle}) only if none is stored. That request is only for display; observation records stay local.</p>
+      <p>Side Panel and Fieldbook first display the X CDN avatar URL saved during observation. Only when no saved URL exists or that image fails do they request a public avatar by handle (https://unavatar.io/x/{handle}); if that also fails, they show a locally generated handle initial. The third-party request is only for display; observation records stay local.</p>
 
       <h3>Permissions</h3>
       <ul>

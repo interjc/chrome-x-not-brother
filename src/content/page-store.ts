@@ -377,12 +377,22 @@ export function applyPageStoreRelationships(
       candidate.observation = withPageStoreIdentity(candidate.observation, pageUser);
     }
     if (candidate.acceptPageStoreRelationship === false) continue;
+    // X's explicit, already-loaded blocked_by boolean is locale-independent and
+    // must outrank stale follow UI that can remain painted during navigation.
+    if (pageUser?.blockedBy === true) {
+      candidate.observation = {
+        ...candidate.observation,
+        relationship: "blocked_by",
+        evidence: ["page-user-entity"],
+      };
+      continue;
+    }
     if (isCollectableRelationship(candidate.observation.relationship)) continue;
     if (!pageUser) continue;
     const relationship = resolveRelationship({
       following: pageUser.following,
       followsYou: pageUser.followsYou,
-      blockedBy: pageUser.blockedBy === true,
+      blockedBy: false,
     });
     if (!isCollectableRelationship(relationship)) continue;
     candidate.observation = {

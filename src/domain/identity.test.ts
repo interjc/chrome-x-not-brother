@@ -39,9 +39,11 @@ describe("identity presentation", () => {
     );
   });
 
-  it("builds a handle avatar and profile URL from the screen name", () => {
+  it("builds avatar and profile URLs from the screen name", () => {
     expect(handleAvatarUrl("OpenAIDevs")).toBe("https://unavatar.io/x/OpenAIDevs");
+    expect(handleAvatarUrl(" name/with?x ")).toBe(
+      "https://unavatar.io/x/name%2Fwith%3Fx",
+    );
     expect(profileUrlForHandle("OpenAIDevs")).toBe("https://x.com/OpenAIDevs");
-    expect(handleAvatarUrl(" name/with?x ")).toBe("https://unavatar.io/x/name%2Fwith%3Fx");
   });
 });

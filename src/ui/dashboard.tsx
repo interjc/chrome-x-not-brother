@@ -425,7 +425,7 @@ function Dashboard() {
                     rel="noreferrer"
                     target="_blank"
                   >
-                    <Avatar avatarUrl={user.avatarUrl} displayName={user.displayName} handle={user.handle} />
+                    <Avatar avatarUrl={user.avatarUrl} handle={user.handle} />
                     <span className="user-record__identity">
                       <strong>{visibleDisplayName(user.displayName, user.handle)}</strong>
                       <span translate="no">@{user.handle}<Icon name="external" /></span>

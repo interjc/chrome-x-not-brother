@@ -286,7 +286,7 @@ export function SidePanel() {
               rel="noreferrer"
               target="_blank"
             >
-              <Avatar avatarUrl={user.avatarUrl} displayName={user.displayName} handle={user.handle} />
+              <Avatar avatarUrl={user.avatarUrl} handle={user.handle} />
               <div className="recent-user__identity">
                 <strong>{visibleDisplayName(user.displayName, user.handle)}</strong>
                 <span translate="no">@{user.handle} · {relativeTime(user.lastSeenAt, locale)}</span>

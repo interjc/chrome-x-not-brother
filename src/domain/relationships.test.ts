@@ -100,6 +100,22 @@ describe("mergeUserObservation", () => {
     expect(later.user.avatarUrl).toBe("https://pbs.twimg.com/profile_images/1/alice_x96.jpg");
   });
 
+  it("replaces the cached avatar whenever a newer observation has a different URL", () => {
+    const first = mergeUserObservation(undefined, {
+      ...observation("mutual"),
+      avatarUrl: "https://pbs.twimg.com/profile_images/1/alice_normal.jpg",
+    });
+    const later = mergeUserObservation(first.user, {
+      ...observation("mutual", 2_000),
+      avatarUrl: "https://pbs.twimg.com/profile_images/2/alice-new_normal.jpg",
+    });
+
+    expect(later.user.avatarUrl).toBe(
+      "https://pbs.twimg.com/profile_images/2/alice-new_x96.jpg",
+    );
+    expect(later.appendHistory).toBe(false);
+  });
+
   it("creates the first user without a false change", () => {
     const result = mergeUserObservation(undefined, observation("following_only"));
     expect(result.user.currentRelationship).toBe("following_only");
@@ -186,6 +202,7 @@ describe("relationship change presentation", () => {
     ["mutual", "follows_you_only", "you_unfollowed", "you_unfollowed"],
     ["mutual", "blocked_by", "blocked_you", "blocked_you"],
     ["following_only", "blocked_by", "blocked_you", "blocked_you"],
+    ["follows_you_only", "blocked_by", "blocked_you", "blocked_you"],
     ["following_only", "mutual", null, "mutual"],
     ["follows_you_only", "mutual", null, "mutual"],
   ] as const)("describes %s → %s as %s / %s", (previous, current, event, display) => {

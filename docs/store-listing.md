@@ -32,6 +32,8 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 ### Next release notes
 
+- Fixes profiles that still showed **Follows you** after blocking the viewer. A locale-independent loaded `blocked_by` signal or an explicit profile blocked notice now overrides stale follow UI, including profiles with no posts.
+- Prevents mismatched archive avatars by binding observed X CDN images to the same handle and replacing the cached URL whenever a new one is observed. The latest observed image is shown first, followed by a public handle lookup and a local initial only when earlier sources fail.
 - Syncs small preferences through the user's enabled Chrome Sync account while keeping the relationship archive and current X handle local. Existing local preferences migrate without overwriting settings already present in Chrome Sync.
 - Adds local Zod-validated blacklist rules for handles, display names, and post content, with expiration, JSON file import/export, and one-time public HTTPS/Gist import behind optional per-site permission.
 - Makes first-run consent easier to find with a prominent entry beside the minimized NB button and an action-icon context-menu shortcut; both open the full disclosure before consent.
@@ -152,6 +154,8 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 ### 下一版本更新说明
 
+- 修复对方拉黑后仍显示“关注了你”：已加载的跨语言 `blocked_by` 信号或个人主页明确屏蔽通知会覆盖残留关注状态；即使主页没有帖子也能识别。
+- 修复档案头像张冠李戴：只缓存与同一 handle 明确绑定的 X CDN 图片，再次观察到新地址时立即覆盖；展示依次使用最近观察头像、按 handle 请求的公开头像和本地首字母，不再读取列表 DOM 复用期间滞后的旧图。
 - 小型偏好可通过用户启用的 Chrome Sync 同步，关系档案和当前 X handle 仍只保存在本机。旧 local 偏好迁移时不会覆盖 Chrome Sync 已有设置。
 - 未同意时，收起后的 NB 悬浮球旁会显示醒目入口，工具栏图标右键菜单也能打开完整隐私说明；入口不会直接代替用户同意。
 
@@ -272,6 +276,8 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 
 ### 次回リリースの更新内容
 
+- 相手にブロックされた後も「フォローされています」と表示される問題を修正します。言語に依存しない読み込み済みの `blocked_by` 信号、またはプロフィール上の明示的なブロック通知を優先し、投稿がないプロフィールでも判定します。
+- アーカイブのアバター取り違えを防ぎます。同じハンドルに明確に結び付いた X CDN 画像だけを保存し、新しい URL を観察するたびに更新します。表示は最新の観察画像、ハンドルによる公開画像、ローカルの頭文字の順にフォールバックし、再利用された一覧 DOM の古い画像は読みません。
 - 小さな設定をユーザーが有効にした Chrome Sync で同期し、関係アーカイブと現在の X ハンドルはローカルに保ちます。旧 local 設定の移行時も、Chrome Sync に既存の設定があれば上書きしません。
 - 未同意の場合、収納した NB ボタンの横に目立つ入口を表示し、ツールバーアイコンの右クリックメニューからも完全なプライバシー説明を開けます。入口だけで同意が確定することはありません。
 
@@ -437,7 +443,7 @@ Dashboard 字段可能调整，提交时以实际界面为准。当前代码应�
 | Personal communications | No | 不读取私信；公开帖子正文属于上述 Website content，仅在用户启用规则时本地匹配且不保存。 |
 | Location, financial, health information | No | 功能不读取这些类别。 |
 | Data sale or advertising | No | 不出售数据，也不用于广告、信用或画像。 |
-| Data transfer | Chrome preference sync and user-requested public rule fetches only; no developer transfer | 小型偏好可由 Chrome Sync 在用户浏览器间同步；关系观察、完整规则和 `viewerHandle` 留在本地。侧栏/档案库展示头像时优先使用已保存的 X CDN URL，没有时才可能请求 unavatar.io/x/{handle}。用户主动按 URL/Gist 导入时，浏览器只向公开来源请求规则文件，不发送 X 或本地数据。 |
+| Data transfer | Chrome preference sync, fallback public-avatar requests, and user-requested public rule fetches only; no developer transfer | 小型偏好可由 Chrome Sync 在用户浏览器间同步；关系观察、完整规则和 `viewerHandle` 留在本地。侧栏/档案库优先使用本地保存的 X CDN 头像，仅在缺失或失败时按 handle 请求 `unavatar.io/x/{handle}`，不发送本地关系或观察历史。用户主动按 URL/Gist 导入时，浏览器只向公开来源请求规则文件，不发送 X 或本地数据。 |
 
 ## Reviewer notes
 

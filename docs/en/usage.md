@@ -60,7 +60,7 @@ Click the toolbar icon to open the side panel. The top switches between **Status
 
 - Activate the mutual, following-only, follows-you, or blocked-you counts to filter the list below; activate the changed callout to see every unreviewed change.
 - Activate the selected category again to restore all recent observations. A filtered empty state appears when nothing matches.
-- Activate a whole user row (avatar, display name, or @handle) to open that standard X profile in a new tab from your gesture. The extension does not open or traverse profiles on its own. Avatars prefer the X CDN URL captured at observation time, then a public image requested by handle.
+- Activate a whole user row (avatar, display name, or @handle) to open that standard X profile in a new tab from your gesture. The extension does not open or traverse profiles on its own. Avatars first use the latest observed X CDN URL, try `https://unavatar.io/x/{handle}` only when it is missing or fails, and show the handle initial if both sources fail.
 - Unfiltered views show up to the 8 most recent users; filtered views show up to 40 recent matches. The full set stays in the relationship fieldbook.
 
 Extension pages follow the system light/dark preference. Badges and the dock on X follow the actual light/dark background of the X page.
@@ -69,7 +69,7 @@ Extension pages follow the system light/dark preference. Badges and the dock on 
 
 Three top tabs, one page at a time: **Archive**, **Rules**, and **Options**. Rules are stored separately per signed-in X account. After you switch accounts, editing and filtering use only that account's rules.
 
-- Activate the avatar, display name, or @handle to open that standard X profile in a new tab. Avatars prefer the stored X CDN URL for that account.
+- Activate the avatar, display name, or @handle to open that standard X profile in a new tab. Avatars use the latest observed X CDN URL, then a handle-derived public image, then the handle initial.
 - The left index filters by relationship.
 - Search handle or display name at the top.
 - Sort by recency, handle, or observation count.

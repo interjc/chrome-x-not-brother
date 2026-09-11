@@ -89,7 +89,10 @@ function user(handle: string, displayName: string): UserRecord {
 describe("dashboard profile links", () => {
   beforeEach(async () => {
     window.location.hash = "";
-    testState.users = [user("thsottiaux", "Tibo")];
+    testState.users = [{
+      ...user("thsottiaux", "Tibo"),
+      avatarUrl: "https://pbs.twimg.com/profile_images/1/tibo_x96.jpg",
+    }];
     testState.settings = {
       consentVersion: 3,
       observerEnabled: true,
@@ -136,7 +139,7 @@ describe("dashboard profile links", () => {
     expect(person?.target).toBe("_blank");
     expect(person?.rel).toContain("noreferrer");
     expect(person?.querySelector("img")?.getAttribute("src")).toBe(
-      "https://unavatar.io/x/thsottiaux",
+      "https://pbs.twimg.com/profile_images/1/tibo_x96.jpg",
     );
     expect(person?.textContent).toContain("Tibo");
     expect(person?.textContent).toContain("@thsottiaux");

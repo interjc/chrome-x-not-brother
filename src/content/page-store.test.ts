@@ -190,6 +190,41 @@ describe("page store relationships", () => {
     });
   });
 
+  it("lets locale-independent blocked_by override stale painted follow evidence", () => {
+    const observation = {
+      observation: {
+        userKey: "alice",
+        handle: "Alice",
+        displayName: "Alice",
+        avatarUrl: null,
+        profileUrl: "https://x.com/Alice",
+        observedAt: 1,
+        sourceUrl: "https://x.com/Alice",
+        sourceType: "profile" as const,
+        relationship: "follows_you_only" as const,
+        evidence: ["follows-you-label" as const],
+      },
+      anchor: document.createElement("div"),
+    } satisfies ExtractedCandidate;
+
+    applyPageStoreRelationships([observation], new Map([
+      ["alice", {
+        handle: "Alice",
+        following: false,
+        followsYou: false,
+        blockedBy: true,
+        muting: null,
+        displayName: null,
+        avatarUrl: null,
+      }],
+    ]));
+
+    expect(observation.observation).toMatchObject({
+      relationship: "blocked_by",
+      evidence: ["page-user-entity"],
+    });
+  });
+
   it("turns explicit neither-following store fields into none", () => {
     const observation = {
       observation: {

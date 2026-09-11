@@ -18,7 +18,7 @@
 | --- | --- |
 | `key` | 小写 handle，0.1 的主键 |
 | `handle` | 最近观察到的原始大小写 |
-| `displayName` / `avatarUrl` | 最近非空展示信息 |
+| `displayName` / `avatarUrl` | 最近非空展示名，以及最近一次与同 handle 强绑定的 X CDN 头像 |
 | `profileUrl` | 标准 `https://x.com/<handle>` |
 | `currentRelationship` | 最近可信基础关系 |
 | `previousRelationship` | 最近一次已知变化前的关系 |
@@ -51,6 +51,10 @@ handle 更名会在 0.1 中形成新记录，因为扩展不读取 X 私有 user
 blocked-by 可保存 `blocked-notice`、`blocked-interaction-restriction` 或 `blocked-profile-summary-restriction`。后两者分别表示评论区三项互动均已明确禁用并已通过同一浮层或页面层的正常帖子对照，或已完整加载的作者浮窗缺少所有 following/follower 链接。首页等没有画出关注控件的卡片，可用 `page-user-entity` 表示关系来自当前页已经载入的 UI store 用户实体。
 
 content script 可通过 service worker 的 `users:lookup` 批量查询页面当前可见的小写 handle。查询只返回已知关系并排除 viewer；它不会创建 observation 或改变 `lastSeenAt`，只用于把已有本地知识重新显示在页面 ID 区域。
+
+头像采集只接受两类同一 DOM 快照内的强绑定：图片所在资料链接的 handle 与候选 handle 相同，或 `UserAvatar-Container-<handle>` 后缀精确相同。读取图片声明的 `src` / `srcset`，不读取列表 DOM 复用期间可能仍指向上一账号的 `currentSrc`，也不退化到复合卡片中的第一张图片。身份展示信息进入 observation 去重签名，因此头像或显示名修正即使关系未变也能更新当前用户记录而不额外追加稠密历史。
+
+数据库中的 `avatarUrl` 是 Side Panel 和档案库的首选头像来源。只要再次观察到与同一 handle 强绑定的非空 X CDN URL，即使关系证据没有变化，也会重新发送并覆盖用户记录中的旧值；本次没有读到头像时保留最近值，不用空值擦除。首选图片缺失或加载失败时，界面再请求 `https://unavatar.io/x/{handle}`；第三方图片也失败时显示 handle 首字母。
 
 ## filter rules
 

@@ -18,7 +18,7 @@ npm run skills:validate
 - 英语、日语、简体中文关系提示；
 - mutual、following-only、follows-you-only、blocked-by，以及内部 unknown 不进入收集；
 - `UserName` 与评论线程 `User-Name` 作者结构；
-- 当前登录用户排除、评论区明确 blocked-by、三项互动受限加同层基线、无计数浮窗独立证据、普通 unavailable 和用户正文防误判；
+- 当前登录用户排除、评论区明确 blocked-by、无帖子 profile 的英/日/简中/繁中屏蔽通知、`blocked_by=true` 覆盖残留“关注了你”、profile 内嵌其他账号关系不污染当前账号、三项互动受限加同层基线、无计数浮窗独立证据，以及普通 unavailable、用户名/简介/正文/扩展旧 badge 防误判；
 - 工具栏 `ON` / `!` 三种状态，以及 X 页面观察 dock 的完整面板/悬浮球切换；同意后展开 dock 显示拦截规则应用状态、本页/累计拦截与编辑入口，未同意或收起为球时不出现该行；
 - 已知关系变化；
 - `following_only → mutual` 与 `follows_you_only → mutual` 显示互关；首次或非取关历史的 `following_only` 显示单向关注；`mutual → following_only` 与 `follows_you_only → following_only` 显示对方取关；`follows_you_only → none` 与其他明确双方都已取消关注不显示徽标；`mutual → follows_you_only` 和已知正常关系 `→ blocked_by` 分别显示你已取关和对方拉黑；双方同时变化保持通用 changed，确认后恢复基础关系；
@@ -29,9 +29,9 @@ npm run skills:validate
 - 同 handle 完整浮窗可用 follow/unfollow 与 `userFollowIndicator` 补全普通关系，不匹配浮窗不会污染其他作者；
 - 评论线程的徽标固定插在可见 `@handle` 之前，不得出现在时间戳之后；没有可见 handle 时才跟在显示名称后面；帖子详情等不含时间戳的 `User-Name` 应把 X 原有显示名和 `@handle` 放在一行，关系标签单独在下一行，左边线与显示名之间只留 1–2px；移除徽标时也清理局部横排/堆叠类，不改变已含时间祖先的 `@handle` 与日期结构；
 - 相关用户 / UserCell 的徽标放在头像正下方，不插入显示名称行；
-- Side Panel 最近观察整行打开该账号 X 资料；档案库的头像、显示名和 @handle 也打开同一资料；头像优先使用观察时保存的 X CDN 地址，没有时才按 handle 请求公开图片；
+- Side Panel 最近观察整行打开该账号 X 资料；档案库的头像、显示名和 @handle 也打开同一资料；展示头像依次使用最近保存的 X CDN `avatarUrl`、`https://unavatar.io/x/{handle}` 和 handle 首字母；采集器只保存同 handle 链接或精确头像容器绑定的 X CDN 声明 URL，不读滞后的 `currentSrc`，关系未变但头像 URL 变化时也必须覆盖缓存；
 - 可见且已启用页面每 2 秒兜底复扫，隐藏页暂停，恢复可见/焦点时立即复扫，重复 start 不产生多个计时器且 stop 清理监听；
-- observation 签名只在对应用户确认持久化后提交；未确认发送保持可重试，已确认的相同证据保持去重；
+- observation 签名只在对应用户确认持久化后提交；未确认发送保持可重试，已确认的相同关系与身份信息保持去重，头像或显示名修正必须重新发送；
 - service worker 把数据变化广播到有 content script 的标签页并忽略无接收端标签页；档案页变更会使已打开 X 页清除本地关系缓存；
 - Side Panel 真实 React 组件中的分类按钮、`aria-pressed` 切换、同分类再次取消、变化筛选、筛选空状态、本人排除、标准 `https://x.com/<handle>` 新标签链接，以及语言选择器默认跟随浏览器并在手工切换后即时改写面板文案；
 - 已打开扩展页面通过共享 settings hook 接收 `chrome.storage.sync` 偏好和 `chrome.storage.local` viewer handle 的变化，并在卸载时移除监听；旧 local 偏好迁移不覆盖已有 sync 值，sync 单项保持低于 8 KB；
@@ -40,7 +40,7 @@ npm run skills:validate
 - 首页时间线可从 `/handle/status/:id`、头像链接或带双向隔离符的 `@handle` 识别作者，证据不足时保持 unknown 且不把引用帖回退成外层作者；
 - 主贴和跟帖含大量正文 @提及的线程只识别作者，不把提及 handle 收成候选，平台拉黑提示仍排除 `tweetText`，扫描不得因克隆整篇帖子或遍历提及链接而退化；
 - 同意后 HoverCard 在名字旁出现「不是兄弟！」入口、帖子 `caret` 下拉最上方出现同一项、帖子正文划词出现「拦截关键词」，点击立即保存对应规则且不把浮窗作者误当成正文提及；未同意、本人浮窗或本人帖子不出现该入口；
-- 当前页 UI store、tweet 祖先 fiber，以及页面已完成的 TweetDetail 等 GraphQL 响应中的 `following` / `followed_by` / `blocked_by` / `muting` 可把首页和评论区 unknown 卡片提升为已知关系，并供可选时间线过滤使用；store 里已有查看者时仍要继续读回复作者；缺少完整布尔值不得编造；DOM 已可收集证据时 store 不得覆盖；
+- 当前页 UI store、tweet 祖先 fiber，以及页面已完成的 TweetDetail 等 GraphQL 响应中的 `following` / `followed_by` / `blocked_by` / `muting` 可把首页和评论区 unknown 卡片提升为已知关系，并供可选时间线过滤使用；store 里已有查看者时仍要继续读回复作者；缺少完整布尔值不得编造；普通 store 事实不得覆盖已可收集的 DOM 证据，但明确 `blocked_by=true` 必须覆盖冲突的普通关注证据；
 - 可选时间线过滤默认关闭；打开后互关静音账号和本地已知 blocked-by 账号的首页帖子单元格被隐藏，个人主页/浮窗/UserCell 不隐藏；关闭过滤后单元格恢复；
 - 自定义规则 Zod schema 规范化 handle，拒绝未知字段、重复 id/handle、无效或可能灾难性回溯的正则和超限 JSON；handle、显示名、正文、启停与到期匹配正确，关闭总开关或规则到期后帖子恢复；
 - content script 仅通过 service worker 的 `filter-rules:get` 取得已校验规则快照；未同意或总开关关闭时后台拒绝返回，content bundle 不包含 Zod 或 `safe-regex2`；
@@ -61,7 +61,7 @@ npm run skills:validate
 6. 打开自己的 followers 页面，验证 follows-you 证据。
 7. 分别把 Chrome UI 设为英语、日语和简体中文，验证 Side Panel、管理页、首次披露、工具栏 title、时间与确认对话框自动切换；未支持语言应完整回退英语。打开 Side Panel 确认语言选择器默认是“跟随浏览器语言”，再分别选日语和英语，确认面板文案、`document.documentElement.lang`、已打开档案库，以及当前 X 页面上的关系徽标和观察 dock 都即时切换；选回“跟随浏览器语言”后，页面标签重新跟随 X 语言。
 8. 语言选择保持“跟随浏览器语言”时，把 X 语言设成与 Chrome 不同的支持语言，验证 X 页面徽标和观察 dock 跟随 X 而不是 Chrome。
-9. 主动打开一个明确显示 blocked notice 的测试资料，验证本地化的“拉黑了你”。
+9. 主动打开一个没有帖子、但主栏明确显示 `@handle 已屏蔽你`（或当前 X 界面语言等价文案）的测试资料，验证“拉黑了你”覆盖仍残留的“关注了你”；再把类似文字只放进显示名或简介，确认不会误判。
 10. 打开帖子详情/评论线程，验证带明确 blocked-by 平台提示的 `User-Name` 作者被标注。
 11. 找到一个评论作者的回复、转发、点赞都不可操作、而同页其他帖子三项正常的场景，验证 `@handle` 前面出现红色 `! 拉黑了你` 增强徽标并写入档案，同时 `@handle` 与日期仍保持 X 原生排列。
 12. 悬停打开一个已知 blocked-by 作者的完整浮窗，验证没有关注/粉丝链接时独立标注并收集；关闭浮窗、刷新页面后仍由本地已知记录回标该评论 ID。
