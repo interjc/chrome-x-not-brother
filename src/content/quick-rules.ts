@@ -2,7 +2,7 @@ import { translate, type AppLocale } from "../i18n";
 import {
   HOVER_CARD_SELECTOR,
   handleFromHoverCard,
-  hoverCardQuickRuleAnchor,
+  hoverCardActionContainer,
   openTweetMoreMenu,
   tweetTextRootFrom,
   visibleHoverCards,
@@ -11,6 +11,18 @@ import {
 export const QUICK_RULE_ATTRIBUTE = "data-xro-quick-rule";
 const KEYWORD_CHIP_ID = "not-brother-keyword-chip";
 const TOAST_ID = "not-brother-quick-rule-toast";
+
+// [idle, already-listed] message keys for the two handle actions.
+const MENU_HANDLE_KEYS = {
+  label: ["quickRuleHandle", "quickRuleHandleAdded"],
+  aria: ["quickRuleHandleAria", "quickRuleHandleAddedAria"],
+} as const;
+
+const HOVER_HANDLE_KEYS = {
+  label: ["quickRuleHoverHandle", "quickRuleHoverHandleAdded"],
+  aria: ["quickRuleHoverHandleAria", "quickRuleHoverHandleAddedAria"],
+  hint: ["quickRuleHoverHint", "quickRuleHoverAddedHint"],
+} as const;
 
 export interface QuickRuleActionState {
   locale: AppLocale;
@@ -53,10 +65,13 @@ function appendHandleChrome(root: HTMLElement, markText: string): void {
 }
 
 function createHoverButton(doc: Document): HTMLButtonElement {
+  const row = element(doc, "div", "xro-quick-rule-handle-row");
+  row.setAttribute(QUICK_RULE_ATTRIBUTE, "handle-row");
   const button = element(doc, "button", "xro-quick-rule xro-quick-rule--handle");
   button.type = "button";
   button.setAttribute(QUICK_RULE_ATTRIBUTE, "handle");
-  appendHandleChrome(button, "!");
+  appendHandleChrome(button, "");
+  row.append(button);
   button.addEventListener("mousedown", stopEvent);
   button.addEventListener("pointerdown", stopEvent);
   return button;
@@ -80,21 +95,23 @@ function paintHandleAction(
   blocked: boolean,
   onAddHandle: (handle: string) => void,
 ): void {
+  const hoverAction = node.classList.contains("xro-quick-rule--handle");
+  const state = blocked ? 1 : 0;
+  const keys = hoverAction ? HOVER_HANDLE_KEYS : MENU_HANDLE_KEYS;
   setText(
     node.querySelector(".xro-quick-rule__label"),
-    translate(locale, blocked ? "quickRuleHandleAdded" : "quickRuleHandle"),
+    translate(locale, keys.label[state]),
   );
+  // Native title: browser chrome, so it cannot steal pointer events from the
+  // HoverCard the way an in-page tooltip did (it made X close the card).
+  if (hoverAction) {
+    setAttr(node, "title", translate(locale, HOVER_HANDLE_KEYS.hint[state], { handle }));
+  }
   const added = blocked ? "true" : "false";
   if (node.dataset.xroAdded !== added) node.dataset.xroAdded = added;
-  setAttr(
-    node,
-    "aria-label",
-    translate(
-      locale,
-      blocked ? "quickRuleHandleAddedAria" : "quickRuleHandleAria",
-      { handle },
-    ),
-  );
+  if (blocked) node.setAttribute("aria-disabled", "true");
+  else node.removeAttribute("aria-disabled");
+  setAttr(node, "aria-label", translate(locale, keys.aria[state], { handle }));
   const activate = (event: Event): void => {
     stopEvent(event);
     if (blocked) return;
@@ -110,13 +127,13 @@ function paintHandleAction(
 }
 
 function placeHoverHandleButton(card: HTMLElement, button: HTMLButtonElement): void {
-  const anchor = hoverCardQuickRuleAnchor(card);
-  if (anchor === card) {
-    if (button.parentElement !== card) card.append(button);
-    return;
-  }
-  if (button.previousElementSibling !== anchor || button.parentNode !== anchor.parentNode) {
-    anchor.after(button);
+  const row = button.closest<HTMLElement>(`[${QUICK_RULE_ATTRIBUTE}="handle-row"]`);
+  if (!row) return;
+  const container = hoverCardActionContainer(card);
+  const inset = container === card ? "card" : "content";
+  if (row.dataset.xroRowInset !== inset) row.dataset.xroRowInset = inset;
+  if (row.parentElement !== container || container.lastElementChild !== row) {
+    container.append(row);
   }
 }
 
@@ -126,7 +143,7 @@ export function refreshHoverQuickRules(
 ): void {
   if (!state.enabled) {
     for (const button of doc.querySelectorAll(`[${QUICK_RULE_ATTRIBUTE}="handle"]`)) {
-      button.remove();
+      button.closest(`[${QUICK_RULE_ATTRIBUTE}="handle-row"]`)?.remove();
     }
     return;
   }
@@ -150,7 +167,7 @@ export function refreshHoverQuickRules(
   for (const button of doc.querySelectorAll(`[${QUICK_RULE_ATTRIBUTE}="handle"]`)) {
     const card = button.closest<HTMLElement>(HOVER_CARD_SELECTOR);
     if (!card || seen.has(card)) continue;
-    button.remove();
+    button.closest(`[${QUICK_RULE_ATTRIBUTE}="handle-row"]`)?.remove();
   }
 }
 

@@ -546,13 +546,71 @@
   outline-offset: 2px;
 }
 
+.xro-quick-rule-handle-row {
+  border-top: 1px solid rgb(83 100 113 / 0.22);
+  box-sizing: border-box;
+  margin-top: 10px;
+  width: 100%;
+}
+
+/* Sits inside X's own padded content container, so only vertical spacing. */
+.xro-quick-rule-handle-row[data-xro-row-inset="content"] {
+  padding: 10px 0 2px;
+}
+
+/* Fallback placement directly on the card root, which has no padding. */
+.xro-quick-rule-handle-row[data-xro-row-inset="card"] {
+  padding: 10px 12px 12px;
+}
+
 .xro-quick-rule--handle {
-  align-self: flex-start;
-  flex: none;
-  margin: 4px 0 6px;
-  max-width: 100%;
-  padding: 4px 8px;
-  width: max-content;
+  background: #fff0ed;
+  border-color: #e6a096;
+  border-radius: 10px;
+  box-shadow: none;
+  box-sizing: border-box;
+  color: #8f3025;
+  font-size: 12px;
+  justify-content: center;
+  margin: 0;
+  max-width: none;
+  padding: 9px 12px;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  width: 100%;
+}
+
+.xro-quick-rule--handle:hover,
+.xro-quick-rule--handle:focus-visible {
+  background: #ffe1dc;
+  border-color: #d66a5c;
+  color: #702219;
+}
+
+.xro-quick-rule--handle .xro-quick-rule__mark {
+  background: transparent;
+  border: 2px solid currentColor;
+  box-sizing: border-box;
+  color: inherit;
+  height: 16px;
+  position: relative;
+  width: 16px;
+}
+
+.xro-quick-rule--handle .xro-quick-rule__mark::after {
+  background: currentColor;
+  border-radius: 1px;
+  content: "";
+  height: 2px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) rotate(-45deg);
+}
+
+.xro-quick-rule--handle[aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.68;
 }
 
 .xro-quick-rule--menu {
@@ -590,6 +648,13 @@
   box-shadow: none;
 }
 
+/* Must follow the generic added rule: same specificity, later wins. */
+.xro-quick-rule--handle[data-xro-added="true"] {
+  background: #f4e8e5;
+  border-color: #d6b5ae;
+  color: #75463f;
+}
+
 .xro-quick-rule--keyword {
   margin: 0;
   position: fixed;
@@ -617,9 +682,29 @@
   border-color: #647068;
 }
 
+:root[data-xro-theme="dark"] .xro-quick-rule--handle {
+  background: #341f1d;
+  border-color: #96574f;
+  color: #ffb7ad;
+}
+
+:root[data-xro-theme="dark"] .xro-quick-rule--handle:hover,
+:root[data-xro-theme="dark"] .xro-quick-rule--handle:focus-visible {
+  background: #472723;
+  border-color: #c8796e;
+  color: #ffd4ce;
+}
+
 :root[data-xro-theme="dark"] .xro-quick-rule[data-xro-added="true"] {
   background: #18211c;
   color: #edf0e7;
+}
+
+/* Must follow the generic added rule: same specificity, later wins. */
+:root[data-xro-theme="dark"] .xro-quick-rule--handle[data-xro-added="true"] {
+  background: #2a2220;
+  border-color: #67514d;
+  color: #c7aaa5;
 }
 
 :root[data-xro-theme="dark"] .xro-quick-rule-toast {
@@ -629,5 +714,9 @@
 }
 
 @media print {
-  .xro-observer-panel, .xro-badge { display: none !important; }
+  .xro-observer-panel, .xro-badge, .xro-quick-rule-handle-row { display: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xro-quick-rule--handle { transition: none; }
 }

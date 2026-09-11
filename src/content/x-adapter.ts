@@ -411,14 +411,26 @@ export function tweetTextRootFrom(node: Node | null): HTMLElement | null {
   return element?.closest<HTMLElement>(TWEET_TEXT_SELECTOR) ?? null;
 }
 
-export function hoverCardQuickRuleAnchor(card: HTMLElement): HTMLElement {
-  const name = card.querySelector<HTMLElement>(USER_NAME_SELECTOR);
-  if (name) return name;
-  for (const link of iterateOutsideUserContent<HTMLAnchorElement>(card, "a[href]")) {
-    if (link.querySelector("img") || link.closest(AVATAR_CONTAINER_SELECTOR)) continue;
-    if (handleFromHref(link.getAttribute("href"))) return link;
+const HOVER_CARD_WRAPPER_DEPTH = 8;
+
+/**
+ * X tracks "is the pointer still on the card" on a wrapper *inside* the
+ * [data-testid="HoverCard"] root, not on the root itself. A node appended to
+ * the root is a sibling of that wrapper, so moving onto it fires the wrapper's
+ * mouseleave and X closes the card. Descending through the single-child wrapper
+ * chain to the first branching element keeps injected UI inside the tracked box.
+ */
+export function hoverCardActionContainer(card: HTMLElement): HTMLElement {
+  let container = card;
+  for (let depth = 0; depth < HOVER_CARD_WRAPPER_DEPTH; depth += 1) {
+    const children = [...container.children].filter(
+      (node): node is HTMLElement => node instanceof HTMLElement,
+    );
+    const [only] = children;
+    if (children.length !== 1 || !only || only.hasAttribute("data-xro-quick-rule")) break;
+    container = only;
   }
-  return card;
+  return container;
 }
 
 function findHandle(area: Element): string | null {

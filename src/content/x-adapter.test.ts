@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   handleFromHoverCard,
-  hoverCardQuickRuleAnchor,
+  hoverCardActionContainer,
   isInsideXUserAuthoredContent,
   mediaLightboxTweetFrom,
   openTweetMoreMenu,
@@ -985,16 +985,32 @@ describe("hover card and tweet text helpers", () => {
     expect([...visibleHoverCards(doc).keys()]).toEqual(["alice"]);
     expect(tweetTextRootFrom(doc.querySelector('a[href="/Mention"]')!)).not.toBeNull();
     expect(tweetTextRootFrom(card)).toBeNull();
-    expect(hoverCardQuickRuleAnchor(card as HTMLElement).textContent).toContain("@Alice");
   });
 
-  it("anchors the hover quick-add after User-Name when that cluster exists", () => {
+  it("descends single-child wrappers to the HoverCard's content container", () => {
+    const doc = fixture(`<aside data-testid="HoverCard">
+      <div id="w1"><div id="w2">
+        <div data-testid="User-Name"><a href="/Alice">Alice</a></div>
+        <p>bio</p>
+      </div></div>
+    </aside>`);
+    const card = doc.querySelector<HTMLElement>('[data-testid="HoverCard"]')!;
+    expect(hoverCardActionContainer(card).id).toBe("w2");
+  });
+
+  it("stops at the card root when it already branches, and never enters injected rows", () => {
     const doc = fixture(`<aside data-testid="HoverCard">
       <div data-testid="User-Name"><a href="/Alice">Alice</a></div>
       <p>bio</p>
     </aside>`);
     const card = doc.querySelector<HTMLElement>('[data-testid="HoverCard"]')!;
-    expect(hoverCardQuickRuleAnchor(card).getAttribute("data-testid")).toBe("User-Name");
+    expect(hoverCardActionContainer(card)).toBe(card);
+
+    const onlyChild = fixture(`<aside data-testid="HoverCard">
+      <div data-xro-quick-rule="handle-row"><button></button></div>
+    </aside>`);
+    const lone = onlyChild.querySelector<HTMLElement>('[data-testid="HoverCard"]')!;
+    expect(hoverCardActionContainer(lone)).toBe(lone);
   });
 
   it("reads the expanded tweet more-menu author and ignores quoted inner carets", () => {

@@ -36,7 +36,7 @@ describe("quick rule actions", () => {
     expect(onAddHandle).toHaveBeenCalledWith("Alice");
   });
 
-  it("places the HoverCard action next to the name instead of the card footer", () => {
+  it("places a distinct action row at the HoverCard footer with a native title hint", () => {
     const doc = fixture(`<aside data-testid="HoverCard">
       <div data-testid="User-Name"><a href="/Alice"><span>Alice</span></a><span>@Alice</span></div>
       <p>A long bio that used to sit between the name and the action.</p>
@@ -52,9 +52,55 @@ describe("quick rule actions", () => {
       onAddKeyword: vi.fn(),
     });
     const name = doc.querySelector("[data-testid='User-Name']");
-    const button = doc.querySelector("[data-xro-quick-rule='handle']");
-    expect(name?.nextElementSibling).toBe(button);
-    expect(button?.nextElementSibling?.textContent).toContain("long bio");
+    const card = doc.querySelector("[data-testid='HoverCard']");
+    const row = doc.querySelector("[data-xro-quick-rule='handle-row']");
+    const button = doc.querySelector<HTMLButtonElement>("[data-xro-quick-rule='handle']");
+    expect(card?.lastElementChild).toBe(row);
+    expect(name?.nextElementSibling?.textContent).toContain("long bio");
+    expect(row?.contains(button ?? null)).toBe(true);
+    expect(button?.textContent).toContain("加入“不是兄弟”名单");
+    expect(button?.getAttribute("aria-label")).toBe("把 @Alice 加入“不是兄弟”名单");
+    expect(button?.querySelector(".xro-quick-rule__mark")?.getAttribute("aria-hidden")).toBe("true");
+    // The hint rides on the native title so it cannot close the HoverCard.
+    expect(button?.title).toContain("本地拦截规则");
+    expect(button?.title).toContain("不会在 X 上拉黑");
+    expect(row?.querySelector("[role='tooltip']")).toBeNull();
+  });
+
+  it("appends the row inside X's content wrapper, not as a sibling of it", () => {
+    // A row appended to the HoverCard root sits outside the wrapper X tracks for
+    // hover, so pointing at it closes the card.
+    const doc = fixture(`<aside data-testid="HoverCard">
+      <div class="wrapper"><div class="content">
+        <div data-testid="User-Name"><a href="/Alice"><span>@Alice</span></a></div>
+        <p>bio</p>
+      </div></div>
+    </aside>`);
+    refreshHoverQuickRules(doc, {
+      locale: "en",
+      viewerHandle: "Viewer",
+      enabled: true,
+      blockedHandles: new Set(),
+      onAddHandle: vi.fn(),
+      onAddKeyword: vi.fn(),
+    });
+    const content = doc.querySelector(".content");
+    const row = doc.querySelector<HTMLElement>("[data-xro-quick-rule='handle-row']");
+    expect(row?.parentElement).toBe(content);
+    expect(content?.lastElementChild).toBe(row);
+    expect(row?.dataset.xroRowInset).toBe("content");
+
+    // Re-running must not descend into or re-parent the row it already placed.
+    refreshHoverQuickRules(doc, {
+      locale: "en",
+      viewerHandle: "Viewer",
+      enabled: true,
+      blockedHandles: new Set(),
+      onAddHandle: vi.fn(),
+      onAddKeyword: vi.fn(),
+    });
+    expect(doc.querySelectorAll("[data-xro-quick-rule='handle-row']")).toHaveLength(1);
+    expect(doc.querySelector("[data-xro-quick-rule='handle-row']")?.parentElement).toBe(content);
   });
 
   it("does not mark the signed-in viewer and paints an already-listed account", () => {
@@ -72,7 +118,12 @@ describe("quick rule actions", () => {
     });
     const buttons = [...doc.querySelectorAll("[data-xro-quick-rule='handle']")];
     expect(buttons).toHaveLength(1);
-    expect(buttons[0]?.textContent).toContain("Already");
+    expect(buttons[0]?.textContent).toContain("Already in Not Brother list");
+    expect(buttons[0]?.getAttribute("aria-disabled")).toBe("true");
+    expect(buttons[0]?.getAttribute("aria-label"))
+      .toBe("@Blocked is already in the Not Brother list");
+    expect(buttons[0]?.getAttribute("title"))
+      .toContain("already in the local filter rules");
   });
 
   it("shows a keyword chip for tweet-text selections and not for author chrome", () => {
