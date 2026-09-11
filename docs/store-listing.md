@@ -32,11 +32,16 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 ### Next release notes
 
-- Fixes profiles that still showed **Follows you** after blocking the viewer. A locale-independent loaded `blocked_by` signal or an explicit profile blocked notice now overrides stale follow UI, including profiles with no posts.
-- Prevents mismatched archive avatars by binding observed X CDN images to the same handle and replacing the cached URL whenever a new one is observed. The latest observed image is shown first, followed by a public handle lookup and a local initial only when earlier sources fail.
 - Syncs small preferences through the user's enabled Chrome Sync account while keeping the relationship archive and current X handle local. Existing local preferences migrate without overwriting settings already present in Chrome Sync.
 - Adds local Zod-validated blacklist rules for handles, display names, and post content, with expiration, JSON file import/export, and one-time public HTTPS/Gist import behind optional per-site permission.
 - Makes first-run consent easier to find with a prominent entry beside the minimized NB button and an action-icon context-menu shortcut; both open the full disclosure before consent.
+
+### Version 0.5.11 release notes
+
+- Fixes profiles that still showed **Follows you** after blocking the viewer. A locale-independent loaded blocked-by signal or an explicit profile blocked notice now overrides stale follow UI, including profiles with no posts.
+- Prevents mismatched archive avatars by binding observed X CDN images to the same handle and replacing the cached URL whenever a new one is observed. The latest observed image is shown first, followed by a public handle lookup and a local initial only when earlier sources fail.
+- Keeps the HoverCard Not Brother quick-add inside the card as a full-width action so moving onto it no longer closes the card. The control uses a native tooltip and matching light/dark styles.
+
 
 ### Version 0.5.10 release notes
 
@@ -154,10 +159,15 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 ### 下一版本更新说明
 
-- 修复对方拉黑后仍显示“关注了你”：已加载的跨语言 `blocked_by` 信号或个人主页明确屏蔽通知会覆盖残留关注状态；即使主页没有帖子也能识别。
-- 修复档案头像张冠李戴：只缓存与同一 handle 明确绑定的 X CDN 图片，再次观察到新地址时立即覆盖；展示依次使用最近观察头像、按 handle 请求的公开头像和本地首字母，不再读取列表 DOM 复用期间滞后的旧图。
 - 小型偏好可通过用户启用的 Chrome Sync 同步，关系档案和当前 X handle 仍只保存在本机。旧 local 偏好迁移时不会覆盖 Chrome Sync 已有设置。
 - 未同意时，收起后的 NB 悬浮球旁会显示醒目入口，工具栏图标右键菜单也能打开完整隐私说明；入口不会直接代替用户同意。
+
+### 0.5.11 更新说明
+
+- 修复对方拉黑后仍显示“关注了你”：已加载的跨语言屏蔽信号或个人主页明确屏蔽通知会覆盖残留关注状态；即使主页没有帖子也能识别。
+- 修复档案头像张冠李戴：只缓存与同一 handle 明确绑定的 X CDN 图片，再次观察到新地址时立即覆盖；展示依次使用最近观察头像、按 handle 请求的公开头像和本地首字母。
+- 头像浮窗的「不是兄弟」快捷添加改为铺满内容区的按钮，移到按钮上不会关掉浮窗；用浏览器原生提示说明，并补齐浅色/深色样式。
+
 
 ### 0.5.10 更新说明
 
@@ -276,10 +286,15 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 
 ### 次回リリースの更新内容
 
-- 相手にブロックされた後も「フォローされています」と表示される問題を修正します。言語に依存しない読み込み済みの `blocked_by` 信号、またはプロフィール上の明示的なブロック通知を優先し、投稿がないプロフィールでも判定します。
-- アーカイブのアバター取り違えを防ぎます。同じハンドルに明確に結び付いた X CDN 画像だけを保存し、新しい URL を観察するたびに更新します。表示は最新の観察画像、ハンドルによる公開画像、ローカルの頭文字の順にフォールバックし、再利用された一覧 DOM の古い画像は読みません。
 - 小さな設定をユーザーが有効にした Chrome Sync で同期し、関係アーカイブと現在の X ハンドルはローカルに保ちます。旧 local 設定の移行時も、Chrome Sync に既存の設定があれば上書きしません。
 - 未同意の場合、収納した NB ボタンの横に目立つ入口を表示し、ツールバーアイコンの右クリックメニューからも完全なプライバシー説明を開けます。入口だけで同意が確定することはありません。
+
+### 0.5.11 更新内容
+
+- 相手にブロックされた後も「フォローされています」と表示される問題を修正しました。言語に依存しない読み込み済みのブロック信号、またはプロフィール上の明示的なブロック通知を優先し、投稿がないプロフィールでも判定します。
+- アーカイブのアバター取り違えを防ぎます。同じハンドルに明確に結び付いた X CDN 画像だけを保存し、新しい URL を観察するたびに更新します。表示は最新の観察画像、ハンドルによる公開画像、ローカルの頭文字の順です。
+- HoverCard の「兄貴じゃない」クイック追加をカード内いっぱいに表示し、ボタンへ移動してもカードが閉じないようにしました。ブラウザー標準のツールチップとライト／ダークの見た目を揃えます。
+
 
 ### 0.5.10 更新内容
 
