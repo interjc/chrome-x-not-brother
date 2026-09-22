@@ -36,6 +36,11 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 - Adds local Zod-validated blacklist rules for handles, display names, and post content, with expiration, JSON file import/export, and one-time public HTTPS/Gist import behind optional per-site permission.
 - Makes first-run consent easier to find with a prominent entry beside the minimized NB button and an action-icon context-menu shortcut; both open the full disclosure before consent.
 
+### Version 0.5.12 release notes
+
+- Annotates notification activity rows directly using already-loaded page UI store relationships without requiring a hover card. Badges appear on the display-name link or avatar link for notification actors.
+- Distinguishes notification historical action text (such as "followed you") from current relationships, preventing past activities from incorrectly overriding active relationship facts.
+
 ### Version 0.5.11 release notes
 
 - Fixes profiles that still showed **Follows you** after blocking the viewer. A locale-independent loaded blocked-by signal or an explicit profile blocked notice now overrides stale follow UI, including profiles with no posts.
@@ -161,6 +166,11 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 - 小型偏好可通过用户启用的 Chrome Sync 同步，关系档案和当前 X handle 仍只保存在本机。旧 local 偏好迁移时不会覆盖 Chrome Sync 已有设置。
 - 未同意时，收起后的 NB 悬浮球旁会显示醒目入口，工具栏图标右键菜单也能打开完整隐私说明；入口不会直接代替用户同意。
+
+### 0.5.12 更新说明
+
+- 支持通知流直接标注：无需打开悬浮窗，即可根据页面已加载的关系数据为通知中的互动用户标注关系徽章；徽章显示在昵称或头像链接旁。
+- 区分通知中的历史动作文案（如“关注了你”）与当前实际关系，避免将过往动态误判为当前关注状态或覆盖准确的关系事实。
 
 ### 0.5.11 更新说明
 
@@ -288,6 +298,11 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 
 - 小さな設定をユーザーが有効にした Chrome Sync で同期し、関係アーカイブと現在の X ハンドルはローカルに保ちます。旧 local 設定の移行時も、Chrome Sync に既存の設定があれば上書きしません。
 - 未同意の場合、収納した NB ボタンの横に目立つ入口を表示し、ツールバーアイコンの右クリックメニューからも完全なプライバシー説明を開けます。入口だけで同意が確定することはありません。
+
+### 0.5.12 更新内容
+
+- 通知タイムラインの直接アノテーションに対応：ホバーカードを開かなくても、ページに読み込み済みの関係データから通知内のアクティブユーザーに関係バッジを表示します。バッジは表示名またはアバターのリンク横に配置されます。
+- 通知内の過去の行動テキスト（「フォローされました」など）と現在の実際の関係を区別し、過去のアクティビティによって現在の関係が誤って判定・上書きされるのを防ぎます。
 
 ### 0.5.11 更新内容
 

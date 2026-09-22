@@ -19,27 +19,34 @@ Source copy lives in `terms/`. Public HTML lives in `pages/`. After changing ter
 ## Shipping another version
 
 1. Features stay annotation and local collection.
-2. Bump the version:
+2. Bump version and package:
 
 ```bash
 source "$HOME/.nvm/nvm.sh"
 nvm use
-npm run version:bump -- patch
 ```
 
-`patch` can be `minor`, `major`, or a specific number such as `0.5.0`. The script updates `package.json` and `public/manifest.json` together, and inserts empty trilingual release-note headings in [store-listing.md](../store-listing.md). Fill in the new version's points. All three languages must say the same thing.
+`.nvmrc` provides the recommended Node version; versions are not rigidly restricted in configuration files, so running `nvm use` is sufficient.
 
-3. If permissions, collection scope, or the consent flow changed: update `terms/` and `pages/`, raise the consent version, then package.
-4. Build locally and create the upload package:
-
+You can bump the version and run the full release pipeline in one command:
 ```bash
-source "$HOME/.nvm/nvm.sh"
-nvm use
-npm ci
+npm run release:patch   # or minor / major
+```
+Or run step by step:
+```bash
+npm run version:bump -- patch
 npm run release
 ```
 
-This runs `check`, coverage tests, `skills:validate`, `build`, `validate:dist`, packaging, and a check that the GitHub Pages privacy policy and terms still open. Offline, use `npm run release -- --skip-pages`.
+`version:bump` updates `package.json`, `package-lock.json`, and `public/manifest.json` together, and inserts empty trilingual release-note headings in [store-listing.md](../store-listing.md). Fill in the new version's points. All three languages must say the same thing.
+
+3. If permissions, collection scope, or the consent flow changed: update `terms/` and `pages/`, raise the consent version, then package.
+4. `npm run release` automatically runs:
+   - `npm run check` (TypeScript + unit tests)
+   - `npm run test:coverage` (coverage verification)
+   - `npm run skills:validate` (checks project skills)
+   - `npm run package` (builds `dist/`, validates constraints, creates ZIP)
+   - `npm run verify:pages` (checks GitHub Pages privacy policy and terms; offline use `--skip-pages`)
 
 5. The upload file is:
 
@@ -66,8 +73,9 @@ Load nvm first, then run from the repository root.
 | `npm run skills:validate` | check project skills |
 | `npm run package` | build, validate, delete old ZIPs, write the current version to `artifacts/` |
 | `npm run verify:pages` | fetch the public privacy policy and terms pages |
-| `npm run version:bump -- patch` | bump version and insert Store release-note headings |
-| `npm run release` | full local release build; upload `artifacts/not-brother-<version>.zip` |
+| `npm run version:bump -- patch` | bump version, sync package-lock, and insert Store release-note headings |
+| `npm run release` | full release pipeline; checks, builds, and creates `artifacts/not-brother-<version>.zip` |
+| `npm run release:patch` | bump patch version and run full release pipeline |
 
 Matching files live in `scripts/`: `build.mjs`, `validate-dist.mjs`, `package.mjs`, `verify-pages.mjs`, `bump-version.mjs`, `release.mjs`.
 

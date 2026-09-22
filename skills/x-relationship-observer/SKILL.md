@@ -18,7 +18,7 @@ Preserve the extension's narrow contract: annotate relationship evidence already
 
 ## Apply invariant checks
 
-1. Load nvm and run the Node version from `.nvmrc` before any Node command.
+1. Load nvm with `nvm use` before Node or npm commands; `.nvmrc` provides the recommended version without restricting versions in config files.
 2. Keep X DOM knowledge inside `src/content/x-adapter.ts`. Keep already-loaded page UI store / tweet fiber relationship reads in `src/content/page-store.ts`. Collect platform text and author identity without cloning tweet bodies; skip `tweetText` and never treat in-post @mentions as authors.
 3. Represent absent evidence as internal `unknown`; never badge, persist, import, export, or count it, and do not invent a negative relationship. A Follow button on a UserCell or Who-to-follow card is not `followsYou=false`. Explicit neither-following is `none`, not unknown: persist it only to replace a visible relationship so stale badges can be removed. Neither-following transitions, including follows-you-only to none, are not unfollowed-you.
 4. Discard unknown before persistence and never let it erase a known relationship; purge legacy unknown records.

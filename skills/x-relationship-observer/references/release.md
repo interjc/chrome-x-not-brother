@@ -1,16 +1,28 @@
 # Release workflow
 
 1. Confirm the scope still performs only annotation and local collection.
-2. Load nvm and bump the version with `npm run version:bump -- patch` (or `minor` / `major` / `x.y.z`) so `package.json` and `public/manifest.json` stay aligned.
-3. Fill the new three-language release-note stubs in `docs/store-listing.md`. Update user, maintenance, privacy, terms, `pages/` HTML, and release documentation where necessary.
-4. Load nvm and run:
+2. Load nvm with `nvm use` (`.nvmrc` provides the recommended Node version without restricting versions in config files).
+3. Bump the version:
+   - Run `npm run release:patch` (or `minor`, `major`, or `npm run version:bump -- <kind>`) to automatically bump version and keep `package.json`, `package-lock.json`, and `public/manifest.json` aligned.
+4. Fill the new three-language release-note stubs in `docs/store-listing.md`. Update user, maintenance, privacy, terms, `pages/` HTML, and release documentation where necessary.
+5. Run the standard release pipeline:
 
 ```bash
-npm ci
+source "$HOME/.nvm/nvm.sh"
+nvm use
 npm run release
 ```
 
-Use `npm run release -- --skip-pages` only when GitHub Pages cannot be reached. The uploadable archive is `artifacts/not-brother-<version>.zip`. Each `npm run package` deletes previous `not-brother-*.zip` files in `artifacts/` (and leftover copies in `output/`) before writing the new archive.
+Use `npm run release -- --skip-pages` only when GitHub Pages cannot be reached.
+
+The release script executes:
+- `npm run check` (TypeScript + Vitest)
+- `npm run test:coverage` (Coverage check)
+- `npm run skills:validate` (Validates agent skills)
+- `npm run package` (Builds `dist/`, validates Manifest V3 constraints, cleans old archives, writes `artifacts/not-brother-<version>.zip`)
+- `npm run verify:pages` (Verifies public privacy policy and terms on GitHub Pages)
+
+The uploadable archive is `artifacts/not-brother-<version>.zip`. Each `npm run package` deletes previous `not-brother-*.zip` files in `artifacts/` (and leftover copies in `output/`) before writing the new archive.
 
 6. Load `dist/` unpacked in a clean Chrome profile and execute `docs/testing.md`.
 7. Inspect the ZIP; it must contain `manifest.json` at the archive root.

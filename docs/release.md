@@ -19,27 +19,34 @@
 ## 以后再发一版
 
 1. 功能仍只做标注和本地收集。
-2. 升版本：
+2. 升版本与打包：
 
 ```bash
 source "$HOME/.nvm/nvm.sh"
 nvm use
-npm run version:bump -- patch
 ```
 
-`patch` 可换成 `minor`、`major` 或具体号，例如 `0.5.0`。脚本会同时改 `package.json` 和 `public/manifest.json`，并在 [store-listing.md](store-listing.md) 插入三语更新说明空标题。把新版本的要点写进去，三种语言说同一件事。
+`.nvmrc` 提供推荐的 Node 版本，不在配置中死板限定版本，`nvm use` 后直接运行即可。
 
-3. 若改了权限、收集范围或同意流程：先改 `terms/` 与 `pages/`、提高同意版本，再打包。
-4. 本地构建并打上传包：
-
+可以直接一键升版本并走完发布流程：
 ```bash
-source "$HOME/.nvm/nvm.sh"
-nvm use
-npm ci
+npm run release:patch   # 或 minor / major
+```
+或分步执行：
+```bash
+npm run version:bump -- patch
 npm run release
 ```
 
-这会依次跑 `check`、覆盖率测试、`skills:validate`、`build`、`validate:dist`、打包，并检查 GitHub Pages 上的隐私政策和条款还能打开。没有网时用 `npm run release -- --skip-pages`。
+`version:bump` 会同步修改 `package.json`、`package-lock.json` 和 `public/manifest.json`，并在 [store-listing.md](store-listing.md) 插入三语更新说明空标题。把新版本的要点写进去，三种语言说同一件事。
+
+3. 若改了权限、收集范围或同意流程：先改 `terms/` 与 `pages/`、提高同意版本，再打包。
+4. `npm run release` 会依次自动跑：
+   - `npm run check`（TypeScript + 单元测试）
+   - `npm run test:coverage`（覆盖率测试）
+   - `npm run skills:validate`（检查项目 skills）
+   - `npm run package`（构建 `dist/`、校验规范、打包）
+   - `npm run verify:pages`（检查 GitHub Pages 上的隐私政策和条款还能打开；没有网时加 `--skip-pages`）
 
 5. 上传文件是：
 
@@ -66,8 +73,9 @@ npm run release
 | `npm run skills:validate` | 检查项目 skill |
 | `npm run package` | 构建、校验，删除旧 ZIP，并把当前版写到 `artifacts/` |
 | `npm run verify:pages` | 请求公开隐私政策和条款页 |
-| `npm run version:bump -- patch` | 同步升版本并插入商店更新说明标题 |
-| `npm run release` | 完整本地发布构建；上传 `artifacts/not-brother-<version>.zip` |
+| `npm run version:bump -- patch` | 同步升版本、更新 package-lock 并插入商店更新说明标题 |
+| `npm run release` | 完整发布流水线；检查、构建并打包生成 `artifacts/not-brother-<version>.zip` |
+| `npm run release:patch` | 升级 patch 版本并执行完整发布流水线 |
 
 对应文件在 `scripts/`：`build.mjs`、`validate-dist.mjs`、`package.mjs`、`verify-pages.mjs`、`bump-version.mjs`、`release.mjs`。
 

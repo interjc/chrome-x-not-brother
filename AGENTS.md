@@ -18,14 +18,14 @@ A standard X profile link in extension UI may open only from an explicit user cl
 
 Node.js is installed and managed through **nvm**. Non-interactive shells on this machine may otherwise resolve the system Node 8 binary, which is too old for this project.
 
-Before every Node, npm, or npx command, load nvm and select the repository version:
+Before running Node, npm, or npx commands, load nvm and select the repository version:
 
 ```bash
 source "$HOME/.nvm/nvm.sh"
 nvm use
 ```
 
-The authoritative version is `.nvmrc` (`24.19.0`). Do not replace the nvm workflow with a system-wide Node installation. Keep `package.json#engines.node` aligned with `.nvmrc`.
+`.nvmrc` (`24.19.0`) provides the recommended Node version. Do not restrict the Node version in configuration files (`package.json`). Running `nvm use` in the shell is sufficient.
 
 ## Python environment
 
@@ -51,6 +51,44 @@ npm run skills:validate
 ```
 
 Use `npm run package` only when preparing a loadable release archive. Write the ZIP only to `artifacts/`, and delete previous `not-brother-*.zip` files there (and any leftover copies in `output/`) before creating the new one.
+
+## Release workflow
+
+The standard release workflow is automated in repository scripts:
+
+1. **Environment preparation**:
+   ```bash
+   source "$HOME/.nvm/nvm.sh"
+   nvm use
+   ```
+
+2. **Run release**:
+   - For an existing bumped version:
+     ```bash
+     npm run release
+     ```
+   - Or bump version and release together:
+     ```bash
+     npm run release:patch   # or release:minor / release:major
+     # or: node scripts/release.mjs patch
+     ```
+   - When offline or GitHub Pages is unreachable:
+     ```bash
+     npm run release -- --skip-pages
+     ```
+
+3. **Release notes**:
+   The release script verifies and guides release notes in `docs/store-listing.md` across English, Simplified Chinese, and Japanese. Ensure the notes are filled for the current version.
+
+4. **Pipeline checks performed automatically by `npm run release`**:
+   - `npm run check` (TypeScript typecheck + Vitest unit tests)
+   - `npm run test:coverage` (Coverage verification)
+   - `npm run skills:validate` (Validates agent skills)
+   - `npm run package` (Builds `dist/`, validates Manifest V3 constraints, cleans old archives, writes `artifacts/not-brother-<version>.zip`)
+   - `npm run verify:pages` (Verifies public privacy policy and terms on GitHub Pages)
+
+5. **Upload & Publish**:
+   Upload `artifacts/not-brother-<version>.zip` to the Chrome Web Store Developer Dashboard, copy the matching release notes from `docs/store-listing.md`, and submit for review.
 
 ## Architecture rules
 
