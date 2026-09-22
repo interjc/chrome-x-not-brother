@@ -18,6 +18,7 @@ Automated tests must at least cover:
 - English, Japanese, and Simplified Chinese relationship copy;
 - mutual, following-only, follows-you-only, blocked-by, and internal unknown staying out of collection;
 - `UserName` and thread `User-Name` author structures;
+- notification activity rows: actors come from avatars, the badge sits inside the display-name link, the action sentence is not the current relationship, people in one row do not share a Follow button, and preview links without an avatar are not actors;
 - signed-in viewer exclusion, explicit thread blocked-by, post-less profile notices in English/Japanese/Simplified Chinese/Traditional Chinese, `blocked_by=true` overriding stale follows-you, nested profile-feed relationships not leaking into the viewed account, all-three interaction restrictions plus a same-layer baseline, count-less hover cards as independent evidence, and generic unavailable / name/biography/post/old-extension-badge false-positive guards;
 - toolbar `ON` / `!` states, and the X-page observer dock's full panel / floating-ball toggle; after consent the expanded dock shows filter-rule applying status, this-page / lifetime intercepts, and an edit entry; that row is absent before consent or while collapsed to the ball;
 - known relationship changes;

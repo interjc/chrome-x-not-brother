@@ -18,6 +18,7 @@ npm run skills:validate
 - 英语、日语、简体中文关系提示；
 - mutual、following-only、follows-you-only、blocked-by，以及内部 unknown 不进入收集；
 - `UserName` 与评论线程 `User-Name` 作者结构；
+- 通知页 `notification` 活动行：从头像识别参与者，徽标放在显示名链接内；活动文案不写成当前关系；多名参与者不共享关注按钮；没有头像的预览链接不是参与者；
 - 当前登录用户排除、评论区明确 blocked-by、无帖子 profile 的英/日/简中/繁中屏蔽通知、`blocked_by=true` 覆盖残留“关注了你”、profile 内嵌其他账号关系不污染当前账号、三项互动受限加同层基线、无计数浮窗独立证据，以及普通 unavailable、用户名/简介/正文/扩展旧 badge 防误判；
 - 工具栏 `ON` / `!` 三种状态，以及 X 页面观察 dock 的完整面板/悬浮球切换；同意后展开 dock 显示拦截规则应用状态、本页/累计拦截与编辑入口，未同意或收起为球时不出现该行；
 - 已知关系变化；

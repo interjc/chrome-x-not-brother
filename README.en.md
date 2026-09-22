@@ -53,7 +53,7 @@ Toolbar icon states:
 
 ### Page badges
 
-Browse X normally. Home usually has enough already-loaded relationship fields. If a card still has no badge, hover the author's avatar or ID and wait for X's own relationship hover card. Missing evidence does not show an "unknown" badge and is not archived.
+Browse X normally. Home usually has enough already-loaded relationship fields. Likes, reposts, and follows on the notifications page get the same badge beside the person's name. If a card still has no badge, hover the author's avatar or ID and wait for X's own relationship hover card. Missing evidence does not show an "unknown" badge and is not archived.
 
 Change labels stay specific when they can: they unfollowed, you unfollowed, they blocked you. When a single-sided action cannot be inferred, the badge shows **Changed**.
 

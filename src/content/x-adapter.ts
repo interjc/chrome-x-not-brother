@@ -22,6 +22,7 @@ export const USER_NAME_SELECTOR =
 export const X_CORNER_FAB_SELECTOR =
   'div[data-testid="GrokDrawer"], div[data-testid="DMDrawer"], div[data-testid="chat-drawer-root"]';
 export const TWEET_SELECTOR = 'article[data-testid="tweet"]';
+const NOTIFICATION_SELECTOR = '[data-testid="notification"]';
 export const TWEET_CARET_SELECTOR = '[data-testid="caret"]';
 export const DROPDOWN_SELECTOR = '[data-testid="Dropdown"]';
 const TWEET_SURFACE_SELECTOR = `${TWEET_SELECTOR}, [data-testid="UserCell"]`;
@@ -581,6 +582,14 @@ export function sourceTypeFromUrl(url: URL, viewerHandle: string | null): Source
   return "unknown";
 }
 
+function relationshipControlsOnly(surface: Element): boolean {
+  // A notification row's action sentence ("followed you", "赞了你的帖子") is
+  // historical. Reading it as a current relationship would outrank the page
+  // store. Live follow controls on that row still count.
+  return surface.closest(TWEET_SELECTOR) === null &&
+    surface.closest(NOTIFICATION_SELECTOR) !== null;
+}
+
 function relationshipFacts(
   surface: Element,
   sourceType: SourceType,
@@ -592,10 +601,15 @@ function relationshipFacts(
   const relationshipSurfaces = supplementalSurface
     ? [surface, supplementalSurface]
     : [surface];
-  const text = relationshipSurfaces.map(platformText).join(" ");
+  const controlsOnly = relationshipControlsOnly(surface);
+  const textSurfaces = controlsOnly
+    ? relationshipSurfaces.filter((area) => area !== surface)
+    : relationshipSurfaces;
+  const text = textSurfaces.map(platformText).join(" ");
   const isProfileRoot = sourceType === "profile" &&
     surface.matches('[data-testid="primaryColumn"]');
-  const blockText = relationshipSurfaces.map((area) =>
+  const blockSurfaces = controlsOnly ? textSurfaces : relationshipSurfaces;
+  const blockText = blockSurfaces.map((area) =>
     blockedNoticeText(area, isProfileRoot && area === surface)).join(" ");
   const ordinaryText = isProfileRoot
     ? platformText(firstDirect(surface, USER_NAME_SELECTOR) ?? surface)
@@ -611,14 +625,16 @@ function relationshipFacts(
     evidence.push("blocked-profile-summary-restriction");
   }
 
+  const controlIn = (area: Element, selector: string): boolean => {
+    if ((isProfileRoot || controlsOnly) && area === surface) {
+      return firstDirect(area, selector) !== null;
+    }
+    return area.querySelector(selector) !== null;
+  };
   const unfollowControl = relationshipSurfaces.some((area) =>
-    isProfileRoot && area === surface
-      ? firstDirect(area, '[data-testid$="-unfollow"]') !== null
-      : area.querySelector('[data-testid$="-unfollow"]'));
+    controlIn(area, '[data-testid$="-unfollow"]'));
   const followControl = relationshipSurfaces.some((area) =>
-    isProfileRoot && area === surface
-      ? firstDirect(area, '[data-testid$="-follow"]') !== null
-      : area.querySelector('[data-testid$="-follow"]'));
+    controlIn(area, '[data-testid$="-follow"]'));
   let following: boolean | null = null;
   if (unfollowControl) {
     following = true;
@@ -632,9 +648,7 @@ function relationshipFacts(
   }
 
   const followsYouLabel = relationshipSurfaces.some((area) =>
-    isProfileRoot && area === surface
-      ? firstDirect(area, '[data-testid="userFollowIndicator"]') !== null
-      : area.querySelector('[data-testid="userFollowIndicator"]')) ||
+    controlIn(area, '[data-testid="userFollowIndicator"]')) ||
     matchesAny(ordinaryText, FOLLOWS_YOU_PATTERNS);
   let followsYou: boolean | null = null;
   if (followsYouLabel) {
@@ -674,7 +688,7 @@ function displayNameFromProfileLink(area: Element, handle: string): string | nul
   for (const link of iterateOutsideUserContent<HTMLAnchorElement>(area, "a[href]")) {
     if (isInsideNestedSurface(link, area)) continue;
     if (handleFromHref(link.getAttribute("href"))?.toLowerCase() !== normalized) continue;
-    const text = cleanedText(link.textContent ?? "");
+    const text = cleanedText(textExcluding(link, OBSERVATION_SKIP_SELECTOR));
     const withoutHandle = cleanedText(
       text.replace(new RegExp(`@${handle}\\b`, "ig"), ""),
     );
@@ -766,6 +780,73 @@ function observationFor(
     relationship: resolveRelationship(facts),
     evidence,
   };
+}
+
+function isAvatarLink(link: Element): boolean {
+  return link.closest(AVATAR_CONTAINER_SELECTOR) !== null ||
+    link.querySelector("img") !== null;
+}
+
+function handleFromAvatarContainer(container: HTMLElement): string | null {
+  const testId = container.getAttribute("data-testid") ?? "";
+  const prefix = "UserAvatar-Container-";
+  if (testId.startsWith(prefix)) {
+    const fromId = handleFromText(testId.slice(prefix.length), true);
+    if (fromId) return fromId;
+  }
+  const link = container.closest("a[href]") ?? container.querySelector("a[href]");
+  return link ? handleFromHref(link.getAttribute("href")) : null;
+}
+
+function notificationNameAnchor(
+  notification: HTMLElement,
+  handle: string,
+): HTMLAnchorElement | null {
+  const normalized = handle.toLowerCase();
+  const matches: HTMLAnchorElement[] = [];
+  for (const link of iterateOutsideUserContent<HTMLAnchorElement>(notification, "a[href]")) {
+    if (isInsideNestedSurface(link, notification) || isAvatarLink(link)) continue;
+    if (handleFromHref(link.getAttribute("href"))?.toLowerCase() !== normalized) continue;
+    let segments: string[] = [];
+    try {
+      segments = new URL(link.getAttribute("href") ?? "", "https://x.com")
+        .pathname.split("/").filter(Boolean);
+    } catch {
+      segments = [];
+    }
+    if (segments[1]?.toLowerCase() === "status") continue;
+    if (link.querySelector("a[href]")) continue;
+    matches.push(link);
+  }
+  return matches.find((link) =>
+    !matches.some((other) => other !== link && link.contains(other)),
+  ) ?? null;
+}
+
+function notificationActors(
+  notification: HTMLElement,
+): Array<{ handle: string; anchor: HTMLElement }> {
+  const byKey = new Map<string, { handle: string; anchor: HTMLElement; named: boolean }>();
+  for (const container of iterateOutsideUserContent<HTMLElement>(
+    notification,
+    AVATAR_CONTAINER_SELECTOR,
+  )) {
+    if (isInsideNestedSurface(container, notification)) continue;
+    const handle = handleFromAvatarContainer(container);
+    if (!handle) continue;
+    const key = handle.toLowerCase();
+    const name = notificationNameAnchor(notification, handle);
+    const avatarLink = container.closest("a[href]");
+    const anchor = name ??
+      (avatarLink instanceof HTMLAnchorElement && notification.contains(avatarLink)
+        ? avatarLink
+        : container);
+    const existing = byKey.get(key);
+    if (!existing || (name !== null && !existing.named)) {
+      byKey.set(key, { handle, anchor, named: name !== null });
+    }
+  }
+  return [...byKey.values()].map(({ handle, anchor }) => ({ handle, anchor }));
 }
 
 function profileCandidate(
@@ -878,6 +959,17 @@ export function scanXDocument(
       (named ? findHandle(named) : findHandle(surface));
     if (!handle || coversHandle(surface, handle)) continue;
     addCandidate(handle, identityAnchorFromSurface(surface, handle), surface);
+  }
+
+  for (const notification of doc.querySelectorAll<HTMLElement>(NOTIFICATION_SELECTOR)) {
+    const enclosingTweet = notification.closest(TWEET_SELECTOR);
+    if (enclosingTweet && enclosingTweet !== notification) continue;
+    const actors = notificationActors(notification);
+    for (const actor of actors) {
+      if (coversHandle(notification, actor.handle)) continue;
+      const surface = actors.length === 1 ? notification : actor.anchor;
+      addCandidate(actor.handle, actor.anchor, surface);
+    }
   }
 
   for (const [userKey, card] of visibleHoverCards) {

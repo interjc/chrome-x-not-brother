@@ -47,9 +47,10 @@ flowchart LR
 - 在评论线程将三项互动均已渲染且明确禁用、并与同一浮层或页面层的正常对照组合，生成 `blocked-interaction-restriction`；空壳、滚动锁定和虚拟化隐藏单元格保持 unknown；图片查看器不得借用背后时间线当对照；将完整加载但缺少 following/follower 链接的已显示浮窗归一化为独立的 `blocked-profile-summary-restriction`；
 - 将完整加载的可见浮窗按 handle 精确配给底层作者卡片，并用 `*-follow`、`*-unfollow` 和 `userFollowIndicator` 补充普通关系事实；
 - 从首页时间线的 status permalink、作者头像和去掉格式字符的 `@handle` 识别作者身份；没有关注控件时仍输出内部 unknown，供本地档案回标，不把它当成未关注；帖子正文里的 @提及不是作者；
+- 通知页的点赞、转帖和关注活动行使用 `data-testid="notification"`。参与者只取该行头像（`UserAvatar-Container-<handle>` 或其资料链接），徽标放进同一 handle 的显示名链接，没有显示名链接时放进头像链接。活动句（“关注了你”“赞了你的帖子”）不是当前关系；该行上的关注/取关控件和 `userFollowIndicator` 仍有效。没有这些控件时保持 unknown，由当前页已载入的用户实体或本地档案回标。没有头像的预览链接、嵌套帖子里的 @提及不是参与者。同一条通知里的多名参与者不共享一枚关注按钮；
 - 头像只从同 handle 的资料链接或精确 `UserAvatar-Container-<handle>` 读取声明的 X CDN `src` / `srcset`；不读列表 DOM 复用时可能仍是上一账号的 `currentSrc`，不从复合卡片任取第一张图片；再次观察到不同非空 URL 时覆盖该账号的缓存头像；Side Panel 与档案库优先显示这个最近观察值，缺失或失败时按 handle 请求公开头像，再失败显示 handle 首字母；
 - 通过 `users:lookup` 批量读取可见 handle 的本地已知关系，使已确认账号在证据浮层关闭后继续回标；
-- 读取 X 已经为当前页面载入的 UI store、tweet fiber（含祖先组件）以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`、`muting`，以及已有的 `name` / `profile_image_url_https`，给首页和评论区没有关注控件的卡片补全关系，并补全 DOM 抽坏的显示名和头像；不发起新的 GraphQL 或 REST 请求；
+- 读取 X 已经为当前页面载入的 UI store、tweet fiber（含祖先组件）以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`、`muting`，以及已有的 `name` / `profile_image_url_https`，给首页、评论区和通知活动行没有关注控件的账号补全关系，并补全 DOM 抽坏的显示名和头像；不发起新的 GraphQL 或 REST 请求；
 - 同意后若打开可选时间线过滤，用已载入的 `muting`、现场/本地 `blocked_by` 隐藏首页、搜索、通知和帖子详情/评论区里对应帖子单元格；页面 GraphQL 一返回静音/拉黑信号就立即隐藏。本地名单已有的账号立刻消失，第一次检测到的账号带短收起动画。不隐藏个人主页、浮窗或关注列表，也不把静音列表写入数据库；
 - `hideByFilterRules` 打开且同意版本有效时，通过 `filter-rules:get` 向 service worker 请求当前登录 X 账号命名空间下、已由 Zod 校验的规则快照，再用不依赖 Zod 的轻量匹配器预编译 handle 集合、contains 与正则。切换账号时丢弃上一账号的编译快照。候选帖正文选择器仍封装在 `x-adapter.ts`；正文只作为内存中的当前匹配输入，不写档案或消息。每次匹配重新检查到期时间，2 秒复扫负责在规则到期后恢复节点；规则存储变化通过 `chrome.storage.onChanged` 使快照失效并复扫。同意后可在 HoverCard 名字旁、帖子三个点菜单和帖子正文划词处用 `filter-rules:quick-add` 立即保存一条 handle 或 contains 规则；内容脚本不直接写规则文档，也不点击 X 的拉黑/静音；
 - 页面主世界 `page-bridge.js` 只把上述已载入字段回传给隔离世界的观察器；普通 DOM 证据优先，store / 已完成响应通常只填充内部 unknown，但明确 `blocked_by=true` 必须覆盖冲突的普通关注证据；

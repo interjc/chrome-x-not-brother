@@ -123,6 +123,28 @@ function overlayNameCluster(from: HTMLElement, handle: string): HTMLElement | nu
   return named;
 }
 
+function containedPlacement(
+  anchor: HTMLElement,
+  placement: { host: HTMLElement; position: BadgePosition },
+): { host: HTMLElement; position: BadgePosition } {
+  if (placement.host === anchor && placement.position !== "beforeend") {
+    return { host: anchor, position: "beforeend" };
+  }
+  return placement;
+}
+
+function resolvedBadgePlacement(
+  anchor: HTMLElement,
+  handle: string,
+): { host: HTMLElement; position: BadgePosition } | null {
+  const placement = tweetPlacement(anchor, handle);
+  if (placement) return containedPlacement(anchor, placement);
+  if (isAvatarIdentity(anchor) && !isTimeLike(anchor)) {
+    return { host: anchor, position: "beforeend" };
+  }
+  return null;
+}
+
 function tweetPlacement(
   anchor: HTMLElement,
   handle: string,
@@ -260,7 +282,7 @@ function markOverlayIdentity(named: HTMLElement, handle: string): void {
 }
 
 function markIdentityLayout(parent: HTMLElement | null, handle: string): void {
-  if (!parent) return;
+  if (!parent || parent instanceof HTMLAnchorElement || isAvatarIdentity(parent)) return;
   const overlay = overlayNameCluster(parent, handle);
   if (overlay) {
     markOverlayIdentity(overlay, handle);
@@ -327,11 +349,13 @@ export function setRelationshipBadge(
   }
   badge.setAttribute(BADGE_ATTRIBUTE, relationship);
   badge.className = `xro-badge xro-badge--${relationship}`;
-  if (card) badge.classList.add("xro-badge--user-card");
+  const placement = card ? null : resolvedBadgePlacement(anchor, handle);
+  if (card || (placement !== null && isAvatarIdentity(placement.host))) {
+    badge.classList.add("xro-badge--user-card");
+  }
   if (badge.textContent !== presentation.shortLabel) badge.textContent = presentation.shortLabel;
   badge.title = `${handle} · ${presentation.description}`;
   badge.setAttribute("aria-label", `${handle}: ${presentation.label}`);
-  const placement = card ? null : tweetPlacement(anchor, handle);
   const misplaced = existing !== null && (
     card
       ? userCardBadgeMisplaced(existing, card)

@@ -64,6 +64,11 @@
   gap: 4px;
 }
 
+a > .xro-badge:not(.xro-badge--user-card) {
+  margin-inline: 4px;
+  vertical-align: text-bottom;
+}
+
 .xro-badge--user-card {
   margin: 0;
   max-width: 64px;

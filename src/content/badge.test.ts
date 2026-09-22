@@ -189,6 +189,41 @@ describe("relationship badge", () => {
     expect(anchor.querySelector("time + [data-xro-badge]")).toBeNull();
   });
 
+  it("places a notification label inside the display-name link", () => {
+    const row = document.createElement("div");
+    row.innerHTML = `
+      <a href="/Alice"><span>Alice Example</span></a>
+      <span> liked your post</span>
+    `;
+    const link = row.querySelector<HTMLElement>("a");
+    if (!link) throw new Error("missing name link");
+    setRelationshipBadge(link, "mutual", "Alice", "zh-CN");
+    setRelationshipBadge(link, "mutual", "Alice", "zh-CN");
+
+    expect(link.querySelectorAll("[data-xro-badge]")).toHaveLength(1);
+    expect(link.lastElementChild?.getAttribute("data-xro-badge")).toBe("mutual");
+    expect(link.classList.contains("xro-name-badge-row")).toBe(false);
+    expect(row.querySelector(":scope > [data-xro-badge]")).toBeNull();
+    expect(row.textContent).toContain("liked your post");
+
+    removeRelationshipBadge(link);
+    expect(row.querySelector("[data-xro-badge]")).toBeNull();
+    expect(link.textContent).toBe("Alice Example");
+  });
+
+  it("places an avatar-only notification label inside the avatar link", () => {
+    const link = document.createElement("a");
+    link.href = "/Dana";
+    link.innerHTML = `<div data-testid="UserAvatar-Container-Dana"><img alt=""></div>`;
+    setRelationshipBadge(link, "follows_you_only", "Dana", "zh-CN");
+    setRelationshipBadge(link, "follows_you_only", "Dana", "zh-CN");
+
+    const badge = link.querySelector("[data-xro-badge='follows_you_only']");
+    expect(badge?.classList.contains("xro-badge--user-card")).toBe(true);
+    expect(link.querySelectorAll("[data-xro-badge]")).toHaveLength(1);
+    expect(link.classList.contains("xro-name-badge-row")).toBe(false);
+  });
+
   it("adds and removes a strong identity mark for blocked-by", () => {
     const anchor = document.createElement("div");
     anchor.innerHTML = '<a href="/Alice">@Alice</a>';

@@ -970,6 +970,120 @@ describe("scanXDocument", () => {
     const [candidate] = scanXDocument(doc, "https://x.com/home", 100);
     expect(candidate?.observation.handle).toBe("Alice");
   });
+
+  it("identifies notification actors and ignores the historical action sentence", () => {
+    const doc = fixture(`${accountSwitcher()}
+      <div data-testid="cellInnerDiv">
+        <article data-testid="notification">
+          <a href="/Alice/status/123">
+            <a href="/Alice">
+              <div data-testid="UserAvatar-Container-Alice">
+                <img src="https://pbs.twimg.com/profile_images/1/alice_normal.jpg" alt="">
+              </div>
+            </a>
+            <div>
+              <a href="/Alice"><span>Alice Example</span></a>
+              <span>关注了你</span>
+            </div>
+          </a>
+          <button data-testid="99-follow">关注</button>
+        </article>
+      </div>`);
+
+    const [candidate] = scanXDocument(doc, "https://x.com/notifications", 100);
+    expect(candidate?.observation).toMatchObject({
+      handle: "Alice",
+      displayName: "Alice Example",
+      sourceType: "notifications",
+      relationship: "unknown",
+      avatarUrl: "https://pbs.twimg.com/profile_images/1/alice_x96.jpg",
+    });
+    expect(candidate?.anchor.getAttribute("href")).toBe("/Alice");
+    expect(candidate?.anchor.textContent).toBe("Alice Example");
+    expect(candidate?.observation.evidence).not.toContain("follows-you-label");
+
+    const badge = doc.createElement("span");
+    badge.setAttribute("data-xro-badge", "mutual");
+    badge.textContent = "互关";
+    candidate?.anchor.append(badge);
+    const again = scanXDocument(doc, "https://x.com/notifications", 100);
+    expect(again).toHaveLength(1);
+    expect(again[0]?.observation.displayName).toBe("Alice Example");
+    expect(again[0]?.anchor.querySelectorAll("[data-xro-badge]")).toHaveLength(1);
+  });
+
+  it("reads live follow controls on a single notification row", () => {
+    const doc = fixture(`${accountSwitcher()}
+      <article data-testid="notification">
+        <a href="/Bob">
+          <div data-testid="UserAvatar-Container-Bob">
+            <img src="https://pbs.twimg.com/profile_images/2/bob_normal.jpg" alt="">
+          </div>
+        </a>
+        <a href="/Bob"><span>Bob</span></a>
+        <button data-testid="7-unfollow">Following</button>
+        <div data-testid="userFollowIndicator">Follows you</div>
+      </article>`);
+
+    const [candidate] = scanXDocument(doc, "https://x.com/notifications/mentions", 100);
+    expect(candidate?.observation).toMatchObject({
+      handle: "Bob",
+      sourceType: "notifications",
+      relationship: "mutual",
+      evidence: ["following-control", "follows-you-label"],
+    });
+  });
+
+  it("keeps each notification actor separate and skips preview links without avatars", () => {
+    const doc = fixture(`${accountSwitcher()}
+      <article data-testid="notification">
+        <a href="/Alice">
+          <div data-testid="UserAvatar-Container-Alice">
+            <img src="https://pbs.twimg.com/profile_images/1/alice_normal.jpg" alt="">
+          </div>
+        </a>
+        <a href="/Bob">
+          <div data-testid="UserAvatar-Container-Bob">
+            <img src="https://pbs.twimg.com/profile_images/2/bob_normal.jpg" alt="">
+          </div>
+        </a>
+        <div>
+          <a href="/Alice"><span>Alice</span></a>
+          <span> and </span>
+          <a href="/Bob"><span>Bob</span></a>
+          <span> liked a post mentioning </span>
+          <a href="/Carol">Carol</a>
+        </div>
+        <button data-testid="1-follow">Follow</button>
+        <div data-testid="userFollowIndicator">Follows you</div>
+        <article data-testid="tweet">
+          <div data-testid="User-Name"><a href="/Viewer">@Viewer</a></div>
+        </article>
+      </article>`);
+
+    const candidates = scanXDocument(doc, "https://x.com/notifications", 100);
+    expect(candidates.map((item) => item.observation.handle)).toEqual(["Alice", "Bob"]);
+    expect(candidates.map((item) => item.observation.relationship)).toEqual(["unknown", "unknown"]);
+    expect(new Set(candidates.map((item) => item.anchor)).size).toBe(2);
+    expect(candidates.every((item) => item.anchor.textContent === item.observation.handle)).toBe(true);
+  });
+
+  it("badges an avatar-only notification actor from the avatar link", () => {
+    const doc = fixture(`${accountSwitcher()}
+      <article data-testid="notification">
+        <a href="/Dana">
+          <div data-testid="UserAvatar-Container-Dana">
+            <img src="https://pbs.twimg.com/profile_images/4/dana_normal.jpg" alt="">
+          </div>
+        </a>
+        <span>and 2 others liked your post</span>
+      </article>`);
+
+    const [candidate] = scanXDocument(doc, "https://x.com/notifications", 100);
+    expect(candidate?.observation.handle).toBe("Dana");
+    expect(candidate?.anchor.getAttribute("href")).toBe("/Dana");
+    expect(candidate?.anchor.querySelector("img")).not.toBeNull();
+  });
 });
 
 describe("hover card and tweet text helpers", () => {

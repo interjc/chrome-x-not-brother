@@ -44,6 +44,8 @@ For thread blocked-by changes, keep fixtures for explicit notices, all-three-dis
 
 For Home timeline identity, keep fixtures where the display name links to `/handle/status/:id`, the visible `@handle` is missing or bidi-wrapped, only `Tweet-User-Avatar` identifies the author, a matching hover card still enriches that card, and a quoted inner card does not inherit the outer avatar handle.
 
+For notification activity rows, keep a `data-testid="notification"` fixture whose actors come from `UserAvatar-Container-<handle>`. The badge anchor is the display-name link, or the avatar link when the row has no name link. A historical action sentence plus a Follow button stays unknown. Live unfollow plus `userFollowIndicator` on that single row can still be mutual. Grouped avatars stay separate, and a preview link with no avatar is not an actor.
+
 For mention-heavy status threads, keep a fixture whose `tweetText` contains a large `@user` link list. Scanning must return only the post/reply authors, still honor a platform blocked notice outside `tweetText`, and must not treat in-post mentions as identity. Badge placement stays on the author `User-Name` and must not land inside `tweetText`.
 
 Never place credentials in the extension. The current release has no X API or AI integration.

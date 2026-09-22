@@ -30,6 +30,8 @@ Following-only and blocked-by use an enhanced badge immediately before the threa
 
 Home timeline posts usually omit follow/unfollow buttons, but X already puts `following` / `followed_by` into the current page UI store when the timeline loads. The extension reads those already-loaded fields for authors visible on the page. It does not make extra X requests for this and does not auto-hover. Follow controls or author hover cards already in the DOM still win.
 
+Likes, reposts, and follows on the notifications page get the same badge beside the person's name. The extension recognizes the account from that notification's avatar. The relationship comes from follow controls already drawn on the row, user fields the current page already loaded, or the local archive. A historical sentence such as "so-and-so followed you" does not rewrite the current relationship.
+
 If a visible card still has no badge, hover the author avatar or ID and wait for X's author card to finish loading. The extension reads follow/unfollow controls and the "follows you" indicator already shown on that same-handle card. That is a fallback, not a requirement for Home recognition.
 
 While observation has just started and the count is still zero, the page dock and Side Panel say you can hover the author for extra relationship evidence when a card has no badge. That is not a claim that the extension opens every hover card.
