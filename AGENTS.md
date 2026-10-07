@@ -25,7 +25,7 @@ source "$HOME/.nvm/nvm.sh"
 nvm use
 ```
 
-`.nvmrc` (`24.19.0`) provides the recommended Node version. Do not restrict the Node version in configuration files (`package.json`). Running `nvm use` in the shell is sufficient.
+`.nvmrc` (`24`) selects the Node 24 LTS line; any installed 24.x release is acceptable, and `nvm use` picks the newest one. Do not pin a patch or minor version there. Do not restrict the Node version in configuration files (`package.json`). Running `nvm use` in the shell is sufficient.
 
 ## Python environment
 

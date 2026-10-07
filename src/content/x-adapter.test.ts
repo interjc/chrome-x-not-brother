@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  BLOCKED_NOTICE_SKIP_SELECTOR,
+  OBSERVATION_SKIP_SELECTOR,
+  PROFILE_BLOCKED_NOTICE_SKIP_SELECTOR,
+  USER_NAME_SELECTOR,
+  observationAndBlockText,
   handleFromHoverCard,
   hoverCardActionContainer,
+  isInsideXMediaPlayer,
   isInsideXUserAuthoredContent,
   mediaLightboxTweetFrom,
   openTweetMoreMenu,
@@ -1153,5 +1159,165 @@ describe("isInsideXUserAuthoredContent", () => {
     </article>`);
     expect(isInsideXUserAuthoredContent(doc.querySelector('a[href="/Mention"]')!)).toBe(true);
     expect(isInsideXUserAuthoredContent(doc.querySelector('a[href="/Author"]')!)).toBe(false);
+  });
+});
+
+describe("media player mutation scope", () => {
+  it("recognizes nodes inside a video player but not the surrounding post chrome", () => {
+    const doc = fixture(`
+      <article data-testid="tweet">
+        <a href="/Author">Author</a>
+        <div data-testid="videoPlayer"><span>0:13</span></div>
+      </article>
+    `);
+    const clock = doc.querySelector('[data-testid="videoPlayer"] span')!;
+    expect(isInsideXMediaPlayer(clock.firstChild!)).toBe(true);
+    expect(isInsideXMediaPlayer(doc.querySelector('a[href="/Author"]')!)).toBe(false);
+  });
+});
+
+describe("blocked notice keyword prefilter", () => {
+  it("still classifies localized blocked notices outside the post body", () => {
+    for (const notice of [
+      "You’re blocked",
+      "@Author has blocked you",
+      "このポストはあなたをブロックしているアカウントのものです",
+      "这则贴文来自已屏蔽你的账号",
+    ]) {
+      const doc = fixture(`
+        ${accountSwitcher()}
+        <article data-testid="tweet">
+          <div data-testid="User-Name"><a href="/Author"><span>Author</span></a><span>@Author</span></div>
+          <div><span>${notice}</span></div>
+          <div data-testid="tweetText">nothing blocked here</div>
+        </article>
+      `);
+      const [candidate] = scanXDocument(doc, "https://x.com/home");
+      expect(candidate?.observation.relationship, notice).toBe("blocked_by");
+    }
+  });
+
+  it("ignores block keywords that only appear in the post body", () => {
+    const doc = fixture(`
+      ${accountSwitcher()}
+      <article data-testid="tweet">
+        <div data-testid="User-Name"><a href="/Author"><span>Author</span></a><span>@Author</span></div>
+        <div data-testid="tweetText">has blocked you 已屏蔽你</div>
+      </article>
+    `);
+    const [candidate] = scanXDocument(doc, "https://x.com/home");
+    expect(candidate?.observation.relationship).not.toBe("blocked_by");
+  });
+});
+
+function splitTopLevel(selector: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < selector.length; index += 1) {
+    const char = selector[index];
+    if (char === "(" || char === "[") depth += 1;
+    else if (char === ")" || char === "]") depth -= 1;
+    else if (char === "," && depth === 0) {
+      parts.push(selector.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  parts.push(selector.slice(start).trim());
+  return parts;
+}
+
+// The subject compound is the last compound outside any brackets/parens.
+function subjectCompound(alternative: string): string {
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < alternative.length; index += 1) {
+    const char = alternative[index];
+    if (char === "(" || char === "[") depth += 1;
+    else if (char === ")" || char === "]") depth -= 1;
+    else if (depth === 0 && /[\s>+~]/.test(char!)) start = index + 1;
+  }
+  return alternative.slice(start);
+}
+
+describe("skip selector prefilter invariant", () => {
+  it("requires data-testid or data-xro-badge on every alternative's subject", () => {
+    for (const selector of [
+      OBSERVATION_SKIP_SELECTOR,
+      BLOCKED_NOTICE_SKIP_SELECTOR,
+      PROFILE_BLOCKED_NOTICE_SKIP_SELECTOR,
+    ]) {
+      const alternatives = splitTopLevel(selector);
+      expect(alternatives.length).toBeGreaterThan(3);
+      for (const alternative of alternatives) {
+        const subject = subjectCompound(alternative);
+        const outsideHas = subject.replace(/:has\((?:[^()]|\([^()]*\))*\)/g, "");
+        expect(
+          outsideHas.includes("data-testid") || outsideHas.includes("data-xro-badge"),
+          alternative,
+        ).toBe(true);
+      }
+    }
+  });
+});
+
+describe("observationAndBlockText", () => {
+  function twoCalls(root: Element): { ordinary: string; block: string } {
+    const walk = (skip: string): string => {
+      const parts: string[] = [];
+      const visit = (node: Node): void => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          if (node.textContent) parts.push(node.textContent);
+          return;
+        }
+        if (!(node instanceof Element)) return;
+        if (node !== root && node.matches(skip)) return;
+        node.childNodes.forEach(visit);
+      };
+      visit(root);
+      return parts.join("").normalize("NFKC");
+    };
+    return {
+      ordinary: walk(OBSERVATION_SKIP_SELECTOR),
+      block: walk(BLOCKED_NOTICE_SKIP_SELECTOR),
+    };
+  }
+
+  const fixtures: Record<string, string> = {
+    tweet: `<article data-testid="tweet">
+      <div data-testid="User-Name"><span>Ａlice</span><a href="/Alice">@Alice</a></div>
+      <span>Follows you</span>
+      <div data-testid="tweetText">has blocked you</div>
+      <span data-xro-badge="mutual">NB</span>
+      <div data-testid="UserDescription">bio</div>
+    </article>`,
+    nested: `<div data-testid="UserCell">
+      <div data-testid="UserName"><div data-testid="User-Names"><span>deep</span></div>x</div>
+      <span>after</span>
+    </div>`,
+    hover: `<div data-testid="HoverCard">
+      <div data-testid="UserName"><span>Bob</span></div>
+      <span>Follows you</span><a href="/Bob/following">3 Following</a>
+    </div>`,
+    notification: `<div data-testid="notification">
+      <div data-testid="card.layoutLarge.media">media</div>
+      <a href="/Carol"><span>Carol</span></a><span>followed you</span>
+    </div>`,
+  };
+
+  for (const [name, html] of Object.entries(fixtures)) {
+    it(`matches the two-pass output for ${name}`, () => {
+      const doc = fixture(html);
+      const root = doc.body.firstElementChild!;
+      expect(observationAndBlockText(root)).toEqual(twoCalls(root));
+    });
+  }
+
+  it("never skips the root even when it is a UserName", () => {
+    const doc = fixture(`<div data-testid="UserName"><span>root</span></div>`);
+    const root = doc.body.firstElementChild!;
+    expect(root.matches(USER_NAME_SELECTOR)).toBe(true);
+    expect(observationAndBlockText(root)).toEqual(twoCalls(root));
+    expect(observationAndBlockText(root).block).toBe("root");
   });
 });

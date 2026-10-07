@@ -37,7 +37,7 @@ Not Brother 是开源软件。源码、议题和发布说明都在 [interjc/chro
 
 ## 开发环境
 
-Node.js 通过 nvm 管理，版本以 `.nvmrc` 为准（当前是 `24.19.0`）。非交互 shell 可能解析到过旧的系统 Node，任何 `npm` 命令前都要先加载 nvm：
+Node.js 通过 nvm 管理，版本以 `.nvmrc` 为准（当前是 Node 24 LTS 系列，任意 24.x 均可）。非交互 shell 可能解析到过旧的系统 Node，任何 `npm` 命令前都要先加载 nvm：
 
 ```bash
 source "$HOME/.nvm/nvm.sh"

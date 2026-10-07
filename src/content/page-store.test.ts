@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   applyPageStoreRelationships,
   harvestUsersFromPayload,
+  isPageStoreQueryMessage,
+  mergePageUserMaps,
+  mergeSelectedPageUsers,
+  PAGE_STORE_MESSAGE_SOURCE,
   readPageUserRelationships,
+  selectPageUsersForQuery,
+  type PageUserRelationship,
 } from "./page-store";
 import { scanXDocument, type ExtractedCandidate } from "./x-adapter";
 
@@ -490,5 +496,120 @@ describe("page store relationships", () => {
       following: true,
       followsYou: true,
     });
+  });
+
+  it("re-walks the page store only when its state reference changes", () => {
+    const doc = fixture("<div id='react-root'><div></div></div>");
+    const host = doc.querySelector("#react-root > div");
+    let reads = 0;
+    const user = (following: boolean) => ({
+      legacy: { screen_name: "Steady", following },
+    });
+    const users: Record<string, unknown> = { "1": user(true) };
+    const entities = { users: { entities: users } };
+    let state: Record<string, unknown> = {
+      get entities() {
+        reads += 1;
+        return entities;
+      },
+    };
+    Object.defineProperty(host, "__reactProps$test", {
+      value: { store: { getState: () => state } },
+    });
+
+    expect(readPageUserRelationships(doc).get("steady")?.following).toBe(true);
+    const readsAfterFirst = reads;
+    expect(readPageUserRelationships(doc).get("steady")?.following).toBe(true);
+    expect(reads).toBe(readsAfterFirst);
+
+    users["1"] = user(false);
+    state = { entities: { users: { entities: { ...users } } } };
+    expect(readPageUserRelationships(doc).get("steady")?.following).toBe(false);
+  });
+
+  it("narrows a bridge answer to requested handles plus muted and blocked-by users", () => {
+    const person = (
+      handle: string,
+      extra: Partial<PageUserRelationship> = {},
+    ): PageUserRelationship => ({
+      handle,
+      following: true,
+      followsYou: null,
+      blockedBy: null,
+      muting: null,
+      displayName: null,
+      avatarUrl: null,
+      ...extra,
+    });
+    const users = new Map<string, PageUserRelationship>([
+      ["visible", person("Visible")],
+      ["offscreen", person("Offscreen")],
+      ["muted", person("Muted", { muting: true })],
+      ["blocker", person("Blocker", { blockedBy: true })],
+    ]);
+
+    expect([...selectPageUsersForQuery(users, ["VISIBLE"]).keys()])
+      .toEqual(["visible", "muted", "blocker"]);
+    expect(selectPageUsersForQuery(users, undefined)).toBe(users);
+  });
+
+  it("accepts query messages with an optional string handle list only", () => {
+    const base = { source: PAGE_STORE_MESSAGE_SOURCE, type: "query", requestId: "1" };
+    expect(isPageStoreQueryMessage(base)).toBe(true);
+    expect(isPageStoreQueryMessage({ ...base, handles: ["alice"] })).toBe(true);
+    expect(isPageStoreQueryMessage({ ...base, handles: "alice" })).toBe(false);
+    expect(isPageStoreQueryMessage({ ...base, handles: [1] })).toBe(false);
+  });
+});
+
+describe("mergeSelectedPageUsers", () => {
+  const u = (
+    handle: string,
+    extra: Partial<PageUserRelationship> = {},
+  ): PageUserRelationship => ({
+    handle,
+    following: null,
+    followsYou: null,
+    blockedBy: null,
+    muting: null,
+    displayName: null,
+    avatarUrl: null,
+    ...extra,
+  });
+  const mapOf = (...users: PageUserRelationship[]) =>
+    new Map(users.map((user) => [user.handle.toLowerCase(), user]));
+  const expectSame = (
+    maps: Array<Map<string, PageUserRelationship>>,
+    handles: string[] | undefined,
+  ) => {
+    const actual = mergeSelectedPageUsers(maps, handles);
+    const expected = selectPageUsersForQuery(mergePageUserMaps(...maps), handles);
+    expect([...actual]).toEqual([...expected]);
+  };
+
+  it("keeps only wanted handles", () => {
+    expectSame(
+      [mapOf(u("a", { following: true }), u("b"), u("c")), mapOf(u("d", { followsYou: true }))],
+      ["c", "a"],
+    );
+  });
+
+  it("keeps a user muted in only one map", () => {
+    expectSame([mapOf(u("a"), u("m", { muting: true })), mapOf(u("z"))], ["a"]);
+  });
+
+  it("uses merged flags when a later map overrides blockedBy", () => {
+    expectSame(
+      [mapOf(u("x", { blockedBy: true }), u("y")), mapOf(u("x", { blockedBy: false }), u("y", { blockedBy: true }))],
+      ["q"],
+    );
+  });
+
+  it("matches handles case-insensitively", () => {
+    expectSame([mapOf(u("Alice", { following: true })), mapOf(u("ALICE", { followsYou: true }), u("bob"))], ["aLiCe"]);
+  });
+
+  it("falls back to the full merge without handles", () => {
+    expectSame([mapOf(u("a"), u("b")), mapOf(u("c"), u("a", { following: true }))], undefined);
   });
 });

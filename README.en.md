@@ -190,7 +190,7 @@ After install, the assistant should activate the matching skill when it works on
 
 ## Local development
 
-The repository pins Node through nvm in `.nvmrc` (currently `24.19.0`):
+The repository selects Node through nvm and `.nvmrc` (currently the Node 24 LTS line; any 24.x works):
 
 ```bash
 source "$HOME/.nvm/nvm.sh"

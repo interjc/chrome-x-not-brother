@@ -1,7 +1,7 @@
 import {
   harvestUsersFromPayload,
   isPageStoreQueryMessage,
-  mergePageUserMaps,
+  mergeSelectedPageUsers,
   PAGE_STORE_MESSAGE_SOURCE,
   readPageUserRelationships,
   type PageStoreResultMessage,
@@ -13,11 +13,14 @@ const HOOK_FLAG = "__notBrotherHarvestedGraphql";
 const harvested = new Map<string, PageUserRelationship>();
 const UPDATE_NOTIFY_MS = 32;
 let notifyTimer = 0;
+// Fingerprints of muted/blocked-by users already announced, so each post carries only changes.
+const announced = new Map<string, string>();
 
-function publishUsers(requestId: string): void {
-  const users = Object.fromEntries(
-    mergePageUserMaps(harvested, readPageUserRelationships(document)),
-  );
+function publishUsers(requestId: string, handles?: string[]): void {
+  const users = Object.fromEntries(mergeSelectedPageUsers(
+    [harvested, readPageUserRelationships(document)],
+    handles,
+  ));
   const message: PageStoreResultMessage = {
     source: PAGE_STORE_MESSAGE_SOURCE,
     type: "result",
@@ -52,7 +55,11 @@ function scheduleHideSignal(): void {
     notifyTimer = 0;
     const users: Record<string, PageUserRelationship> = {};
     for (const [key, user] of harvested) {
-      if (user.muting === true || user.blockedBy === true) users[key] = user;
+      if (user.muting !== true && user.blockedBy !== true) continue;
+      const fingerprint = JSON.stringify(user);
+      if (announced.get(key) === fingerprint) continue;
+      announced.set(key, fingerprint);
+      users[key] = user;
     }
     if (Object.keys(users).length === 0) return;
     const message: PageStoreUpdatedMessage = {
@@ -112,7 +119,7 @@ window.addEventListener("message", (event: MessageEvent) => {
   if (event.source !== window) return;
   if (!isPageStoreQueryMessage(event.data)) return;
   try {
-    publishUsers(event.data.requestId);
+    publishUsers(event.data.requestId, event.data.handles);
   } catch {
     const message: PageStoreResultMessage = {
       source: PAGE_STORE_MESSAGE_SOURCE,

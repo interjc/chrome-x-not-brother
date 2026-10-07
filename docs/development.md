@@ -6,7 +6,7 @@
 
 - Google Chrome 116+；
 - nvm；
-- `.nvmrc` 指定的 Node 24.19.0；
+- `.nvmrc` 指定的 Node 24 LTS 系列（任意 24.x）；
 - npm。
 
 非交互 shell 可能解析到旧的系统 Node 8。任何 Node 命令前必须显式加载 nvm：

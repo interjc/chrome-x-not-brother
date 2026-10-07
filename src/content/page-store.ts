@@ -26,6 +26,12 @@ export interface PageStoreQueryMessage {
   source: typeof PAGE_STORE_MESSAGE_SOURCE;
   type: "query";
   requestId: string;
+  /**
+   * Lowercase handles visible to the current scan. When present, the bridge
+   * answers with only those users plus every muted or blocked-by user, so the
+   * result stays small however many users the page has loaded this session.
+   */
+  handles?: string[];
 }
 
 export interface PageStoreResultMessage {
@@ -207,6 +213,11 @@ function reactRoot(doc: Document): HTMLElement | null {
   return doc.querySelector("#react-root") ?? doc.querySelector("[data-reactroot]");
 }
 
+// Redux state is immutable: an unchanged root reference has unchanged users,
+// so a quiet page does not re-walk the whole store on every scan.
+let cachedStoreState: unknown = undefined;
+let cachedStoreUsers: Map<string, PageUserRelationship> | null = null;
+
 function usersFromReactStore(doc: Document, users: Map<string, PageUserRelationship>): void {
   const root = reactRoot(doc);
   const host = root?.firstElementChild ?? root;
@@ -215,7 +226,14 @@ function usersFromReactStore(doc: Document, users: Map<string, PageUserRelations
   const store = findStore(props, 0, new Set());
   if (!store) return;
   try {
-    usersFromState(store.getState(), users);
+    const state = store.getState();
+    if (!cachedStoreUsers || state !== cachedStoreState) {
+      const fresh = new Map<string, PageUserRelationship>();
+      usersFromState(state, fresh);
+      cachedStoreState = state;
+      cachedStoreUsers = fresh;
+    }
+    for (const user of cachedStoreUsers.values()) rememberUser(users, user);
   } catch {
     // The page store is best-effort; a React tree change must not stop DOM scanning.
   }
@@ -344,6 +362,52 @@ export function mergePageUserMaps(
   return merged;
 }
 
+/**
+ * Narrows a bridge answer to the handles a scan asked for. Muted and blocked-by
+ * users always stay so timeline hiding knows them before their post is a
+ * candidate, exactly as with the full map.
+ */
+export function selectPageUsersForQuery(
+  users: Map<string, PageUserRelationship>,
+  handles: readonly string[] | undefined,
+): Map<string, PageUserRelationship> {
+  if (!handles) return users;
+  const wanted = new Set(handles.map((handle) => handle.toLowerCase()));
+  const selected = new Map<string, PageUserRelationship>();
+  for (const [key, user] of users) {
+    if (wanted.has(key) || user.muting === true || user.blockedBy === true) {
+      selected.set(key, user);
+    }
+  }
+  return selected;
+}
+
+/**
+ * Same result as selectPageUsersForQuery(mergePageUserMaps(...maps), handles)
+ * without copying users the query would drop. Only wanted keys and keys flagged
+ * muted/blocked-by in some input are merged, in input order, so values and Map
+ * order match the full merge; the final select re-checks the merged flags.
+ */
+export function mergeSelectedPageUsers(
+  maps: ReadonlyArray<Map<string, PageUserRelationship>>,
+  handles: readonly string[] | undefined,
+): Map<string, PageUserRelationship> {
+  if (!handles) return mergePageUserMaps(...maps);
+  const keys = new Set(handles.map((handle) => handle.toLowerCase()));
+  for (const map of maps) {
+    for (const [key, user] of map) {
+      if (user.muting === true || user.blockedBy === true) keys.add(key);
+    }
+  }
+  const merged = new Map<string, PageUserRelationship>();
+  for (const map of maps) {
+    for (const [key, user] of map) {
+      if (keys.has(key)) rememberUser(merged, user);
+    }
+  }
+  return selectPageUsersForQuery(merged, handles);
+}
+
 export function readPageUserRelationships(doc: Document): Map<string, PageUserRelationship> {
   const users = new Map<string, PageUserRelationship>();
   usersFromReactStore(doc, users);
@@ -430,20 +494,27 @@ export function isPageStoreQueryMessage(value: unknown): value is PageStoreQuery
   if (!isRecord(value)) return false;
   return value.source === PAGE_STORE_MESSAGE_SOURCE &&
     value.type === "query" &&
-    typeof value.requestId === "string";
+    typeof value.requestId === "string" &&
+    (
+      value.handles === undefined ||
+      (Array.isArray(value.handles) &&
+        value.handles.every((handle) => typeof handle === "string"))
+    );
 }
 
 export async function loadPageUserRelationships(
   doc: Document,
   targetWindow: Window,
+  handles?: readonly string[],
 ): Promise<Map<string, PageUserRelationship>> {
-  const local = readPageUserRelationships(doc);
-  const remote = await requestPageStoreFromBridge(targetWindow);
+  const local = selectPageUsersForQuery(readPageUserRelationships(doc), handles);
+  const remote = await requestPageStoreFromBridge(targetWindow, handles);
   return mergePageUserMaps(local, remote);
 }
 
 function requestPageStoreFromBridge(
   targetWindow: Window,
+  handles?: readonly string[],
 ): Promise<Map<string, PageUserRelationship>> {
   if (typeof targetWindow.postMessage !== "function") {
     return Promise.resolve(new Map());
@@ -470,6 +541,7 @@ function requestPageStoreFromBridge(
       source: PAGE_STORE_MESSAGE_SOURCE,
       type: "query",
       requestId,
+      ...(handles ? { handles: [...handles] } : {}),
     };
     targetWindow.postMessage(message, targetWindow.location.origin || "*");
   });

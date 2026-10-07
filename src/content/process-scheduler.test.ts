@@ -47,4 +47,34 @@ describe("content process scheduler", () => {
     expect(task).toHaveBeenCalledTimes(1);
     expect(onError).toHaveBeenCalledWith(failure);
   });
+
+  it("coalesces a burst into one run per minimum interval and runs a quiet request at once", async () => {
+    vi.useFakeTimers();
+    const task = vi.fn(async () => undefined);
+    const scheduler = createProcessScheduler({
+      window,
+      delayMs: 0,
+      minIntervalMs: 100,
+      task,
+      onError: vi.fn(),
+    });
+
+    scheduler.request();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(task).toHaveBeenCalledTimes(1);
+
+    for (let index = 0; index < 5; index += 1) {
+      scheduler.request();
+      await vi.advanceTimersByTimeAsync(10);
+    }
+    expect(task).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(50);
+    expect(task).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(500);
+    scheduler.request();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(task).toHaveBeenCalledTimes(3);
+    scheduler.stop();
+  });
 });

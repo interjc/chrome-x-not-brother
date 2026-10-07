@@ -6,7 +6,7 @@
 
 - Google Chrome 116+;
 - nvm;
-- Node 24.19.0 from `.nvmrc`;
+- Node 24 LTS line from `.nvmrc` (any 24.x);
 - npm.
 
 Non-interactive shells may resolve the old system Node 8. Load nvm explicitly before any Node command:

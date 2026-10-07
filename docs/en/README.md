@@ -21,7 +21,7 @@ Agent entry points are [AGENTS.md](../../AGENTS.md) and the [project skill](../.
 | [Release](release.md) | Versioning, checks, packaging, Store prep, and rollback |
 | [Privacy](privacy.md) | Pointer to the bilingual public privacy policy and terms |
 
-Chinese-only companion docs, still linked from [docs/README.md](../README.md): feasibility, requirements, design, data model, first-time Store launch, Chrome Web Store operations, trilingual Store listing copy, and X-extension resilience research.
+Chinese-only companion docs, still linked from [docs/README.md](../README.md): feasibility, requirements, design, data model, first-time Store launch, Chrome Web Store operations, trilingual Store listing copy, X-extension resilience research, and the content-script performance overhaul.
 
 Public privacy and terms HTML is published from [pages/](../../pages/) on GitHub Pages:
 

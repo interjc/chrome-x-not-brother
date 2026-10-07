@@ -190,7 +190,7 @@ npx skills add https://github.com/interjc/chrome-x-not-brother
 
 ## 本地开发
 
-仓库用 nvm 固定 Node `.nvmrc`（当前是 `24.19.0`）：
+仓库用 nvm 和 `.nvmrc` 选择 Node 版本（当前是 Node 24 LTS 系列，任意 24.x 均可）：
 
 ```bash
 source "$HOME/.nvm/nvm.sh"

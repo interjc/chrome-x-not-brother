@@ -40,6 +40,7 @@ import {
   updateSettings,
 } from "../storage/settings";
 import { isFilterRulesStorageChange } from "../storage/filter-rule-keys";
+import { isHideStatsStorageChange } from "../storage/hide-stats";
 import {
   removeRelationshipBadge,
   removeRelationshipBadges,
@@ -90,6 +91,7 @@ import {
   DROPDOWN_SELECTOR,
   HOVER_CARD_SELECTOR,
   TWEET_CARET_SELECTOR,
+  isInsideXMediaPlayer,
   isInsideXUserAuthoredContent,
   scanXDocument,
   type ExtractedCandidate,
@@ -98,12 +100,21 @@ import {
 
 const PROCESS_DELAY_MS = 180;
 const HIDE_DELAY_MS = 0;
+// While X keeps mutating the timeline (scrolling, media), coalesce hide passes.
+// The first request after a quiet period still runs immediately.
+const HIDE_MIN_INTERVAL_MS = 100;
+// Settings and filter status are invalidated by storage.onChanged; the TTL
+// only bounds staleness if an event were ever missed.
+const CACHED_STATE_TTL_MS = 30_000;
 const observationSignatures = createObservationSignatureTracker();
 const recordCache = new Map<string, UserRecord>();
 const requestedUserKeys = new Set<string>();
 const muteMemory = createMuteMemory();
 let latestPageUsers = new Map<string, PageUserRelationship>();
 let currentUrl = location.href;
+// Bumped whenever the page may have changed evidence (observer batch, URL change,
+// fallback rescan) so processPage can tell if its own scan is still fresh.
+let evidenceGeneration = 0;
 let latestSettings: ObserverSettings | null = null;
 let latestSummary: ObservationSummary | null = null;
 let latestSummaryReadAt = 0;
@@ -131,6 +142,11 @@ let keywordWatcher: { refresh(): void; stop(): void } | null = null;
 let caretClickTimers: number[] = [];
 let filterStatusLoading: Promise<void> | null = null;
 let filterStatusLoadingFor: string | null = null;
+let filterStatusReadAt = 0;
+let filterStatusReadFor: string | null = null;
+let filterStatusGeneration = 0;
+let settingsReadAt = 0;
+let settingsGeneration = 0;
 
 function currentViewerHandle(): string | null {
   return viewerHandleFromDocument(document)?.toLowerCase()
@@ -280,6 +296,7 @@ function refreshFilterStatus(): Promise<void> {
     return filterStatusLoading;
   }
   filterStatusLoadingFor = requested;
+  const generation = filterStatusGeneration;
   filterStatusLoading = sendRuntimeMessage<
     GetFilterRulesStatusResponse | { ok: false; error: string }
   >({
@@ -291,6 +308,10 @@ function refreshFilterStatus(): Promise<void> {
       if (!response.ok) throw new Error(response.error);
       latestFilterStatus = response.status;
       latestHideStats = response.hideStats ?? emptyHideStats();
+      if (generation === filterStatusGeneration) {
+        filterStatusReadAt = Date.now();
+        filterStatusReadFor = requested;
+      }
     }).catch((error: unknown) => {
       handleRuntimeError(error, "Could not read custom filter rule status");
     }).finally(() => {
@@ -300,6 +321,37 @@ function refreshFilterStatus(): Promise<void> {
       }
     });
   return filterStatusLoading;
+}
+
+function filterStatusIsFresh(): boolean {
+  return latestFilterStatus !== null &&
+    filterStatusReadAt > 0 &&
+    filterStatusReadFor === (currentViewerHandle() ?? "") &&
+    Date.now() - filterStatusReadAt < CACHED_STATE_TTL_MS;
+}
+
+function invalidateFilterStatus(): void {
+  filterStatusGeneration += 1;
+  filterStatusReadAt = 0;
+}
+
+function invalidateSettings(): void {
+  settingsGeneration += 1;
+  settingsReadAt = 0;
+}
+
+async function readSettings(): Promise<ObserverSettings> {
+  if (
+    latestSettings &&
+    settingsReadAt > 0 &&
+    Date.now() - settingsReadAt < CACHED_STATE_TTL_MS
+  ) {
+    return latestSettings;
+  }
+  const generation = settingsGeneration;
+  const settings = await getSettings();
+  if (generation === settingsGeneration) settingsReadAt = Date.now();
+  return settings;
 }
 
 function ensureFilterRulesLoaded(): Promise<void> {
@@ -345,6 +397,8 @@ function handleStorageChanged(
   areaName: string,
 ): void {
   if (isSettingsStorageChange(changes, areaName)) {
+    invalidateSettings();
+    invalidateFilterStatus();
     filterRulesLoaded = false;
     compiledFilterRulesForViewer = null;
     void refreshFilterStatus().then(() => {
@@ -353,7 +407,14 @@ function handleStorageChanged(
     scheduleHide();
     scheduleProcess();
   }
+  if (isHideStatsStorageChange(changes, areaName, currentViewerHandle())) {
+    invalidateFilterStatus();
+    void refreshFilterStatus().then(() => {
+      if (!stopped && latestSettings) renderPanel(latestSettings);
+    });
+  }
   if (isFilterRulesStorageChange(changes, areaName, currentViewerHandle())) {
+    invalidateFilterStatus();
     filterRulesLoaded = false;
     compiledFilterRulesForViewer = null;
     void refreshFilterStatus().then(() => {
@@ -461,7 +522,7 @@ function recordNewHides(count: TimelineHideCount): void {
   });
 }
 
-function applyHideNow(): void {
+function applyHideNow(scanned?: ExtractedCandidate[]): void {
   if (stopped) return;
   const settings = latestSettings;
   if (!settings) return;
@@ -474,9 +535,12 @@ function applyHideNow(): void {
   }
   const viewerHandle = viewerHandleFromDocument(document);
   const viewerKey = viewerHandle?.toLowerCase() ?? settings.viewerHandle;
-  const candidates = scanXDocument(document, location.href).filter(
-    (candidate) => candidate.observation.userKey !== viewerKey,
-  );
+  // Page-store fills below replace candidate.observation; copy a reused scan so
+  // processPage still persists exactly what its own pass resolved.
+  const candidates = scanned?.map((candidate) => ({ ...candidate })) ??
+    scanXDocument(document, location.href).filter(
+      (candidate) => candidate.observation.userKey !== viewerKey,
+    );
   applyPageStoreRelationships(candidates, latestPageUsers);
   recordNewHides(applyTimelineHiding({
     root: document,
@@ -542,6 +606,11 @@ function handleRuntimeError(error: unknown, message: string): void {
   console.warn(`[Not Brother] ${message}`, error);
 }
 
+function setPageTheme(theme: "dark" | "light"): void {
+  const root = document.documentElement;
+  if (root.dataset.xroTheme !== theme) root.dataset.xroTheme = theme;
+}
+
 function syncPageTheme(): void {
   let channels: number[] | null = null;
   for (const target of [document.body, document.documentElement]) {
@@ -552,14 +621,12 @@ function syncPageTheme(): void {
     break;
   }
   if (!channels) {
-    document.documentElement.dataset.xroTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
+    setPageTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     return;
   }
   const [red = 255, green = 255, blue = 255] = channels;
   const luminance = (red * 299 + green * 587 + blue * 114) / 1000;
-  document.documentElement.dataset.xroTheme = luminance < 128 ? "dark" : "light";
+  setPageTheme(luminance < 128 ? "dark" : "light");
 }
 
 function pageUiLocale(settings: ObserverSettings | null = latestSettings): AppLocale {
@@ -734,11 +801,12 @@ async function hydrateRecordCache(candidates: ExtractedCandidate[]): Promise<voi
 
 async function processPage(): Promise<void> {
   if (stopped) return;
+  periodicRescan?.postpone();
   syncPageTheme();
-  const settings = await getSettings();
+  const settings = await readSettings();
   if (stopped) return;
   latestSettings = settings;
-  if (settings.consentVersion >= CURRENT_CONSENT_VERSION) {
+  if (settings.consentVersion >= CURRENT_CONSENT_VERSION && !filterStatusIsFresh()) {
     try {
       await refreshFilterStatus();
     } catch (error) {
@@ -775,10 +843,16 @@ async function processPage(): Promise<void> {
   }
   const viewerHandle = viewerHandleFromDocument(document);
   const viewerKey = viewerHandle?.toLowerCase() ?? settings.viewerHandle;
+  const scanGeneration = evidenceGeneration;
+  const scanHref = location.href;
   const candidates = scanXDocument(document, location.href).filter(
     (candidate) => candidate.observation.userKey !== viewerKey,
   );
-  const pageUsers = await loadPageUserRelationships(document, window);
+  const pageUsers = await loadPageUserRelationships(
+    document,
+    window,
+    [...new Set(candidates.map((item) => item.observation.userKey))],
+  );
   rememberPageUsers(pageUsers);
   applyPageStoreRelationships(candidates, latestPageUsers);
   if (stopped) return;
@@ -791,7 +865,13 @@ async function processPage(): Promise<void> {
     if (stopped) return;
   }
 
-  if (hidingEnabled) applyHideNow();
+  if (hidingEnabled) {
+    // Reuse this pass's scan only while no evidence-changing mutation, rescan, or
+    // navigation happened across the awaits above; otherwise rescan as before.
+    const scanStillFresh =
+      scanGeneration === evidenceGeneration && scanHref === location.href;
+    applyHideNow(scanStillFresh ? candidates : undefined);
+  }
 
   if (!settings.observerEnabled) {
     removeRelationshipBadges();
@@ -835,6 +915,35 @@ function scheduleHide(): void {
   hideScheduler?.request();
 }
 
+// Hide passes that can only be no-ops (filters off, or no consent) still run
+// revealAllHiddenTweets()'s querySelectorAll; skip them on high-frequency paths.
+// Settings/data/startup paths keep the unconditional scheduleHide() so turning a
+// filter off still reveals hidden cells.
+function scheduleHideIfFiltering(): void {
+  const settings = latestSettings;
+  if (
+    settings &&
+    settings.consentVersion >= CURRENT_CONSENT_VERSION &&
+    timelineHidingEnabled(settings)
+  ) {
+    scheduleHide();
+  }
+}
+
+function batchTouchesQuickRuleHost(mutations: MutationRecord[]): boolean {
+  // Without any HoverCard/Dropdown host in the document only the caret
+  // aria-expanded attribute case can matter, so skip the per-node host probes.
+  if (document.querySelector(`${HOVER_CARD_SELECTOR}, ${DROPDOWN_SELECTOR}`) === null) {
+    return mutations.some((mutation) =>
+      mutation.type === "attributes" &&
+      mutation.attributeName === "aria-expanded" &&
+      mutation.target instanceof Element &&
+      mutation.target.closest(TWEET_CARET_SELECTOR) !== null
+    );
+  }
+  return mutations.some(mutationTouchesQuickRuleHost);
+}
+
 function nodeIsInsideInjectedUi(node: Node): boolean {
   const element = node instanceof Element ? node : node.parentElement;
   return Boolean(
@@ -842,20 +951,30 @@ function nodeIsInsideInjectedUi(node: Node): boolean {
   );
 }
 
+function mutationCannotChangeEvidence(mutation: MutationRecord): boolean {
+  if (
+    nodeIsInsideInjectedUi(mutation.target) ||
+    isInsideXUserAuthoredContent(mutation.target) ||
+    isInsideXMediaPlayer(mutation.target)
+  ) {
+    return true;
+  }
+  // Inserting our own badge or quick-rule control into X's DOM records a
+  // childList change on X's node; it is not new page evidence.
+  return mutation.type === "childList" &&
+    mutation.removedNodes.length === 0 &&
+    mutation.addedNodes.length > 0 &&
+    [...mutation.addedNodes].every(nodeIsInsideInjectedUi);
+}
+
 observer = new MutationObserver((mutations) => {
   if (stopped) return;
-  if (
-    mutations.every((mutation) =>
-      nodeIsInsideInjectedUi(mutation.target) ||
-      isInsideXUserAuthoredContent(mutation.target)
-    )
-  ) {
-    return;
-  }
-  if (latestSettings && mutations.some(mutationTouchesQuickRuleHost)) {
+  if (mutations.every(mutationCannotChangeEvidence)) return;
+  evidenceGeneration += 1;
+  if (latestSettings && batchTouchesQuickRuleHost(mutations)) {
     syncQuickRuleUi();
   }
-  scheduleHide();
+  scheduleHideIfFiltering();
   scheduleProcess();
 });
 
@@ -889,7 +1008,8 @@ heartbeatId = window.setInterval(() => {
   }
   if (location.href === currentUrl) return;
   currentUrl = location.href;
-  scheduleHide();
+  evidenceGeneration += 1;
+  scheduleHideIfFiltering();
   scheduleProcess();
 }, 800);
 
@@ -903,6 +1023,7 @@ if (hasExtensionContext()) {
   hideScheduler = createProcessScheduler({
     window,
     delayMs: HIDE_DELAY_MS,
+    minIntervalMs: HIDE_MIN_INTERVAL_MS,
     task: async () => applyHideNow(),
     onError: (error) => handleRuntimeError(error, "Could not apply timeline filters"),
   });
@@ -922,7 +1043,10 @@ if (hasExtensionContext()) {
       (latestSettings.observerEnabled || timelineHidingEnabled(latestSettings)),
     ),
     onRescan: () => {
-      scheduleHide();
+      // The fallback exists for changes the observer misses (style/class fades),
+      // so it must force fresh scans rather than reuse an earlier one.
+      evidenceGeneration += 1;
+      scheduleHideIfFiltering();
       scheduleProcess();
     },
   });

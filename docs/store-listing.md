@@ -36,6 +36,11 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 - Adds local Zod-validated blacklist rules for handles, display names, and post content, with expiration, JSON file import/export, and one-time public HTTPS/Gist import behind optional per-site permission.
 - Makes first-run consent easier to find with a prominent entry beside the minimized NB button and an action-icon context-menu shortcut; both open the full disclosure before consent.
 
+### Version 0.5.13 release notes
+
+- Reduces CPU usage while browsing X. Settings and filter status are cached and refreshed only when they change, scans skip video-player updates and the extension's own badges, the background fallback scan waits for a quiet moment, and data exchanged with the page is limited to the accounts actually on screen.
+- Timeline filters do less repeated work while scrolling: hide passes are grouped to at most one every 100 ms, and no hide work runs at all when every filter is off. Relationship detection, badges, and stored observations are unchanged.
+
 ### Version 0.5.12 release notes
 
 - Annotates notification activity rows directly using already-loaded page UI store relationships without requiring a hover card. Badges appear on the display-name link or avatar link for notification actors.
@@ -166,6 +171,11 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 - 小型偏好可通过用户启用的 Chrome Sync 同步，关系档案和当前 X handle 仍只保存在本机。旧 local 偏好迁移时不会覆盖 Chrome Sync 已有设置。
 - 未同意时，收起后的 NB 悬浮球旁会显示醒目入口，工具栏图标右键菜单也能打开完整隐私说明；入口不会直接代替用户同意。
+
+### 0.5.13 更新说明
+
+- 降低浏览 X 时的 CPU 占用：设置和过滤状态改为缓存，变化时才刷新；视频播放和扩展自己的徽章不再触发扫描；兜底复扫只在页面安静时运行；与页面交换的数据只包含当前可见的账号。
+- 时间线过滤在滚动时减少重复计算：隐藏处理每 100 毫秒最多一次，全部过滤关闭时不再运行。关系识别、徽章和观察记录的结果不变。
 
 ### 0.5.12 更新说明
 
@@ -298,6 +308,11 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 
 - 小さな設定をユーザーが有効にした Chrome Sync で同期し、関係アーカイブと現在の X ハンドルはローカルに保ちます。旧 local 設定の移行時も、Chrome Sync に既存の設定があれば上書きしません。
 - 未同意の場合、収納した NB ボタンの横に目立つ入口を表示し、ツールバーアイコンの右クリックメニューからも完全なプライバシー説明を開けます。入口だけで同意が確定することはありません。
+
+### 0.5.13 更新内容
+
+- X の閲覧中の CPU 使用率を下げました。設定とフィルター状態はキャッシュし、変更時だけ更新します。動画の再生や拡張機能自身のバッジではスキャンせず、補助スキャンはページが落ち着いてから実行し、ページとやり取りするデータは画面上のアカウントに限ります。
+- タイムラインフィルターのスクロール中の重複処理を減らしました。非表示処理は 100 ミリ秒に 1 回までにまとめ、すべてのフィルターがオフのときは実行しません。関係の判定、バッジ、保存される観察記録は変わりません。
 
 ### 0.5.12 更新内容
 

@@ -30,11 +30,11 @@ export const HOVER_CARD_SELECTOR = '[data-testid="HoverCard"]';
 export const TWEET_TEXT_SELECTOR = '[data-testid="tweetText"]';
 export const USER_CONTENT_SELECTOR =
   `${TWEET_TEXT_SELECTOR}, [data-testid="card.layoutLarge.media"]`;
-const OBSERVATION_SKIP_SELECTOR =
+export const OBSERVATION_SKIP_SELECTOR =
   `${USER_CONTENT_SELECTOR}, [data-testid="UserDescription"], [data-xro-badge]`;
-const BLOCKED_NOTICE_SKIP_SELECTOR =
+export const BLOCKED_NOTICE_SKIP_SELECTOR =
   `${OBSERVATION_SKIP_SELECTOR}, ${USER_NAME_SELECTOR}`;
-const PROFILE_BLOCKED_NOTICE_SKIP_SELECTOR =
+export const PROFILE_BLOCKED_NOTICE_SKIP_SELECTOR =
   `${BLOCKED_NOTICE_SKIP_SELECTOR}, ${TWEET_SELECTOR}, ` +
   `[data-testid="UserCell"], [data-testid="cellInnerDiv"]:has(${TWEET_SELECTOR})`;
 const SUGGESTION_DIRECTORY_LINK_SELECTOR =
@@ -93,6 +93,14 @@ const BLOCKED_PATTERNS = [
   /(?:此|这)(?:帖子|貼文|贴文|則貼文|则贴文)[^。]*(?:来自|來自)[^。]*(?:屏蔽|拉黑|封鎖)你/u,
 ];
 
+// Every blocked-by pattern names a block keyword. One cheap scan for those
+// keywords skips the whole pattern list for ordinary card chrome.
+const BLOCKED_KEYWORD = /block|ブロック|屏蔽|拉黑|封鎖/i;
+
+function matchesBlockedNotice(text: string): boolean {
+  return BLOCKED_KEYWORD.test(text) && matchesAny(text, BLOCKED_PATTERNS);
+}
+
 const FOLLOWS_YOU_PATTERNS = [
   /follows you/i,
   /フォローされています/u,
@@ -125,6 +133,30 @@ export function isInsideXUserAuthoredContent(node: Node): boolean {
   return Boolean(element?.closest(USER_CONTENT_SELECTOR));
 }
 
+const MEDIA_PLAYER_SELECTOR =
+  '[data-testid="videoPlayer"], [data-testid="videoComponent"]';
+
+/**
+ * A playing video rewrites its clock, progress, and control labels every
+ * second. Nothing inside the player is author identity or relationship chrome.
+ */
+export function isInsideXMediaPlayer(node: Node): boolean {
+  const element = node instanceof Element ? node : node.parentElement;
+  return Boolean(element?.closest(MEDIA_PLAYER_SELECTOR));
+}
+
+/**
+ * Every alternative in the observation/blocked-notice skip selectors needs a
+ * data-testid or data-xro-badge on the matched element itself, so an element
+ * with neither can skip the costly matches() call. Only valid for those skip
+ * selectors (a unit test pins the invariant), never for arbitrary selectors.
+ */
+function maySkip(element: Element, skipSelector: string): boolean {
+  return (element.hasAttribute("data-testid") ||
+    element.hasAttribute("data-xro-badge")) &&
+    element.matches(skipSelector);
+}
+
 function* elementsMatching<T extends Element>(
   root: Element,
   selector: string,
@@ -133,7 +165,7 @@ function* elementsMatching<T extends Element>(
   const stack: Element[] = [root];
   while (stack.length > 0) {
     const element = stack.pop()!;
-    if (element !== root && element.matches(skipSelector)) continue;
+    if (element !== root && maySkip(element, skipSelector)) continue;
     if (element.matches(selector)) yield element as T;
     const children = element.children;
     for (let index = children.length - 1; index >= 0; index -= 1) {
@@ -149,7 +181,11 @@ export function* iterateOutsideUserContent<T extends Element>(
   yield* elementsMatching<T>(root, selector, OBSERVATION_SKIP_SELECTOR);
 }
 
-function textExcluding(element: Element, skipSelector: string): string {
+function textExcluding(
+  element: Element,
+  skipSelector: string,
+  prefiltered = false,
+): string {
   const parts: string[] = [];
   const visit = (node: Node): void => {
     if (node.nodeType === Node.TEXT_NODE) {
@@ -158,7 +194,8 @@ function textExcluding(element: Element, skipSelector: string): string {
       return;
     }
     if (!(node instanceof Element)) return;
-    if (node !== element && node.matches(skipSelector)) return;
+    if (node !== element &&
+      (prefiltered ? maySkip(node, skipSelector) : node.matches(skipSelector))) return;
     const children = node.childNodes;
     for (let index = 0; index < children.length; index += 1) {
       visit(children[index]!);
@@ -169,7 +206,7 @@ function textExcluding(element: Element, skipSelector: string): string {
 }
 
 function platformText(element: Element): string {
-  return textExcluding(element, OBSERVATION_SKIP_SELECTOR);
+  return textExcluding(element, OBSERVATION_SKIP_SELECTOR, true);
 }
 
 function blockedNoticeText(element: Element, skipNestedProfileContent = false): string {
@@ -178,7 +215,49 @@ function blockedNoticeText(element: Element, skipNestedProfileContent = false): 
     skipNestedProfileContent
       ? PROFILE_BLOCKED_NOTICE_SKIP_SELECTOR
       : BLOCKED_NOTICE_SKIP_SELECTOR,
+    true,
   );
+}
+
+/**
+ * One traversal producing platformText(element) and blockedNoticeText(element)
+ * (without nested-profile skipping): both skip OBSERVATION_SKIP content; the
+ * block text additionally omits nested UserName subtrees.
+ */
+export function observationAndBlockText(
+  element: Element,
+): { ordinary: string; block: string } {
+  const ordinary: string[] = [];
+  const block: string[] = [];
+  const visit = (node: Node, inUserName: boolean): void => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const value = node.textContent;
+      if (value) {
+        ordinary.push(value);
+        if (!inUserName) block.push(value);
+      }
+      return;
+    }
+    if (!(node instanceof Element)) return;
+    let nested = inUserName;
+    if (node !== element) {
+      const hasMark = node.hasAttribute("data-testid") ||
+        node.hasAttribute("data-xro-badge");
+      if (hasMark) {
+        if (node.matches(OBSERVATION_SKIP_SELECTOR)) return;
+        if (!nested && node.matches(USER_NAME_SELECTOR)) nested = true;
+      }
+    }
+    const children = node.childNodes;
+    for (let index = 0; index < children.length; index += 1) {
+      visit(children[index]!, nested);
+    }
+  };
+  visit(element, false);
+  return {
+    ordinary: ordinary.join("").normalize("NFKC"),
+    block: block.join("").normalize("NFKC"),
+  };
 }
 
 function matchesAny(text: string, patterns: RegExp[]): boolean {
@@ -246,11 +325,21 @@ function isAriaHiddenSubtree(element: HTMLElement): boolean {
   return false;
 }
 
-function computedStyleHides(element: HTMLElement): boolean {
+/**
+ * Thread scans test the same ancestor chains for reply, repost, and like on
+ * every cell. One scan reads each element's computed style at most once.
+ */
+type ComputedHiddenCache = WeakMap<Element, boolean>;
+
+function computedStyleHides(element: HTMLElement, cache?: ComputedHiddenCache): boolean {
+  const cached = cache?.get(element);
+  if (cached !== undefined) return cached;
   const style = element.ownerDocument.defaultView?.getComputedStyle(element);
-  return style?.display === "none" ||
+  const hides = style?.display === "none" ||
     style?.visibility === "hidden" ||
     style?.opacity === "0";
+  cache?.set(element, hides);
+  return hides;
 }
 
 function walkAncestorsWithinSurface(
@@ -269,11 +358,15 @@ function walkAncestorsWithinSurface(
   return false;
 }
 
-function isRenderedEngagementTarget(element: HTMLElement, surface: Element): boolean {
+function isRenderedEngagementTarget(
+  element: HTMLElement,
+  surface: Element,
+  styleCache?: ComputedHiddenCache,
+): boolean {
   return !walkAncestorsWithinSurface(element, surface, (current) =>
     Boolean(current.hidden) ||
     current.getAttribute("aria-hidden") === "true" ||
-    computedStyleHides(current),
+    computedStyleHides(current, styleCache),
   );
 }
 
@@ -283,29 +376,33 @@ function isExplicitlyDisabledEngagement(element: HTMLElement, surface: Element):
   );
 }
 
-function engagementControlState(surface: Element, selector: string): EngagementControlState {
+function engagementControlState(
+  surface: Element,
+  selector: string,
+  styleCache?: ComputedHiddenCache,
+): EngagementControlState {
   const control = surface.querySelector<HTMLElement>(selector);
   if (!control) return "missing";
   const interactive = control.matches('button, [role="button"], a[href]')
     ? control
     : control.querySelector<HTMLElement>('button, [role="button"], a[href]');
   const target = interactive ?? control;
-  if (!isRenderedEngagementTarget(target, surface)) return "missing";
+  if (!isRenderedEngagementTarget(target, surface, styleCache)) return "missing";
   if (isExplicitlyDisabledEngagement(target, surface)) return "restricted";
   return interactive ? "actionable" : "missing";
 }
 
-function engagementIsUnavailable(surface: Element): boolean {
+function engagementIsUnavailable(surface: Element, styleCache?: ComputedHiddenCache): boolean {
   if (surface instanceof HTMLElement && isAriaHiddenSubtree(surface)) return false;
   return ENGAGEMENT_SELECTORS.every(
-    (selector) => engagementControlState(surface, selector) === "restricted",
+    (selector) => engagementControlState(surface, selector, styleCache) === "restricted",
   );
 }
 
-function engagementIsAvailable(surface: Element): boolean {
+function engagementIsAvailable(surface: Element, styleCache?: ComputedHiddenCache): boolean {
   if (surface instanceof HTMLElement && isAriaHiddenSubtree(surface)) return false;
   return ENGAGEMENT_SELECTORS.every(
-    (selector) => engagementControlState(surface, selector) === "actionable",
+    (selector) => engagementControlState(surface, selector, styleCache) === "actionable",
   );
 }
 
@@ -335,12 +432,15 @@ export function mediaLightboxTweetFrom(
   return null;
 }
 
-function actionableEngagementLayers(doc: Document): Set<Element | "page"> {
+function actionableEngagementLayers(
+  doc: Document,
+  styleCache?: ComputedHiddenCache,
+): Set<Element | "page"> {
   const layers = new Set<Element | "page">();
   for (const surface of doc.querySelectorAll<HTMLElement>(
     '[data-testid="cellInnerDiv"], article',
   )) {
-    if (!engagementIsAvailable(surface)) continue;
+    if (!engagementIsAvailable(surface, styleCache)) continue;
     layers.add(containingOverlay(surface) ?? "page");
   }
   return layers;
@@ -605,17 +705,24 @@ function relationshipFacts(
   const textSurfaces = controlsOnly
     ? relationshipSurfaces.filter((area) => area !== surface)
     : relationshipSurfaces;
-  const text = textSurfaces.map(platformText).join(" ");
   const isProfileRoot = sourceType === "profile" &&
     surface.matches('[data-testid="primaryColumn"]');
   const blockSurfaces = controlsOnly ? textSurfaces : relationshipSurfaces;
-  const blockText = blockSurfaces.map((area) =>
-    blockedNoticeText(area, isProfileRoot && area === surface)).join(" ");
-  const ordinaryText = isProfileRoot
-    ? platformText(firstDirect(surface, USER_NAME_SELECTOR) ?? surface)
-    : text;
+  let blockText: string;
+  let ordinaryText: string;
+  if (isProfileRoot) {
+    blockText = blockSurfaces.map((area) =>
+      blockedNoticeText(area, area === surface)).join(" ");
+    // A profile root is the whole primary column; only its name block is read.
+    ordinaryText = platformText(firstDirect(surface, USER_NAME_SELECTOR) ?? surface);
+  } else {
+    // blockSurfaces and textSurfaces hold the same elements here: walk once.
+    const texts = textSurfaces.map(observationAndBlockText);
+    blockText = texts.map((text) => text.block).join(" ");
+    ordinaryText = texts.map((text) => text.ordinary).join(" ");
+  }
   const evidence: EvidenceType[] = [];
-  const blockedByNotice = matchesAny(blockText, BLOCKED_PATTERNS);
+  const blockedByNotice = matchesBlockedNotice(blockText);
   const blockedBy = blockedByNotice ||
     blockedByInteractionRestriction ||
     blockedByProfileSummaryRestriction;
@@ -688,7 +795,7 @@ function displayNameFromProfileLink(area: Element, handle: string): string | nul
   for (const link of iterateOutsideUserContent<HTMLAnchorElement>(area, "a[href]")) {
     if (isInsideNestedSurface(link, area)) continue;
     if (handleFromHref(link.getAttribute("href"))?.toLowerCase() !== normalized) continue;
-    const text = cleanedText(textExcluding(link, OBSERVATION_SKIP_SELECTOR));
+    const text = cleanedText(textExcluding(link, OBSERVATION_SKIP_SELECTOR, true));
     const withoutHandle = cleanedText(
       text.replace(new RegExp(`@${handle}\\b`, "ig"), ""),
     );
@@ -882,10 +989,14 @@ export function scanXDocument(
   const viewerHandle = viewerHandleFromDocument(doc);
   const sourceType = sourceTypeFromUrl(url, viewerHandle);
   const candidates: ExtractedCandidate[] = [];
+  const anchorsByUser = new Map<string, HTMLElement[]>();
   const seenAnchors = new Set<HTMLElement>();
   const visibleHoverCards = visibleHoverCardsByHandle(doc);
   const suggestionCells = new WeakMap<Element, boolean>();
-  const engagementLayers = sourceType === "thread" ? actionableEngagementLayers(doc) : null;
+  const styleCache: ComputedHiddenCache = new WeakMap();
+  const engagementLayers = sourceType === "thread"
+    ? actionableEngagementLayers(doc, styleCache)
+    : null;
 
   const addCandidate = (
     handle: string,
@@ -906,35 +1017,37 @@ export function scanXDocument(
     const suggestionSurface = isSuggestionSurface(surface, suggestionCells);
     const blockedByInteractionRestriction =
       sourceType === "thread" &&
-      engagementIsUnavailable(surface) &&
+      engagementIsUnavailable(surface, styleCache) &&
       Boolean(engagementLayers?.has(containingOverlay(surface) ?? "page"));
     const blockedByProfileSummaryRestriction =
       sourceType === "thread" &&
       hoverCard !== null &&
       hoverCardOmitsRelationshipCounts(hoverCard, handle);
+    const observation = observationFor(
+      handle,
+      area,
+      surface,
+      url,
+      sourceType,
+      observedAt,
+      blockedByInteractionRestriction,
+      blockedByProfileSummaryRestriction,
+      hoverCard,
+      suggestionSurface,
+    );
     candidates.push({
-      observation: observationFor(
-        handle,
-        area,
-        surface,
-        url,
-        sourceType,
-        observedAt,
-        blockedByInteractionRestriction,
-        blockedByProfileSummaryRestriction,
-        hoverCard,
-        suggestionSurface,
-      ),
+      observation,
       anchor: area,
       acceptPageStoreRelationship: !suggestionSurface,
     });
+    const anchors = anchorsByUser.get(observation.userKey);
+    if (anchors) anchors.push(area);
+    else anchorsByUser.set(observation.userKey, [area]);
   };
 
   const coversHandle = (surface: Element, handle: string): boolean =>
-    candidates.some((item) =>
-      item.observation.userKey === handle.toLowerCase() &&
-      (surface.contains(item.anchor) || item.anchor.contains(surface)),
-    );
+    anchorsByUser.get(handle.toLowerCase())?.some((anchor) =>
+      surface.contains(anchor) || anchor.contains(surface)) ?? false;
 
   for (const area of doc.querySelectorAll<HTMLElement>(USER_NAME_SELECTOR)) {
     let surface = relationshipSurfaceFor(area, sourceType);
@@ -973,7 +1086,7 @@ export function scanXDocument(
   }
 
   for (const [userKey, card] of visibleHoverCards) {
-    if (candidates.some((item) => item.observation.userKey === userKey)) continue;
+    if (anchorsByUser.has(userKey)) continue;
     const handle = findHandle(card) ?? userKey;
     const area = card.querySelector<HTMLElement>(USER_NAME_SELECTOR) ?? card;
     addCandidate(handle, area, card, card);
