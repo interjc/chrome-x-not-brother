@@ -19,7 +19,7 @@
 
 注入 dock 的 `data-xro-version` 是只读诊断标记。重新加载 unpacked 扩展后必须刷新已有 X 标签页；维护者可用该标记确认页面已经替换旧 content script，再进行真实页面验收。收起悬浮球时用 `GrokDrawer` / `DMDrawer` / `chat-drawer-root` 把 X 右下角按钮上移；这些选择器只放在 `x-adapter.ts`，漂移时只改 adapter 与 dock fixture。
 
-调整轮询时先测量可见 `User-Name` 数量、单次扫描耗时和一分钟内 observation 写入次数。不得在隐藏标签页维持兜底复扫；扩展上下文失效时必须移除 visibility/focus 监听并停止定时器。`style` 与 `class` 变化频率很高，不加入全局 attributeFilter，依靠 2 秒兜底覆盖。
+扫描成本、缓存与节流的设计取舍见 [内容脚本性能改造](performance.md)。调整轮询时先测量可见 `User-Name` 数量、单次扫描耗时和一分钟内 observation 写入次数。不得在隐藏标签页维持兜底复扫；扩展上下文失效时必须移除 visibility/focus 监听并停止定时器。`style` 与 `class` 变化频率很高，不加入全局 attributeFilter，依靠 2 秒兜底覆盖。
 
 关系档案的确认、删除、导入和清空必须向 service worker 发送 `data:changed`，service worker 再用 `chrome.tabs.sendMessage` 尝试通知全部标签页；没有 content script 的标签页拒绝消息属于正常情况。content script 收到后无条件清除 record/requested cache，运行中才安排复扫。不要清空 observation signature，否则用户刚删除的当前可见记录可能被同一证据立即重新写回。
 

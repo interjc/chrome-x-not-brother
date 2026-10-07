@@ -19,6 +19,7 @@
 | [测试指南](testing.md) · [EN](en/testing.md) | 自动检查和 Chrome 手工验收清单 |
 | [维护指南](maintenance.md) · [EN](en/maintenance.md) | X DOM 漂移、数据迁移与故障处置 |
 | [X 扩展实时观察调研](x-extension-resilience-research.md) | 其他开源 X 扩展的 DOM 策略与本项目混合复扫设计 |
+| [内容脚本性能改造](performance.md) | CPU 占用问题点、扫描成本、缓存与节流方案、行为差异与测量方法 |
 | [使用指南](usage.md) · [EN](en/usage.md) | 加载、标注、档案库、导入导出、清空与反馈 |
 | [贡献指南](contributing.md) · [EN](en/contributing.md) | 产品边界、Issue、开发环境、检查与 Pull request |
 | [隐私政策](../terms/privacy.md) · [EN](en/privacy.md) | 收集内容、保存位置、权限、删除方式和联系方式 |
