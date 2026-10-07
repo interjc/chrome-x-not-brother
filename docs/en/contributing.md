@@ -37,7 +37,7 @@ Feature requests must still sit inside annotation, local collection, and optiona
 
 ## Development environment
 
-Node.js is managed through nvm. The version in `.nvmrc` is authoritative (currently `24.19.0`). Non-interactive shells may resolve an old system Node. Load nvm before any `npm` command:
+Node.js is managed through nvm. The version in `.nvmrc` is authoritative (currently the Node 24 LTS line; any 24.x works). Non-interactive shells may resolve an old system Node. Load nvm before any `npm` command:
 
 ```bash
 source "$HOME/.nvm/nvm.sh"
