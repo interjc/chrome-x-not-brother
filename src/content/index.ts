@@ -40,6 +40,7 @@ import {
   updateSettings,
 } from "../storage/settings";
 import { isFilterRulesStorageChange } from "../storage/filter-rule-keys";
+import { isHideStatsStorageChange } from "../storage/hide-stats";
 import {
   removeRelationshipBadge,
   removeRelationshipBadges,
@@ -90,6 +91,7 @@ import {
   DROPDOWN_SELECTOR,
   HOVER_CARD_SELECTOR,
   TWEET_CARET_SELECTOR,
+  isInsideXMediaPlayer,
   isInsideXUserAuthoredContent,
   scanXDocument,
   type ExtractedCandidate,
@@ -98,6 +100,12 @@ import {
 
 const PROCESS_DELAY_MS = 180;
 const HIDE_DELAY_MS = 0;
+// While X keeps mutating the timeline (scrolling, media), coalesce hide passes.
+// The first request after a quiet period still runs immediately.
+const HIDE_MIN_INTERVAL_MS = 100;
+// Settings and filter status are invalidated by storage.onChanged; the TTL
+// only bounds staleness if an event were ever missed.
+const CACHED_STATE_TTL_MS = 30_000;
 const observationSignatures = createObservationSignatureTracker();
 const recordCache = new Map<string, UserRecord>();
 const requestedUserKeys = new Set<string>();
@@ -131,6 +139,11 @@ let keywordWatcher: { refresh(): void; stop(): void } | null = null;
 let caretClickTimers: number[] = [];
 let filterStatusLoading: Promise<void> | null = null;
 let filterStatusLoadingFor: string | null = null;
+let filterStatusReadAt = 0;
+let filterStatusReadFor: string | null = null;
+let filterStatusGeneration = 0;
+let settingsReadAt = 0;
+let settingsGeneration = 0;
 
 function currentViewerHandle(): string | null {
   return viewerHandleFromDocument(document)?.toLowerCase()
@@ -280,6 +293,7 @@ function refreshFilterStatus(): Promise<void> {
     return filterStatusLoading;
   }
   filterStatusLoadingFor = requested;
+  const generation = filterStatusGeneration;
   filterStatusLoading = sendRuntimeMessage<
     GetFilterRulesStatusResponse | { ok: false; error: string }
   >({
@@ -291,6 +305,10 @@ function refreshFilterStatus(): Promise<void> {
       if (!response.ok) throw new Error(response.error);
       latestFilterStatus = response.status;
       latestHideStats = response.hideStats ?? emptyHideStats();
+      if (generation === filterStatusGeneration) {
+        filterStatusReadAt = Date.now();
+        filterStatusReadFor = requested;
+      }
     }).catch((error: unknown) => {
       handleRuntimeError(error, "Could not read custom filter rule status");
     }).finally(() => {
@@ -300,6 +318,37 @@ function refreshFilterStatus(): Promise<void> {
       }
     });
   return filterStatusLoading;
+}
+
+function filterStatusIsFresh(): boolean {
+  return latestFilterStatus !== null &&
+    filterStatusReadAt > 0 &&
+    filterStatusReadFor === (currentViewerHandle() ?? "") &&
+    Date.now() - filterStatusReadAt < CACHED_STATE_TTL_MS;
+}
+
+function invalidateFilterStatus(): void {
+  filterStatusGeneration += 1;
+  filterStatusReadAt = 0;
+}
+
+function invalidateSettings(): void {
+  settingsGeneration += 1;
+  settingsReadAt = 0;
+}
+
+async function readSettings(): Promise<ObserverSettings> {
+  if (
+    latestSettings &&
+    settingsReadAt > 0 &&
+    Date.now() - settingsReadAt < CACHED_STATE_TTL_MS
+  ) {
+    return latestSettings;
+  }
+  const generation = settingsGeneration;
+  const settings = await getSettings();
+  if (generation === settingsGeneration) settingsReadAt = Date.now();
+  return settings;
 }
 
 function ensureFilterRulesLoaded(): Promise<void> {
@@ -345,6 +394,8 @@ function handleStorageChanged(
   areaName: string,
 ): void {
   if (isSettingsStorageChange(changes, areaName)) {
+    invalidateSettings();
+    invalidateFilterStatus();
     filterRulesLoaded = false;
     compiledFilterRulesForViewer = null;
     void refreshFilterStatus().then(() => {
@@ -353,7 +404,14 @@ function handleStorageChanged(
     scheduleHide();
     scheduleProcess();
   }
+  if (isHideStatsStorageChange(changes, areaName, currentViewerHandle())) {
+    invalidateFilterStatus();
+    void refreshFilterStatus().then(() => {
+      if (!stopped && latestSettings) renderPanel(latestSettings);
+    });
+  }
   if (isFilterRulesStorageChange(changes, areaName, currentViewerHandle())) {
+    invalidateFilterStatus();
     filterRulesLoaded = false;
     compiledFilterRulesForViewer = null;
     void refreshFilterStatus().then(() => {
@@ -734,11 +792,12 @@ async function hydrateRecordCache(candidates: ExtractedCandidate[]): Promise<voi
 
 async function processPage(): Promise<void> {
   if (stopped) return;
+  periodicRescan?.postpone();
   syncPageTheme();
-  const settings = await getSettings();
+  const settings = await readSettings();
   if (stopped) return;
   latestSettings = settings;
-  if (settings.consentVersion >= CURRENT_CONSENT_VERSION) {
+  if (settings.consentVersion >= CURRENT_CONSENT_VERSION && !filterStatusIsFresh()) {
     try {
       await refreshFilterStatus();
     } catch (error) {
@@ -778,7 +837,11 @@ async function processPage(): Promise<void> {
   const candidates = scanXDocument(document, location.href).filter(
     (candidate) => candidate.observation.userKey !== viewerKey,
   );
-  const pageUsers = await loadPageUserRelationships(document, window);
+  const pageUsers = await loadPageUserRelationships(
+    document,
+    window,
+    [...new Set(candidates.map((item) => item.observation.userKey))],
+  );
   rememberPageUsers(pageUsers);
   applyPageStoreRelationships(candidates, latestPageUsers);
   if (stopped) return;
@@ -842,16 +905,25 @@ function nodeIsInsideInjectedUi(node: Node): boolean {
   );
 }
 
+function mutationCannotChangeEvidence(mutation: MutationRecord): boolean {
+  if (
+    nodeIsInsideInjectedUi(mutation.target) ||
+    isInsideXUserAuthoredContent(mutation.target) ||
+    isInsideXMediaPlayer(mutation.target)
+  ) {
+    return true;
+  }
+  // Inserting our own badge or quick-rule control into X's DOM records a
+  // childList change on X's node; it is not new page evidence.
+  return mutation.type === "childList" &&
+    mutation.removedNodes.length === 0 &&
+    mutation.addedNodes.length > 0 &&
+    [...mutation.addedNodes].every(nodeIsInsideInjectedUi);
+}
+
 observer = new MutationObserver((mutations) => {
   if (stopped) return;
-  if (
-    mutations.every((mutation) =>
-      nodeIsInsideInjectedUi(mutation.target) ||
-      isInsideXUserAuthoredContent(mutation.target)
-    )
-  ) {
-    return;
-  }
+  if (mutations.every(mutationCannotChangeEvidence)) return;
   if (latestSettings && mutations.some(mutationTouchesQuickRuleHost)) {
     syncQuickRuleUi();
   }
@@ -903,6 +975,7 @@ if (hasExtensionContext()) {
   hideScheduler = createProcessScheduler({
     window,
     delayMs: HIDE_DELAY_MS,
+    minIntervalMs: HIDE_MIN_INTERVAL_MS,
     task: async () => applyHideNow(),
     onError: (error) => handleRuntimeError(error, "Could not apply timeline filters"),
   });

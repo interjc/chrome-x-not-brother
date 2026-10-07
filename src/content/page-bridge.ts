@@ -4,6 +4,7 @@ import {
   mergePageUserMaps,
   PAGE_STORE_MESSAGE_SOURCE,
   readPageUserRelationships,
+  selectPageUsersForQuery,
   type PageStoreResultMessage,
   type PageStoreUpdatedMessage,
   type PageUserRelationship,
@@ -14,10 +15,11 @@ const harvested = new Map<string, PageUserRelationship>();
 const UPDATE_NOTIFY_MS = 32;
 let notifyTimer = 0;
 
-function publishUsers(requestId: string): void {
-  const users = Object.fromEntries(
+function publishUsers(requestId: string, handles?: string[]): void {
+  const users = Object.fromEntries(selectPageUsersForQuery(
     mergePageUserMaps(harvested, readPageUserRelationships(document)),
-  );
+    handles,
+  ));
   const message: PageStoreResultMessage = {
     source: PAGE_STORE_MESSAGE_SOURCE,
     type: "result",
@@ -112,7 +114,7 @@ window.addEventListener("message", (event: MessageEvent) => {
   if (event.source !== window) return;
   if (!isPageStoreQueryMessage(event.data)) return;
   try {
-    publishUsers(event.data.requestId);
+    publishUsers(event.data.requestId, event.data.handles);
   } catch {
     const message: PageStoreResultMessage = {
       source: PAGE_STORE_MESSAGE_SOURCE,

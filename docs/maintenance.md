@@ -15,7 +15,7 @@
 
 优先使用语义化 `data-testid`、标准个人资料 href 和明确可见文本。允许只读当前页已经载入的 UI store、tweet 祖先 fiber，以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`、`muting`。评论区回复作者的关系字段经常不在 `entities.users` 里，而在 Tweet 组件 props 或 TweetDetail 响应中。禁止主动发起新的 X 请求、读取 Cookie，或把缺失实体猜成未关注。可选时间线隐藏只改 `data-xro-hidden-tweet`，选择器变化时同步更新 `src/content/timeline-hide.ts`。
 
-实时识别采用事件与轮询混合机制。MutationObserver 负责新增/移除节点、关系文案和关键可访问性属性变化；`tweetText` 与卡片媒体内部的变更忽略，因为它们是用户正文而不是作者身份或平台关系 chrome，避免主贴/跟帖堆满 @提及时把标签页扫卡。可见且已启用的页面每 2 秒兜底复扫一次，页面恢复可见或重新获得焦点时立即复扫，可选规则匹配也靠这次复扫看到已渲染完的正文。轮询只查询当前 DOM，不滚动、不打开页面、不触发 X 控件。扫描必须保持 single-flight，MutationObserver、轮询、设置变化和 SPA URL 变化同时触发时只排队一次补扫；签名去重必须阻止相同结果重复写历史，但只能在 service worker 确认对应用户已持久化后提交，瞬时发送失败要留给后续复扫重试。
+实时识别采用事件与轮询混合机制。MutationObserver 负责新增/移除节点、关系文案和关键可访问性属性变化；`tweetText` 与卡片媒体内部、视频播放器内部（计时与控件每秒变化）以及只插入扩展自身徽标/控件的变更忽略，因为它们是用户正文而不是作者身份或平台关系 chrome，避免主贴/跟帖堆满 @提及时把标签页扫卡。可见且已启用的页面在 2 秒内没有任何扫描时兜底复扫一次（每次扫描都会重新起算），页面恢复可见或重新获得焦点时立即复扫，可选规则匹配也靠这次复扫看到已渲染完的正文。轮询只查询当前 DOM，不滚动、不打开页面、不触发 X 控件。扫描必须保持 single-flight，MutationObserver、轮询、设置变化和 SPA URL 变化同时触发时只排队一次补扫；签名去重必须阻止相同结果重复写历史，但只能在 service worker 确认对应用户已持久化后提交，瞬时发送失败要留给后续复扫重试。
 
 注入 dock 的 `data-xro-version` 是只读诊断标记。重新加载 unpacked 扩展后必须刷新已有 X 标签页；维护者可用该标记确认页面已经替换旧 content script，再进行真实页面验收。收起悬浮球时用 `GrokDrawer` / `DMDrawer` / `chat-drawer-root` 把 X 右下角按钮上移；这些选择器只放在 `x-adapter.ts`，漂移时只改 adapter 与 dock fixture。
 

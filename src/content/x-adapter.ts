@@ -93,6 +93,14 @@ const BLOCKED_PATTERNS = [
   /(?:此|这)(?:帖子|貼文|贴文|則貼文|则贴文)[^。]*(?:来自|來自)[^。]*(?:屏蔽|拉黑|封鎖)你/u,
 ];
 
+// Every blocked-by pattern names a block keyword. One cheap scan for those
+// keywords skips the whole pattern list for ordinary card chrome.
+const BLOCKED_KEYWORD = /block|ブロック|屏蔽|拉黑|封鎖/i;
+
+function matchesBlockedNotice(text: string): boolean {
+  return BLOCKED_KEYWORD.test(text) && matchesAny(text, BLOCKED_PATTERNS);
+}
+
 const FOLLOWS_YOU_PATTERNS = [
   /follows you/i,
   /フォローされています/u,
@@ -123,6 +131,18 @@ const SUGGESTION_HEADING_PATTERNS = [
 export function isInsideXUserAuthoredContent(node: Node): boolean {
   const element = node instanceof Element ? node : node.parentElement;
   return Boolean(element?.closest(USER_CONTENT_SELECTOR));
+}
+
+const MEDIA_PLAYER_SELECTOR =
+  '[data-testid="videoPlayer"], [data-testid="videoComponent"]';
+
+/**
+ * A playing video rewrites its clock, progress, and control labels every
+ * second. Nothing inside the player is author identity or relationship chrome.
+ */
+export function isInsideXMediaPlayer(node: Node): boolean {
+  const element = node instanceof Element ? node : node.parentElement;
+  return Boolean(element?.closest(MEDIA_PLAYER_SELECTOR));
 }
 
 function* elementsMatching<T extends Element>(
@@ -246,11 +266,21 @@ function isAriaHiddenSubtree(element: HTMLElement): boolean {
   return false;
 }
 
-function computedStyleHides(element: HTMLElement): boolean {
+/**
+ * Thread scans test the same ancestor chains for reply, repost, and like on
+ * every cell. One scan reads each element's computed style at most once.
+ */
+type ComputedHiddenCache = WeakMap<Element, boolean>;
+
+function computedStyleHides(element: HTMLElement, cache?: ComputedHiddenCache): boolean {
+  const cached = cache?.get(element);
+  if (cached !== undefined) return cached;
   const style = element.ownerDocument.defaultView?.getComputedStyle(element);
-  return style?.display === "none" ||
+  const hides = style?.display === "none" ||
     style?.visibility === "hidden" ||
     style?.opacity === "0";
+  cache?.set(element, hides);
+  return hides;
 }
 
 function walkAncestorsWithinSurface(
@@ -269,11 +299,15 @@ function walkAncestorsWithinSurface(
   return false;
 }
 
-function isRenderedEngagementTarget(element: HTMLElement, surface: Element): boolean {
+function isRenderedEngagementTarget(
+  element: HTMLElement,
+  surface: Element,
+  styleCache?: ComputedHiddenCache,
+): boolean {
   return !walkAncestorsWithinSurface(element, surface, (current) =>
     Boolean(current.hidden) ||
     current.getAttribute("aria-hidden") === "true" ||
-    computedStyleHides(current),
+    computedStyleHides(current, styleCache),
   );
 }
 
@@ -283,29 +317,33 @@ function isExplicitlyDisabledEngagement(element: HTMLElement, surface: Element):
   );
 }
 
-function engagementControlState(surface: Element, selector: string): EngagementControlState {
+function engagementControlState(
+  surface: Element,
+  selector: string,
+  styleCache?: ComputedHiddenCache,
+): EngagementControlState {
   const control = surface.querySelector<HTMLElement>(selector);
   if (!control) return "missing";
   const interactive = control.matches('button, [role="button"], a[href]')
     ? control
     : control.querySelector<HTMLElement>('button, [role="button"], a[href]');
   const target = interactive ?? control;
-  if (!isRenderedEngagementTarget(target, surface)) return "missing";
+  if (!isRenderedEngagementTarget(target, surface, styleCache)) return "missing";
   if (isExplicitlyDisabledEngagement(target, surface)) return "restricted";
   return interactive ? "actionable" : "missing";
 }
 
-function engagementIsUnavailable(surface: Element): boolean {
+function engagementIsUnavailable(surface: Element, styleCache?: ComputedHiddenCache): boolean {
   if (surface instanceof HTMLElement && isAriaHiddenSubtree(surface)) return false;
   return ENGAGEMENT_SELECTORS.every(
-    (selector) => engagementControlState(surface, selector) === "restricted",
+    (selector) => engagementControlState(surface, selector, styleCache) === "restricted",
   );
 }
 
-function engagementIsAvailable(surface: Element): boolean {
+function engagementIsAvailable(surface: Element, styleCache?: ComputedHiddenCache): boolean {
   if (surface instanceof HTMLElement && isAriaHiddenSubtree(surface)) return false;
   return ENGAGEMENT_SELECTORS.every(
-    (selector) => engagementControlState(surface, selector) === "actionable",
+    (selector) => engagementControlState(surface, selector, styleCache) === "actionable",
   );
 }
 
@@ -335,12 +373,15 @@ export function mediaLightboxTweetFrom(
   return null;
 }
 
-function actionableEngagementLayers(doc: Document): Set<Element | "page"> {
+function actionableEngagementLayers(
+  doc: Document,
+  styleCache?: ComputedHiddenCache,
+): Set<Element | "page"> {
   const layers = new Set<Element | "page">();
   for (const surface of doc.querySelectorAll<HTMLElement>(
     '[data-testid="cellInnerDiv"], article',
   )) {
-    if (!engagementIsAvailable(surface)) continue;
+    if (!engagementIsAvailable(surface, styleCache)) continue;
     layers.add(containingOverlay(surface) ?? "page");
   }
   return layers;
@@ -605,17 +646,17 @@ function relationshipFacts(
   const textSurfaces = controlsOnly
     ? relationshipSurfaces.filter((area) => area !== surface)
     : relationshipSurfaces;
-  const text = textSurfaces.map(platformText).join(" ");
   const isProfileRoot = sourceType === "profile" &&
     surface.matches('[data-testid="primaryColumn"]');
   const blockSurfaces = controlsOnly ? textSurfaces : relationshipSurfaces;
   const blockText = blockSurfaces.map((area) =>
     blockedNoticeText(area, isProfileRoot && area === surface)).join(" ");
+  // A profile root is the whole primary column; only its name block is read.
   const ordinaryText = isProfileRoot
     ? platformText(firstDirect(surface, USER_NAME_SELECTOR) ?? surface)
-    : text;
+    : textSurfaces.map(platformText).join(" ");
   const evidence: EvidenceType[] = [];
-  const blockedByNotice = matchesAny(blockText, BLOCKED_PATTERNS);
+  const blockedByNotice = matchesBlockedNotice(blockText);
   const blockedBy = blockedByNotice ||
     blockedByInteractionRestriction ||
     blockedByProfileSummaryRestriction;
@@ -885,7 +926,10 @@ export function scanXDocument(
   const seenAnchors = new Set<HTMLElement>();
   const visibleHoverCards = visibleHoverCardsByHandle(doc);
   const suggestionCells = new WeakMap<Element, boolean>();
-  const engagementLayers = sourceType === "thread" ? actionableEngagementLayers(doc) : null;
+  const styleCache: ComputedHiddenCache = new WeakMap();
+  const engagementLayers = sourceType === "thread"
+    ? actionableEngagementLayers(doc, styleCache)
+    : null;
 
   const addCandidate = (
     handle: string,
@@ -906,7 +950,7 @@ export function scanXDocument(
     const suggestionSurface = isSuggestionSurface(surface, suggestionCells);
     const blockedByInteractionRestriction =
       sourceType === "thread" &&
-      engagementIsUnavailable(surface) &&
+      engagementIsUnavailable(surface, styleCache) &&
       Boolean(engagementLayers?.has(containingOverlay(surface) ?? "page"));
     const blockedByProfileSummaryRestriction =
       sourceType === "thread" &&

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   handleFromHoverCard,
   hoverCardActionContainer,
+  isInsideXMediaPlayer,
   isInsideXUserAuthoredContent,
   mediaLightboxTweetFrom,
   openTweetMoreMenu,
@@ -1153,5 +1154,53 @@ describe("isInsideXUserAuthoredContent", () => {
     </article>`);
     expect(isInsideXUserAuthoredContent(doc.querySelector('a[href="/Mention"]')!)).toBe(true);
     expect(isInsideXUserAuthoredContent(doc.querySelector('a[href="/Author"]')!)).toBe(false);
+  });
+});
+
+describe("media player mutation scope", () => {
+  it("recognizes nodes inside a video player but not the surrounding post chrome", () => {
+    const doc = fixture(`
+      <article data-testid="tweet">
+        <a href="/Author">Author</a>
+        <div data-testid="videoPlayer"><span>0:13</span></div>
+      </article>
+    `);
+    const clock = doc.querySelector('[data-testid="videoPlayer"] span')!;
+    expect(isInsideXMediaPlayer(clock.firstChild!)).toBe(true);
+    expect(isInsideXMediaPlayer(doc.querySelector('a[href="/Author"]')!)).toBe(false);
+  });
+});
+
+describe("blocked notice keyword prefilter", () => {
+  it("still classifies localized blocked notices outside the post body", () => {
+    for (const notice of [
+      "You’re blocked",
+      "@Author has blocked you",
+      "このポストはあなたをブロックしているアカウントのものです",
+      "这则贴文来自已屏蔽你的账号",
+    ]) {
+      const doc = fixture(`
+        ${accountSwitcher()}
+        <article data-testid="tweet">
+          <div data-testid="User-Name"><a href="/Author"><span>Author</span></a><span>@Author</span></div>
+          <div><span>${notice}</span></div>
+          <div data-testid="tweetText">nothing blocked here</div>
+        </article>
+      `);
+      const [candidate] = scanXDocument(doc, "https://x.com/home");
+      expect(candidate?.observation.relationship, notice).toBe("blocked_by");
+    }
+  });
+
+  it("ignores block keywords that only appear in the post body", () => {
+    const doc = fixture(`
+      ${accountSwitcher()}
+      <article data-testid="tweet">
+        <div data-testid="User-Name"><a href="/Author"><span>Author</span></a><span>@Author</span></div>
+        <div data-testid="tweetText">has blocked you 已屏蔽你</div>
+      </article>
+    `);
+    const [candidate] = scanXDocument(doc, "https://x.com/home");
+    expect(candidate?.observation.relationship).not.toBe("blocked_by");
   });
 });

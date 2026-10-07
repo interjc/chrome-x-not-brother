@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   applyPageStoreRelationships,
   harvestUsersFromPayload,
+  isPageStoreQueryMessage,
+  PAGE_STORE_MESSAGE_SOURCE,
   readPageUserRelationships,
+  selectPageUsersForQuery,
+  type PageUserRelationship,
 } from "./page-store";
 import { scanXDocument, type ExtractedCandidate } from "./x-adapter";
 
@@ -490,5 +494,68 @@ describe("page store relationships", () => {
       following: true,
       followsYou: true,
     });
+  });
+
+  it("re-walks the page store only when its state reference changes", () => {
+    const doc = fixture("<div id='react-root'><div></div></div>");
+    const host = doc.querySelector("#react-root > div");
+    let reads = 0;
+    const user = (following: boolean) => ({
+      legacy: { screen_name: "Steady", following },
+    });
+    const users: Record<string, unknown> = { "1": user(true) };
+    const entities = { users: { entities: users } };
+    let state: Record<string, unknown> = {
+      get entities() {
+        reads += 1;
+        return entities;
+      },
+    };
+    Object.defineProperty(host, "__reactProps$test", {
+      value: { store: { getState: () => state } },
+    });
+
+    expect(readPageUserRelationships(doc).get("steady")?.following).toBe(true);
+    const readsAfterFirst = reads;
+    expect(readPageUserRelationships(doc).get("steady")?.following).toBe(true);
+    expect(reads).toBe(readsAfterFirst);
+
+    users["1"] = user(false);
+    state = { entities: { users: { entities: { ...users } } } };
+    expect(readPageUserRelationships(doc).get("steady")?.following).toBe(false);
+  });
+
+  it("narrows a bridge answer to requested handles plus muted and blocked-by users", () => {
+    const person = (
+      handle: string,
+      extra: Partial<PageUserRelationship> = {},
+    ): PageUserRelationship => ({
+      handle,
+      following: true,
+      followsYou: null,
+      blockedBy: null,
+      muting: null,
+      displayName: null,
+      avatarUrl: null,
+      ...extra,
+    });
+    const users = new Map<string, PageUserRelationship>([
+      ["visible", person("Visible")],
+      ["offscreen", person("Offscreen")],
+      ["muted", person("Muted", { muting: true })],
+      ["blocker", person("Blocker", { blockedBy: true })],
+    ]);
+
+    expect([...selectPageUsersForQuery(users, ["VISIBLE"]).keys()])
+      .toEqual(["visible", "muted", "blocker"]);
+    expect(selectPageUsersForQuery(users, undefined)).toBe(users);
+  });
+
+  it("accepts query messages with an optional string handle list only", () => {
+    const base = { source: PAGE_STORE_MESSAGE_SOURCE, type: "query", requestId: "1" };
+    expect(isPageStoreQueryMessage(base)).toBe(true);
+    expect(isPageStoreQueryMessage({ ...base, handles: ["alice"] })).toBe(true);
+    expect(isPageStoreQueryMessage({ ...base, handles: "alice" })).toBe(false);
+    expect(isPageStoreQueryMessage({ ...base, handles: [1] })).toBe(false);
   });
 });

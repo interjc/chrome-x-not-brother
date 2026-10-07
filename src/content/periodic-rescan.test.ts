@@ -55,4 +55,32 @@ describe("periodic page rescan", () => {
     window.dispatchEvent(new Event("focus"));
     expect(onRescan).toHaveBeenCalledTimes(3);
   });
+
+  it("postpones the fallback until a full quiet interval after the latest scan", () => {
+    vi.useFakeTimers();
+    setVisibility("visible");
+    const onRescan = vi.fn();
+    const controller = createPeriodicRescanController({
+      document,
+      window,
+      shouldRescan: () => true,
+      onRescan,
+    });
+
+    controller.postpone();
+    controller.start();
+    vi.advanceTimersByTime(PERIODIC_RESCAN_INTERVAL_MS - 100);
+    controller.postpone();
+    vi.advanceTimersByTime(PERIODIC_RESCAN_INTERVAL_MS - 100);
+    expect(onRescan).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(100);
+    expect(onRescan).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(PERIODIC_RESCAN_INTERVAL_MS);
+    expect(onRescan).toHaveBeenCalledTimes(2);
+
+    controller.stop();
+    controller.postpone();
+    vi.advanceTimersByTime(PERIODIC_RESCAN_INTERVAL_MS * 2);
+    expect(onRescan).toHaveBeenCalledTimes(2);
+  });
 });
