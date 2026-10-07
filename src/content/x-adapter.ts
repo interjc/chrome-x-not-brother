@@ -30,11 +30,11 @@ export const HOVER_CARD_SELECTOR = '[data-testid="HoverCard"]';
 export const TWEET_TEXT_SELECTOR = '[data-testid="tweetText"]';
 export const USER_CONTENT_SELECTOR =
   `${TWEET_TEXT_SELECTOR}, [data-testid="card.layoutLarge.media"]`;
-const OBSERVATION_SKIP_SELECTOR =
+export const OBSERVATION_SKIP_SELECTOR =
   `${USER_CONTENT_SELECTOR}, [data-testid="UserDescription"], [data-xro-badge]`;
-const BLOCKED_NOTICE_SKIP_SELECTOR =
+export const BLOCKED_NOTICE_SKIP_SELECTOR =
   `${OBSERVATION_SKIP_SELECTOR}, ${USER_NAME_SELECTOR}`;
-const PROFILE_BLOCKED_NOTICE_SKIP_SELECTOR =
+export const PROFILE_BLOCKED_NOTICE_SKIP_SELECTOR =
   `${BLOCKED_NOTICE_SKIP_SELECTOR}, ${TWEET_SELECTOR}, ` +
   `[data-testid="UserCell"], [data-testid="cellInnerDiv"]:has(${TWEET_SELECTOR})`;
 const SUGGESTION_DIRECTORY_LINK_SELECTOR =
@@ -145,6 +145,18 @@ export function isInsideXMediaPlayer(node: Node): boolean {
   return Boolean(element?.closest(MEDIA_PLAYER_SELECTOR));
 }
 
+/**
+ * Every alternative in the observation/blocked-notice skip selectors needs a
+ * data-testid or data-xro-badge on the matched element itself, so an element
+ * with neither can skip the costly matches() call. Only valid for those skip
+ * selectors (a unit test pins the invariant), never for arbitrary selectors.
+ */
+function maySkip(element: Element, skipSelector: string): boolean {
+  return (element.hasAttribute("data-testid") ||
+    element.hasAttribute("data-xro-badge")) &&
+    element.matches(skipSelector);
+}
+
 function* elementsMatching<T extends Element>(
   root: Element,
   selector: string,
@@ -153,7 +165,7 @@ function* elementsMatching<T extends Element>(
   const stack: Element[] = [root];
   while (stack.length > 0) {
     const element = stack.pop()!;
-    if (element !== root && element.matches(skipSelector)) continue;
+    if (element !== root && maySkip(element, skipSelector)) continue;
     if (element.matches(selector)) yield element as T;
     const children = element.children;
     for (let index = children.length - 1; index >= 0; index -= 1) {
@@ -169,7 +181,11 @@ export function* iterateOutsideUserContent<T extends Element>(
   yield* elementsMatching<T>(root, selector, OBSERVATION_SKIP_SELECTOR);
 }
 
-function textExcluding(element: Element, skipSelector: string): string {
+function textExcluding(
+  element: Element,
+  skipSelector: string,
+  prefiltered = false,
+): string {
   const parts: string[] = [];
   const visit = (node: Node): void => {
     if (node.nodeType === Node.TEXT_NODE) {
@@ -178,7 +194,8 @@ function textExcluding(element: Element, skipSelector: string): string {
       return;
     }
     if (!(node instanceof Element)) return;
-    if (node !== element && node.matches(skipSelector)) return;
+    if (node !== element &&
+      (prefiltered ? maySkip(node, skipSelector) : node.matches(skipSelector))) return;
     const children = node.childNodes;
     for (let index = 0; index < children.length; index += 1) {
       visit(children[index]!);
@@ -189,7 +206,7 @@ function textExcluding(element: Element, skipSelector: string): string {
 }
 
 function platformText(element: Element): string {
-  return textExcluding(element, OBSERVATION_SKIP_SELECTOR);
+  return textExcluding(element, OBSERVATION_SKIP_SELECTOR, true);
 }
 
 function blockedNoticeText(element: Element, skipNestedProfileContent = false): string {
@@ -198,7 +215,49 @@ function blockedNoticeText(element: Element, skipNestedProfileContent = false): 
     skipNestedProfileContent
       ? PROFILE_BLOCKED_NOTICE_SKIP_SELECTOR
       : BLOCKED_NOTICE_SKIP_SELECTOR,
+    true,
   );
+}
+
+/**
+ * One traversal producing platformText(element) and blockedNoticeText(element)
+ * (without nested-profile skipping): both skip OBSERVATION_SKIP content; the
+ * block text additionally omits nested UserName subtrees.
+ */
+export function observationAndBlockText(
+  element: Element,
+): { ordinary: string; block: string } {
+  const ordinary: string[] = [];
+  const block: string[] = [];
+  const visit = (node: Node, inUserName: boolean): void => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const value = node.textContent;
+      if (value) {
+        ordinary.push(value);
+        if (!inUserName) block.push(value);
+      }
+      return;
+    }
+    if (!(node instanceof Element)) return;
+    let nested = inUserName;
+    if (node !== element) {
+      const hasMark = node.hasAttribute("data-testid") ||
+        node.hasAttribute("data-xro-badge");
+      if (hasMark) {
+        if (node.matches(OBSERVATION_SKIP_SELECTOR)) return;
+        if (!nested && node.matches(USER_NAME_SELECTOR)) nested = true;
+      }
+    }
+    const children = node.childNodes;
+    for (let index = 0; index < children.length; index += 1) {
+      visit(children[index]!, nested);
+    }
+  };
+  visit(element, false);
+  return {
+    ordinary: ordinary.join("").normalize("NFKC"),
+    block: block.join("").normalize("NFKC"),
+  };
 }
 
 function matchesAny(text: string, patterns: RegExp[]): boolean {
@@ -649,12 +708,19 @@ function relationshipFacts(
   const isProfileRoot = sourceType === "profile" &&
     surface.matches('[data-testid="primaryColumn"]');
   const blockSurfaces = controlsOnly ? textSurfaces : relationshipSurfaces;
-  const blockText = blockSurfaces.map((area) =>
-    blockedNoticeText(area, isProfileRoot && area === surface)).join(" ");
-  // A profile root is the whole primary column; only its name block is read.
-  const ordinaryText = isProfileRoot
-    ? platformText(firstDirect(surface, USER_NAME_SELECTOR) ?? surface)
-    : textSurfaces.map(platformText).join(" ");
+  let blockText: string;
+  let ordinaryText: string;
+  if (isProfileRoot) {
+    blockText = blockSurfaces.map((area) =>
+      blockedNoticeText(area, area === surface)).join(" ");
+    // A profile root is the whole primary column; only its name block is read.
+    ordinaryText = platformText(firstDirect(surface, USER_NAME_SELECTOR) ?? surface);
+  } else {
+    // blockSurfaces and textSurfaces hold the same elements here: walk once.
+    const texts = textSurfaces.map(observationAndBlockText);
+    blockText = texts.map((text) => text.block).join(" ");
+    ordinaryText = texts.map((text) => text.ordinary).join(" ");
+  }
   const evidence: EvidenceType[] = [];
   const blockedByNotice = matchesBlockedNotice(blockText);
   const blockedBy = blockedByNotice ||
@@ -729,7 +795,7 @@ function displayNameFromProfileLink(area: Element, handle: string): string | nul
   for (const link of iterateOutsideUserContent<HTMLAnchorElement>(area, "a[href]")) {
     if (isInsideNestedSurface(link, area)) continue;
     if (handleFromHref(link.getAttribute("href"))?.toLowerCase() !== normalized) continue;
-    const text = cleanedText(textExcluding(link, OBSERVATION_SKIP_SELECTOR));
+    const text = cleanedText(textExcluding(link, OBSERVATION_SKIP_SELECTOR, true));
     const withoutHandle = cleanedText(
       text.replace(new RegExp(`@${handle}\\b`, "ig"), ""),
     );
@@ -923,6 +989,7 @@ export function scanXDocument(
   const viewerHandle = viewerHandleFromDocument(doc);
   const sourceType = sourceTypeFromUrl(url, viewerHandle);
   const candidates: ExtractedCandidate[] = [];
+  const anchorsByUser = new Map<string, HTMLElement[]>();
   const seenAnchors = new Set<HTMLElement>();
   const visibleHoverCards = visibleHoverCardsByHandle(doc);
   const suggestionCells = new WeakMap<Element, boolean>();
@@ -956,29 +1023,31 @@ export function scanXDocument(
       sourceType === "thread" &&
       hoverCard !== null &&
       hoverCardOmitsRelationshipCounts(hoverCard, handle);
+    const observation = observationFor(
+      handle,
+      area,
+      surface,
+      url,
+      sourceType,
+      observedAt,
+      blockedByInteractionRestriction,
+      blockedByProfileSummaryRestriction,
+      hoverCard,
+      suggestionSurface,
+    );
     candidates.push({
-      observation: observationFor(
-        handle,
-        area,
-        surface,
-        url,
-        sourceType,
-        observedAt,
-        blockedByInteractionRestriction,
-        blockedByProfileSummaryRestriction,
-        hoverCard,
-        suggestionSurface,
-      ),
+      observation,
       anchor: area,
       acceptPageStoreRelationship: !suggestionSurface,
     });
+    const anchors = anchorsByUser.get(observation.userKey);
+    if (anchors) anchors.push(area);
+    else anchorsByUser.set(observation.userKey, [area]);
   };
 
   const coversHandle = (surface: Element, handle: string): boolean =>
-    candidates.some((item) =>
-      item.observation.userKey === handle.toLowerCase() &&
-      (surface.contains(item.anchor) || item.anchor.contains(surface)),
-    );
+    anchorsByUser.get(handle.toLowerCase())?.some((anchor) =>
+      surface.contains(anchor) || anchor.contains(surface)) ?? false;
 
   for (const area of doc.querySelectorAll<HTMLElement>(USER_NAME_SELECTOR)) {
     let surface = relationshipSurfaceFor(area, sourceType);
@@ -1017,7 +1086,7 @@ export function scanXDocument(
   }
 
   for (const [userKey, card] of visibleHoverCards) {
-    if (candidates.some((item) => item.observation.userKey === userKey)) continue;
+    if (anchorsByUser.has(userKey)) continue;
     const handle = findHandle(card) ?? userKey;
     const area = card.querySelector<HTMLElement>(USER_NAME_SELECTOR) ?? card;
     addCandidate(handle, area, card, card);

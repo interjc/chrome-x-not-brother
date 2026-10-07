@@ -130,6 +130,26 @@
 
 **为什么只靠 Redux 根引用判断，不缓存 fiber。** Redux 的约定是不可变更新：根引用不变，内容就没变，否则 X 自己的 selector 也会失效。fiber 的 props 虽然一般也不可变，但其中嵌套的 GraphQL 对象没有同样的保证。一旦缓存过期，错误的关注状态可能被持久化成观察记录，所以 fiber 不做缓存。
 
+## 第二轮改造
+
+第一轮之后，开启时间线过滤时，一批 DOM 变动仍可能触发三次全页 `scanXDocument()`：隐藏调度器一次，`processPage()` 一次，`processPage()` 内部的 `applyHideNow()` 又一次。DOM 扫描本身也会对每个候选的子树反复遍历，并对每个元素调用长选择器的 `matches()`。
+
+| # | 问题 | 改造 | 位置 |
+| --- | --- | --- | --- |
+| 12 | `processPage()` 扫描后，内部隐藏步骤又全页扫一遍 | 新增 `evidenceGeneration` 计数：未被忽略的 mutation 批次、URL 变化和 2 秒兜底复扫都会递增。`processPage()` 扫描前记下计数和 URL，等待结束后两者都没变，就把本次候选的浅拷贝交给 `applyHideNow()`，否则照旧重扫。独立的隐藏调度器仍然每次都重新扫描，不做跨轮缓存 | `index.ts`：`applyHideNow(scanned?)` |
+| 13 | 未开启过滤时，每批变动仍调度一次空的隐藏步骤 | MutationObserver、兜底复扫和 URL 变化改用 `scheduleHideIfFiltering()`：只有已同意且开启了任一过滤时才调度。设置变化、`data:changed`、快捷添加、page-store 更新和启动仍无条件调度，保证关闭过滤后能恢复已隐藏的帖子 | `index.ts` |
+| 14 | 主题属性每 800ms 和每次扫描都写一次 | 值没变就不写 | `index.ts`：`setPageTheme()` |
+| 15 | 每批变动都对新增节点做浮窗 / 菜单子树查询 | 先查一次文档里有没有 HoverCard / Dropdown；没有时只检查 caret 的 `aria-expanded` 属性变化 | `index.ts`：`batchTouchesQuickRuleHost()` |
+| 16 | 子树遍历对每个元素都调用跳过选择器的 `matches()` | 观察、拉黑文案三组跳过选择器的每个分支都要求元素自身带 `data-testid` 或 `data-xro-badge`，所以先用 `hasAttribute` 预筛。单元测试会逐个分支校验这一前提 | `x-adapter.ts`：`maySkip()` |
+| 17 | `relationshipFacts()` 对同一表面分别遍历出拉黑文本和普通文本 | 非个人主页根节点时合并成一次遍历，同时产出两段文本，输出与原来逐字相同；个人主页根节点路径不变 | `x-adapter.ts`：`observationAndBlockText()` |
+| 18 | `coversHandle()` 每次都线性扫描全部候选 | 按 userKey 建立锚点索引，判断条件不变 | `x-adapter.ts`：`scanXDocument()` |
+| 19 | 桥接查询先合并会话内全部 `harvested` 用户再筛选 | 先算出需要的 key（可见 handle，加上任一来源里静音或拉黑你的用户），只合并这些 key，再用合并后的值做最终筛选。结果和原来的"先合并再过滤"完全一致，包括顺序 | `page-store.ts`：`mergeSelectedPageUsers()` |
+| 20 | 每个 GraphQL 响应后都推送全部静音 / 拉黑你的用户 | 按用户记录已推送内容的指纹，只推送新增或变化的用户。查询应答仍然包含全部此类用户，内容脚本不会漏掉 | `page-bridge.ts`：`scheduleHideSignal()` |
+
+**为什么复用扫描要传浅拷贝。** `applyHideNow()` 会再次把 page-store 数据写进候选的 `observation`。如果直接用 `processPage()` 的候选对象，等待期间到达的 page-store 更新就会改掉随后要持久化的观察结果。浅拷贝后，持久化内容与原来一致。
+
+**为什么不在隐藏调度器和 `processPage()` 之间共享扫描结果。** 两次扫描通常相隔不到 180ms，但 X 的 `style` / `class` 变化（例如浮窗淡入）和 `src` 变化不在 `attributeFilter` 里，计数感知不到。跨轮复用可能把过期的浮窗可见性或头像写进观察记录，所以只在同一个 `processPage()` 内复用。
+
 ## 行为差异
 
 | 场景 | 改造前 | 改造后 |
@@ -138,6 +158,8 @@
 | 兜底复扫 | 固定每 2 秒一次 | 距上次扫描满 2 秒才触发 |
 | 设置或规则变化 | 下一次扫描时读到 | 通过 `storage.onChanged` 立即失效并复扫，30 秒上限兜底 |
 | 其他标签页累计的拦截计数 | 下一次扫描时刷新 | 拦截计数存储变化时立即刷新 |
+| 未开启任何时间线过滤时的页面变动 | 每批变动都执行一次空的隐藏步骤 | 不再调度；关闭过滤的那一刻仍会恢复全部已隐藏帖子 |
+| `processPage()` 等待期间没有新变动 | 内部隐藏步骤重新全页扫描 | 复用本次扫描结果 |
 
 关系识别、拉黑判定、观察写入和徽标展示的结果不变。
 
@@ -157,7 +179,8 @@ npm run skills:validate
 - `process-scheduler.test.ts`：突发请求按最小间隔合并，安静后的请求立即执行；
 - `periodic-rescan.test.ts`：`postpone()` 之后，兜底要等满一个完整的安静周期才触发；停止后调用 `postpone()` 无效；
 - `page-store.test.ts`：Redux state 引用不变时不重新遍历，引用变化后读到新值；`selectPageUsersForQuery()` 的筛选规则；查询消息 `handles` 字段的校验；
-- `x-adapter.test.ts`：视频播放器内节点的识别；关键词预筛后，中英日拉黑文案仍能识别，正文里的拉黑词汇不会误判。
+- `x-adapter.test.ts`：视频播放器内节点的识别；关键词预筛后，中英日拉黑文案仍能识别，正文里的拉黑词汇不会误判；三组跳过选择器的每个分支都带 `data-testid` 或 `data-xro-badge`；合并遍历的两段文本与原来分两次遍历的结果一致；
+- `page-store.test.ts`（第二轮）：`mergeSelectedPageUsers()` 与"先合并全部再筛选"的结果（含顺序）完全一致。
 
 ### 在 Chrome 里测 CPU
 

@@ -112,6 +112,9 @@ const requestedUserKeys = new Set<string>();
 const muteMemory = createMuteMemory();
 let latestPageUsers = new Map<string, PageUserRelationship>();
 let currentUrl = location.href;
+// Bumped whenever the page may have changed evidence (observer batch, URL change,
+// fallback rescan) so processPage can tell if its own scan is still fresh.
+let evidenceGeneration = 0;
 let latestSettings: ObserverSettings | null = null;
 let latestSummary: ObservationSummary | null = null;
 let latestSummaryReadAt = 0;
@@ -519,7 +522,7 @@ function recordNewHides(count: TimelineHideCount): void {
   });
 }
 
-function applyHideNow(): void {
+function applyHideNow(scanned?: ExtractedCandidate[]): void {
   if (stopped) return;
   const settings = latestSettings;
   if (!settings) return;
@@ -532,9 +535,12 @@ function applyHideNow(): void {
   }
   const viewerHandle = viewerHandleFromDocument(document);
   const viewerKey = viewerHandle?.toLowerCase() ?? settings.viewerHandle;
-  const candidates = scanXDocument(document, location.href).filter(
-    (candidate) => candidate.observation.userKey !== viewerKey,
-  );
+  // Page-store fills below replace candidate.observation; copy a reused scan so
+  // processPage still persists exactly what its own pass resolved.
+  const candidates = scanned?.map((candidate) => ({ ...candidate })) ??
+    scanXDocument(document, location.href).filter(
+      (candidate) => candidate.observation.userKey !== viewerKey,
+    );
   applyPageStoreRelationships(candidates, latestPageUsers);
   recordNewHides(applyTimelineHiding({
     root: document,
@@ -600,6 +606,11 @@ function handleRuntimeError(error: unknown, message: string): void {
   console.warn(`[Not Brother] ${message}`, error);
 }
 
+function setPageTheme(theme: "dark" | "light"): void {
+  const root = document.documentElement;
+  if (root.dataset.xroTheme !== theme) root.dataset.xroTheme = theme;
+}
+
 function syncPageTheme(): void {
   let channels: number[] | null = null;
   for (const target of [document.body, document.documentElement]) {
@@ -610,14 +621,12 @@ function syncPageTheme(): void {
     break;
   }
   if (!channels) {
-    document.documentElement.dataset.xroTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
+    setPageTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     return;
   }
   const [red = 255, green = 255, blue = 255] = channels;
   const luminance = (red * 299 + green * 587 + blue * 114) / 1000;
-  document.documentElement.dataset.xroTheme = luminance < 128 ? "dark" : "light";
+  setPageTheme(luminance < 128 ? "dark" : "light");
 }
 
 function pageUiLocale(settings: ObserverSettings | null = latestSettings): AppLocale {
@@ -834,6 +843,8 @@ async function processPage(): Promise<void> {
   }
   const viewerHandle = viewerHandleFromDocument(document);
   const viewerKey = viewerHandle?.toLowerCase() ?? settings.viewerHandle;
+  const scanGeneration = evidenceGeneration;
+  const scanHref = location.href;
   const candidates = scanXDocument(document, location.href).filter(
     (candidate) => candidate.observation.userKey !== viewerKey,
   );
@@ -854,7 +865,13 @@ async function processPage(): Promise<void> {
     if (stopped) return;
   }
 
-  if (hidingEnabled) applyHideNow();
+  if (hidingEnabled) {
+    // Reuse this pass's scan only while no evidence-changing mutation, rescan, or
+    // navigation happened across the awaits above; otherwise rescan as before.
+    const scanStillFresh =
+      scanGeneration === evidenceGeneration && scanHref === location.href;
+    applyHideNow(scanStillFresh ? candidates : undefined);
+  }
 
   if (!settings.observerEnabled) {
     removeRelationshipBadges();
@@ -898,6 +915,35 @@ function scheduleHide(): void {
   hideScheduler?.request();
 }
 
+// Hide passes that can only be no-ops (filters off, or no consent) still run
+// revealAllHiddenTweets()'s querySelectorAll; skip them on high-frequency paths.
+// Settings/data/startup paths keep the unconditional scheduleHide() so turning a
+// filter off still reveals hidden cells.
+function scheduleHideIfFiltering(): void {
+  const settings = latestSettings;
+  if (
+    settings &&
+    settings.consentVersion >= CURRENT_CONSENT_VERSION &&
+    timelineHidingEnabled(settings)
+  ) {
+    scheduleHide();
+  }
+}
+
+function batchTouchesQuickRuleHost(mutations: MutationRecord[]): boolean {
+  // Without any HoverCard/Dropdown host in the document only the caret
+  // aria-expanded attribute case can matter, so skip the per-node host probes.
+  if (document.querySelector(`${HOVER_CARD_SELECTOR}, ${DROPDOWN_SELECTOR}`) === null) {
+    return mutations.some((mutation) =>
+      mutation.type === "attributes" &&
+      mutation.attributeName === "aria-expanded" &&
+      mutation.target instanceof Element &&
+      mutation.target.closest(TWEET_CARET_SELECTOR) !== null
+    );
+  }
+  return mutations.some(mutationTouchesQuickRuleHost);
+}
+
 function nodeIsInsideInjectedUi(node: Node): boolean {
   const element = node instanceof Element ? node : node.parentElement;
   return Boolean(
@@ -924,10 +970,11 @@ function mutationCannotChangeEvidence(mutation: MutationRecord): boolean {
 observer = new MutationObserver((mutations) => {
   if (stopped) return;
   if (mutations.every(mutationCannotChangeEvidence)) return;
-  if (latestSettings && mutations.some(mutationTouchesQuickRuleHost)) {
+  evidenceGeneration += 1;
+  if (latestSettings && batchTouchesQuickRuleHost(mutations)) {
     syncQuickRuleUi();
   }
-  scheduleHide();
+  scheduleHideIfFiltering();
   scheduleProcess();
 });
 
@@ -961,7 +1008,8 @@ heartbeatId = window.setInterval(() => {
   }
   if (location.href === currentUrl) return;
   currentUrl = location.href;
-  scheduleHide();
+  evidenceGeneration += 1;
+  scheduleHideIfFiltering();
   scheduleProcess();
 }, 800);
 
@@ -995,7 +1043,10 @@ if (hasExtensionContext()) {
       (latestSettings.observerEnabled || timelineHidingEnabled(latestSettings)),
     ),
     onRescan: () => {
-      scheduleHide();
+      // The fallback exists for changes the observer misses (style/class fades),
+      // so it must force fresh scans rather than reuse an earlier one.
+      evidenceGeneration += 1;
+      scheduleHideIfFiltering();
       scheduleProcess();
     },
   });

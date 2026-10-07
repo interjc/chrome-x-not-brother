@@ -382,6 +382,32 @@ export function selectPageUsersForQuery(
   return selected;
 }
 
+/**
+ * Same result as selectPageUsersForQuery(mergePageUserMaps(...maps), handles)
+ * without copying users the query would drop. Only wanted keys and keys flagged
+ * muted/blocked-by in some input are merged, in input order, so values and Map
+ * order match the full merge; the final select re-checks the merged flags.
+ */
+export function mergeSelectedPageUsers(
+  maps: ReadonlyArray<Map<string, PageUserRelationship>>,
+  handles: readonly string[] | undefined,
+): Map<string, PageUserRelationship> {
+  if (!handles) return mergePageUserMaps(...maps);
+  const keys = new Set(handles.map((handle) => handle.toLowerCase()));
+  for (const map of maps) {
+    for (const [key, user] of map) {
+      if (user.muting === true || user.blockedBy === true) keys.add(key);
+    }
+  }
+  const merged = new Map<string, PageUserRelationship>();
+  for (const map of maps) {
+    for (const [key, user] of map) {
+      if (keys.has(key)) rememberUser(merged, user);
+    }
+  }
+  return selectPageUsersForQuery(merged, handles);
+}
+
 export function readPageUserRelationships(doc: Document): Map<string, PageUserRelationship> {
   const users = new Map<string, PageUserRelationship>();
   usersFromReactStore(doc, users);

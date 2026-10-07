@@ -3,6 +3,8 @@ import {
   applyPageStoreRelationships,
   harvestUsersFromPayload,
   isPageStoreQueryMessage,
+  mergePageUserMaps,
+  mergeSelectedPageUsers,
   PAGE_STORE_MESSAGE_SOURCE,
   readPageUserRelationships,
   selectPageUsersForQuery,
@@ -557,5 +559,57 @@ describe("page store relationships", () => {
     expect(isPageStoreQueryMessage({ ...base, handles: ["alice"] })).toBe(true);
     expect(isPageStoreQueryMessage({ ...base, handles: "alice" })).toBe(false);
     expect(isPageStoreQueryMessage({ ...base, handles: [1] })).toBe(false);
+  });
+});
+
+describe("mergeSelectedPageUsers", () => {
+  const u = (
+    handle: string,
+    extra: Partial<PageUserRelationship> = {},
+  ): PageUserRelationship => ({
+    handle,
+    following: null,
+    followsYou: null,
+    blockedBy: null,
+    muting: null,
+    displayName: null,
+    avatarUrl: null,
+    ...extra,
+  });
+  const mapOf = (...users: PageUserRelationship[]) =>
+    new Map(users.map((user) => [user.handle.toLowerCase(), user]));
+  const expectSame = (
+    maps: Array<Map<string, PageUserRelationship>>,
+    handles: string[] | undefined,
+  ) => {
+    const actual = mergeSelectedPageUsers(maps, handles);
+    const expected = selectPageUsersForQuery(mergePageUserMaps(...maps), handles);
+    expect([...actual]).toEqual([...expected]);
+  };
+
+  it("keeps only wanted handles", () => {
+    expectSame(
+      [mapOf(u("a", { following: true }), u("b"), u("c")), mapOf(u("d", { followsYou: true }))],
+      ["c", "a"],
+    );
+  });
+
+  it("keeps a user muted in only one map", () => {
+    expectSame([mapOf(u("a"), u("m", { muting: true })), mapOf(u("z"))], ["a"]);
+  });
+
+  it("uses merged flags when a later map overrides blockedBy", () => {
+    expectSame(
+      [mapOf(u("x", { blockedBy: true }), u("y")), mapOf(u("x", { blockedBy: false }), u("y", { blockedBy: true }))],
+      ["q"],
+    );
+  });
+
+  it("matches handles case-insensitively", () => {
+    expectSame([mapOf(u("Alice", { following: true })), mapOf(u("ALICE", { followsYou: true }), u("bob"))], ["aLiCe"]);
+  });
+
+  it("falls back to the full merge without handles", () => {
+    expectSame([mapOf(u("a"), u("b")), mapOf(u("c"), u("a", { following: true }))], undefined);
   });
 });
