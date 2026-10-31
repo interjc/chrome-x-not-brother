@@ -88,7 +88,7 @@ The standard release workflow is automated in repository scripts:
    - `npm run verify:pages` (Verifies public privacy policy and terms on GitHub Pages)
 
 5. **GitHub Release (automatic)**:
-   Pushing the version bump to `main` runs `.github/workflows/release.yml`, which creates the `v<version>` Release with both ZIPs and, when the `SAFARI_SIGNING` variable is `true`, a Developer ID-signed, notarized Safari app. Never commit signing material; secrets are listed in `docs/apple-signing.md`.
+   Every push to `main` runs `.github/workflows/release.yml`. A version without a Release gets the `v<version>` Release with both ZIPs; a version that already has one keeps its Chrome ZIP and only has its Safari assets overwritten. When the `SAFARI_SIGNING` variable is `true`, the workflow also uploads a Developer ID-signed, notarized Safari app. Release asset names are case-insensitive, so never distinguish assets by case alone. Never commit signing material; secrets are listed in `docs/apple-signing.md`.
 
 6. **Upload & Publish**:
    Upload `artifacts/not-brother-<version>.zip` to the Chrome Web Store Developer Dashboard, copy the matching release notes from `docs/store-listing.md`, and submit for review.

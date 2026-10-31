@@ -59,7 +59,7 @@ Do not hand-zip `dist/`. After unzip, the root must contain `manifest.json` dire
 6. Load unpacked `dist/` in a clean Chrome profile and run the relevant steps in [Testing](testing.md).
 7. Dashboard → the item → Package → upload the new ZIP. Update the listing release notes in all three languages. Leave privacy fields alone if they did not change. Turn off automatic publish, then submit for review.
 8. After approval, click Publish within 30 days. New permissions make already-installed users authorize again.
-9. Push the version commit to `main` (or merge the PR that contains it). A `package.json` version change publishes the GitHub Release automatically.
+9. Push the version commit to `main` (or merge the PR that contains it). A new version number creates the GitHub Release automatically.
 
 `npm run validate:dist` still checks: trilingual summaries stay within 132 characters and match store-listing; the current version's trilingual release-note headings are present.
 
@@ -93,13 +93,13 @@ Policy and field details: [Chrome Web Store listing guide](../chrome-web-store.m
 
 ## GitHub Releases and Safari
 
-`.github/workflows/release.yml` runs when `package.json` changes on `main`. If `v<version>` has no Release yet, it:
+`.github/workflows/release.yml` runs on every push to `main`. It:
 
 1. runs `npm ci`, `npm run check`, and `npm run package` on Linux;
-2. creates the `v<version>` tag and Release with the Chrome ZIP and the Safari extension-folder ZIP, using the English release notes from [store-listing.md](../store-listing.md) (`scripts/release-notes.mjs`);
-3. when the repository variable `SAFARI_SIGNING` is `true`, builds the Safari app on macOS, signs it with Developer ID, notarizes it, and attaches it to the same Release as `Not-Brother-Safari-<version>.zip`.
+2. if `v<version>` has no Release yet, creates the tag and Release with the Chrome ZIP and the Safari extension-folder ZIP, using the English release notes from [store-listing.md](../store-listing.md) (`scripts/release-notes.mjs`). If the Release exists, it overwrites only the Safari folder ZIP with `--clobber` and leaves the Chrome ZIP unchanged;
+3. when the repository variable `SAFARI_SIGNING` is `true`, builds the Safari app on macOS, signs it with Developer ID, notarizes it, and uploads it to the same Release as `not-brother-safari-app-<version>.zip`, replacing an existing asset of that name.
 
-Versions that already have a Release are skipped, so ordinary dependency bumps do not publish again. Older untagged versions can be published with **Run workflow** on the Actions page; after fixing a signing failure, tick `safari_only` to rebuild only the signed app.
+Safari fixes therefore reach the current version's Safari packages as soon as they merge, without a version bump; the Chrome ZIP is uploaded only when a version is first released. After changing signing secrets, rerun with **Run workflow** on the Actions page. GitHub release asset names are case-insensitive, so never add an asset that differs from another only by case.
 
 The Chrome Web Store upload stays manual. Signing setup is in [Apple signing keys](../apple-signing.md) (Simplified Chinese); the Safari plan is in [Safari support](../safari.md) (Simplified Chinese).
 

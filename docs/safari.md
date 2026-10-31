@@ -1,6 +1,6 @@
 # Safari 支持：GitHub Release 自动构建，手动安装
 
-Chrome Web Store 仍是唯一的正式发布渠道。Safari 只是锦上添花：**不上 Mac App Store，也不增加人工发布步骤**。`main` 上每出现一个新版本号，GitHub Actions 就自动构建 Safari 安装包并挂到 GitHub Release，Safari 用户自己下载安装。安装步骤写在 [README](../README.md#safari) / [README.en](../README.en.md#safari)。
+Chrome Web Store 仍是唯一的正式发布渠道。Safari 只是锦上添花：**不上 Mac App Store，也不增加人工发布步骤**。每次合并到 `main`，GitHub Actions 都会重新构建 Safari 安装包，挂到当前版本的 GitHub Release 上（版本号没变就覆盖），Safari 用户自己下载安装。安装步骤写在 [README](../README.md#safari) / [README.en](../README.en.md#safari)。
 
 兼容性结论来自 Apple 官方文档、WWDC26 与 MDN `@mdn/browser-compat-data` 8.1.7（见文末来源），最后核验于 2026-10-31。
 
@@ -10,7 +10,7 @@ Chrome Web Store 仍是唯一的正式发布渠道。Safari 只是锦上添花�
 | --- | --- | --- |
 | 代码 | 同一个 `src/`，同一次 `npm run build`。Safari 缺失的 API 先做能力检测再调用，不做浏览器检测 | `src/platform/capabilities.ts` |
 | 打包 | `npm run package` 从同一份 `dist/` 写出两个 ZIP，Safari 版只换了 manifest | `scripts/safari-manifest.mjs`、`scripts/package.mjs` |
-| 发布 | `main` 上 `package.json` 变化且该版本还没有 Release 时，自动打 tag、建 Release、上传安装包 | `.github/workflows/release.yml`、`scripts/release-notes.mjs` |
+| 发布 | 每次 push 到 `main`：新版本自动打 tag、建 Release、上传全部安装包；版本号没变时只覆盖 Safari 附件 | `.github/workflows/release.yml`、`scripts/release-notes.mjs` |
 | 签名 | 可选：macOS runner 用 Developer ID 签名并公证 Safari App | 同上；密钥配置见 [Apple 签名与公证密钥配置](apple-signing.md) |
 
 本地发版流程不变：`npm run release:patch` → 上传 Chrome 商店 → 推到 `main`。
@@ -19,7 +19,7 @@ Chrome Web Store 仍是唯一的正式发布渠道。Safari 只是锦上添花�
 
 ### A. 签名并公证的 App（推荐）
 
-Release 附件 `Not-Brother-Safari-<version>.zip`：一个用 Developer ID 签名并经 Apple 公证的 macOS App，扩展就在这个 App 里。
+Release 附件 `not-brother-safari-app-<version>.zip`：一个用 Developer ID 签名并经 Apple 公证的 macOS App，扩展就在这个 App 里。
 
 - 要求 **Safari 18.4 及以上**：Apple 从这个版本起允许在 App Store 之外分发 Developer ID 签名、公证过的 Safari 扩展。
 - 已经公证，Gatekeeper 不会拦，也不需要开发者模式；装好后长期有效。
@@ -35,12 +35,15 @@ Release 附件 `not-brother-safari-<version>.zip`：扩展文件夹本身。Safa
 
 ### 3.1 触发
 
-- `push` 到 `main` 且改动了 `package.json`：读取版本号，`v<version>` 已有 Release 就跳过，所以普通依赖升级不会重复发版；
-- `workflow_dispatch`：手动补发还没有 Release 的版本；勾选 `safari_only` 时只为当前版本的现有 Release 重做签名 App（排查签名问题时使用）。
+- 每次 `push` 到 `main`（包括合并 PR）都会运行，读取 `package.json` 的版本号：
+  - `v<version>` 还没有 Release：新建 Release，上传 Chrome ZIP、Safari 文件夹 ZIP，之后再追加签名 App；
+  - `v<version>` 已有 Release：**只覆盖** Safari 文件夹 ZIP 和签名 App，Chrome ZIP 保持首次发布时的文件，与 Chrome 商店上传的版本一致。所以修 Safari 相关问题不必升版本号，合并后当前版本的 Safari 包就会更新；
+- `workflow_dispatch`：手动按同样的逻辑重跑一次，例如更新了签名 Secrets 之后；
+- 多次合并会排队依次执行，不会互相取消，最后一次合并的结果生效。
 
 ### 3.2 `release` job（Ubuntu）
 
-`npm ci` → `npm run check` → `npm run package` → `gh release create v<version>`，附上 Chrome ZIP 和 Safari 文件夹 ZIP。正文由 `scripts/release-notes.mjs` 从 [store-listing.md](store-listing.md) 中提取 `### Version <version> release notes`，并追加下载说明。
+`npm ci` → `npm run check` → `npm run package`，然后新版本执行 `gh release create v<version>`，附上 Chrome ZIP 和 Safari 文件夹 ZIP；已有版本执行 `gh release upload --clobber`，只替换 Safari 文件夹 ZIP。正文由 `scripts/release-notes.mjs` 从 [store-listing.md](store-listing.md) 中提取 `### Version <version> release notes`，并追加下载说明。
 
 ### 3.3 `safari-app` job（macOS，可选）
 

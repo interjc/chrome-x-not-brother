@@ -43,24 +43,38 @@ npm run build
 
 ### Safari
 
-Safari 版是社区渠道：不在 App Store 上架，不会自动更新，功能以 Chrome 版为准。每个版本的安装包都在 [GitHub Releases](https://github.com/interjc/chrome-x-not-brother/releases)。
+Safari 版和 Chrome 版是同一份代码，但不上 App Store，需要从 GitHub 下载安装，也不会自动更新。支持 macOS 上的 **Safari 18.4 或更高版本**（「Safari →关于 Safari」可查看版本）。
 
-**签名 App（推荐，需要 macOS 上的 Safari 18.4 或更高版本）**
+**安装**
 
-1. 下载 `Not-Brother-Safari-<版本>.zip`，解压后把 **Not Brother.app** 拖进「应用程序」，打开一次。
-2. 打开 Safari →「设置」→「扩展」，勾选 **Not Brother**。
-3. 打开 x.com，点击地址栏旁的扩展图标，选择「在此网站上始终允许」。
+1. 打开 [最新版本的下载页](https://github.com/interjc/chrome-x-not-brother/releases/latest)，在页面底部的 **Assets** 里下载 `not-brother-safari-app-<版本>.zip`。
+2. 双击解压，把得到的 **Not Brother.app** 拖进「应用程序」文件夹。
+3. 打开「应用程序」里的 **Not Brother**。这个 App 已经过 Apple 公证，可以直接打开。它只用来把扩展装进 Safari，窗口里会提示去 Safari 设置启用扩展，点按钮或直接关掉都行。
+4. 打开 Safari →「设置…」→「扩展」，勾选 **Not Brother**。
+5. 允许它在 x.com 上运行：打开 [x.com](https://x.com)，点地址栏旁的 Not Brother 图标，选择「**在此网站上始终允许**」。也可以在「设置 → 扩展 → Not Brother →编辑网站…」里把 x.com 设为「允许」。
+6. 第一次使用时会显示隐私说明，阅读并同意后，扩展才会开始标注和记录。
 
-更新时下载新版本覆盖旧 App 即可，本地档案和设置会保留。
+**使用上和 Chrome 版的区别**
 
-**临时加载（无需安装 App，退出 Safari 后失效）**
+- Safari 没有侧栏。点工具栏上的 Not Brother 图标，会以弹窗打开同样的「状态 / 规则 / 选项」三个标签页。
+- 设置只保存在这台 Mac 上，不会跨设备同步。
 
-1. 下载 `not-brother-safari-<版本>.zip` 并解压。
-2. Safari →「设置」→「高级」，勾选「显示网页开发者功能」。
-3. Safari →「设置」→「开发者」，勾选「允许未签名的扩展」，点击 **Add Temporary Extension…**，选择解压后包含 `manifest.json` 的文件夹。
-4. 按上面第 3 步允许它访问 x.com。
+**更新**
 
-和 Chrome 版的区别：Safari 没有侧栏，点击工具栏图标会以弹窗打开同样的「状态 / 规则 / 选项」；设置不会跨设备同步。
+到 [下载页](https://github.com/interjc/chrome-x-not-brother/releases/latest) 下载新的 `not-brother-safari-app-<版本>.zip`，先退出 Safari，再把新的 Not Brother.app 拖进「应用程序」并选择替换。本地档案、规则和设置都会保留。同一个版本号的 Safari 安装包也可能会更新修复，以下载页上最新的文件为准。
+
+**卸载**
+
+先在 Safari「设置 → 扩展」里取消勾选，再把「应用程序」里的 Not Brother.app 移到废纸篓。
+
+**不想安装 App？临时加载**
+
+适合尝鲜。**退出 Safari 后扩展会被移除**，下次要重新加载。
+
+1. 在下载页下载 `not-brother-safari-<版本>.zip`，然后解压。
+2. Safari →「设置…」→「高级」，勾选「显示网页开发者功能」。
+3. Safari →「设置…」→「开发者」，勾选「允许未签名的扩展」，点 **Add Temporary Extension…**，选择解压后包含 `manifest.json` 的那个文件夹。
+4. 按上面安装步骤的第 5、6 步，允许它访问 x.com 并同意隐私说明。
 
 ## 使用
 

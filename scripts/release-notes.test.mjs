@@ -27,6 +27,12 @@ describe("release notes", () => {
       .toThrow(/empty/);
   });
 
+  it("names release assets that stay distinct on GitHub's case-insensitive asset store", () => {
+    const names = [...releaseBody("- Fix.").matchAll(/`([^`]+\.zip)`/g)].map((match) => match[1]);
+    expect(names).toHaveLength(3);
+    expect(new Set(names.map((name) => name.toLowerCase())).size).toBe(names.length);
+  });
+
   it("lists the downloads after the notes", () => {
     const body = releaseBody("- Fix.");
     expect(body.startsWith("- Fix.\n")).toBe(true);

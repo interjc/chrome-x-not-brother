@@ -1,23 +1,20 @@
 name: Release
 
-# A version bump that reaches main publishes a GitHub Release with the Chrome
-# and Safari packages. The Chrome Web Store upload stays manual; Safari builds
-# are a manual-install community channel. See docs/safari.md.
+# Every push to main rebuilds the Safari packages. A version that has no
+# Release yet gets one, with the Chrome ZIP that matches the Chrome Web Store
+# upload; later pushes with the same version overwrite only the Safari assets
+# and leave the Chrome ZIP alone. The Chrome Web Store upload stays manual;
+# Safari builds are a manual-install community channel. See docs/safari.md.
 
 on:
   push:
     branches: [main]
-    paths: ["package.json"]
   workflow_dispatch:
-    inputs:
-      safari_only:
-        description: "Rebuild only the signed Safari app for the current version's existing release"
-        type: boolean
-        default: false
 
 permissions:
   contents: write
 
+# Queue rather than cancel, so a half-published Release is never abandoned.
 concurrency:
   group: release
   cancel-in-progress: false
@@ -27,7 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.meta.outputs.version }}
-      created: ${{ steps.meta.outputs.created }}
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -43,22 +39,20 @@ jobs:
           version=$(node -p "require('./package.json').version")
           echo "version=$version" >> "$GITHUB_OUTPUT"
           if gh release view "v$version" >/dev/null 2>&1; then
-            echo "Release v$version already exists; nothing to publish."
-            echo "created=false" >> "$GITHUB_OUTPUT"
+            echo "Release v$version exists; its Safari assets will be replaced."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
           else
-            echo "created=true" >> "$GITHUB_OUTPUT"
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - if: steps.meta.outputs.created == 'true'
-        run: npm ci
+      - run: npm ci
 
-      - if: steps.meta.outputs.created == 'true'
-        run: npm run check
+      - run: npm run check
 
-      - if: steps.meta.outputs.created == 'true'
-        run: npm run package
+      - run: npm run package
 
-      - if: steps.meta.outputs.created == 'true'
+      - name: Publish a new version
+        if: steps.meta.outputs.exists == 'false'
         env:
           VERSION: ${{ steps.meta.outputs.version }}
         run: |
@@ -70,12 +64,19 @@ jobs:
             --title "Not Brother v$VERSION" \
             --notes-file "$RUNNER_TEMP/notes.md"
 
+      - name: Refresh the Safari folder on the current version
+        if: steps.meta.outputs.exists == 'true'
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          gh release upload "v$VERSION" "artifacts/not-brother-safari-$VERSION.zip" --clobber
+          node scripts/release-notes.mjs "$VERSION" > "$RUNNER_TEMP/notes.md"
+          gh release edit "v$VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+          echo "Replaced not-brother-safari-$VERSION.zip from $GITHUB_SHA; the Chrome ZIP is unchanged."
+
   safari-app:
     needs: release
-    if: >-
-      vars.SAFARI_SIGNING == 'true' &&
-      (needs.release.outputs.created == 'true' ||
-       (github.event_name == 'workflow_dispatch' && inputs.safari_only))
+    if: vars.SAFARI_SIGNING == 'true'
     runs-on: macos-latest
     timeout-minutes: 45
     env:
@@ -266,8 +267,10 @@ jobs:
 
       - name: Attach the signed app to the release
         run: |
-          ditto -c -k --keepParent "$APP" "$RUNNER_TEMP/Not-Brother-Safari-$VERSION.zip"
-          gh release upload "v$VERSION" "$RUNNER_TEMP/Not-Brother-Safari-$VERSION.zip" --clobber
+          # Asset names are case-insensitive on GitHub, so this must not differ
+          # from not-brother-safari-<version>.zip by case alone.
+          ditto -c -k --keepParent "$APP" "$RUNNER_TEMP/not-brother-safari-app-$VERSION.zip"
+          gh release upload "v$VERSION" "$RUNNER_TEMP/not-brother-safari-app-$VERSION.zip" --clobber
 
       - name: Remove signing material
         if: always()

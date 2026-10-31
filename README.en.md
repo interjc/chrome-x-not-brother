@@ -43,24 +43,38 @@ After a rebuild, click **Reload** on the extension card, then refresh any X tabs
 
 ### Safari
 
-The Safari build is a community channel: it is not on the App Store, does not update itself, and follows the Chrome build's features. Every version's packages are on [GitHub Releases](https://github.com/interjc/chrome-x-not-brother/releases).
+The Safari build comes from the same code as the Chrome build, but it is not on the App Store: you download it from GitHub, and it does not update itself. It needs **Safari 18.4 or later** on macOS (check under Safari → About Safari).
 
-**Signed app (recommended; Safari 18.4 or later on macOS)**
+**Install**
 
-1. Download `Not-Brother-Safari-<version>.zip`, unzip it, drag **Not Brother.app** into Applications, and open it once.
-2. Open Safari → Settings → Extensions and turn on **Not Brother**.
-3. Open x.com, click the extension icon next to the address bar, and choose **Always Allow on This Website**.
+1. Open the [latest release page](https://github.com/interjc/chrome-x-not-brother/releases/latest) and, under **Assets** at the bottom, download `not-brother-safari-app-<version>.zip`.
+2. Double-click to unzip it and drag **Not Brother.app** into your Applications folder.
+3. Open **Not Brother** from Applications. The app is notarized by Apple, so it opens normally. It only installs the extension into Safari. Its window points you to Safari Settings; use the button or just close it.
+4. Open Safari → Settings… → Extensions and turn on **Not Brother**.
+5. Allow it on x.com: open [x.com](https://x.com), click the Not Brother icon next to the address bar, and choose **Always Allow on This Website**. You can also set x.com to Allow under Settings → Extensions → Not Brother → Edit Websites….
+6. On first use, read and accept the privacy notice. The extension only starts annotating and recording after you accept.
 
-To update, download the new version and replace the old app. Your local fieldbook and settings are kept.
+**Differences from Chrome**
 
-**Temporary load (no app; removed when Safari quits)**
+- Safari has no side panel. Clicking the Not Brother toolbar icon opens the same Status / Rules / Options tabs as a popup.
+- Settings stay on this Mac and do not sync across devices.
 
-1. Download `not-brother-safari-<version>.zip` and unzip it.
-2. Safari → Settings → Advanced: turn on **Show features for web developers**.
-3. Safari → Settings → Developer: turn on **Allow unsigned extensions**, click **Add Temporary Extension…**, and choose the unzipped folder that contains `manifest.json`.
-4. Allow it on x.com as in step 3 above.
+**Update**
 
-Differences from Chrome: Safari has no side panel, so the toolbar icon opens the same Status / Rules / Options view as a popup, and settings do not sync across devices.
+Download the new `not-brother-safari-app-<version>.zip` from the [release page](https://github.com/interjc/chrome-x-not-brother/releases/latest), quit Safari, then drag the new Not Brother.app into Applications and choose Replace. Your local fieldbook, rules, and settings are kept. The Safari packages for a given version may also be refreshed with fixes, so always take the newest file on the release page.
+
+**Uninstall**
+
+Turn the extension off in Safari Settings → Extensions, then move Not Brother.app from Applications to the Trash.
+
+**Prefer not to install an app? Load it temporarily**
+
+Good for a quick try. **The extension is removed when Safari quits**, and you have to load it again next time.
+
+1. Download `not-brother-safari-<version>.zip` from the release page and unzip it.
+2. Safari → Settings… → Advanced: turn on **Show features for web developers**.
+3. Safari → Settings… → Developer: turn on **Allow unsigned extensions**, click **Add Temporary Extension…**, and choose the unzipped folder that contains `manifest.json`.
+4. Follow install steps 5 and 6 above to allow x.com and accept the privacy notice.
 
 ## Usage
 
