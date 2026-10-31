@@ -29,7 +29,7 @@
 | [Chrome Web Store 上架](chrome-web-store.md) | 开发者账号、文案、素材、隐私披露、审核、更新与回滚 |
 | [Chrome Web Store 三语文案](store-listing.md) | 可粘贴的中英日名称、简介、详细说明、更新说明、权限理由与审核备注 |
 | [Safari 支持方案](safari.md) | 一套代码，`main` 上版本变化时由 GitHub Actions 自动构建 Safari 包挂到 Release，用户手动安装：兼容性对照、能力检测、manifest 改写 |
-| [Apple 签名与公证密钥配置](apple-signing.md) | Developer ID 证书、App Store Connect API Key 的生成方法和 GitHub Secrets 清单 |
+| [Apple 签名与公证密钥配置](apple-signing.md) | 逐步手册：CSR、Developer ID 证书、`.p12`、Team ID、App Store Connect API Key（`.p8`、Key ID、Issuer ID）的生成，base64 转换，GitHub Secrets / Variables，自检、排错与续期 |
 
 公开隐私政策和条款的 HTML 在 [pages/](../pages/)，由 GitHub Pages 发布：
 
