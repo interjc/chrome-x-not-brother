@@ -265,9 +265,10 @@ spctl --assess --type execute --verbose=2 "Not Brother.app"
 
 | 失败的步骤和现象 | 原因与处理 |
 | --- | --- |
-| “Import the Developer ID certificate” 报错 `MACOS_CERT_P12_BASE64 has no signing identity`，日志中有 `p12 import: 1 certificate imported.`（旧版 workflow 显示为 `security: SecItemCopyMatching: The specified item could not be found in the keychain.`） | `.p12` 里只有证书、没有私钥。按第 2.4 节确认，再按第 2.3 节在「我的证书」里重新导出，更新 `MACOS_CERT_P12_BASE64` 和 `MACOS_CERT_PASSWORD` |
-| “Import the Developer ID certificate” 中 `security import` 报 MAC 校验失败或密码错误 | `MACOS_CERT_PASSWORD` 与导出密码不一致；或者 `.p12` 是用 OpenSSL 3 默认算法生成的，按第 2.5 节的参数重新生成 |
-| 同一步报 `has no signing identity`，但日志显示 `1 identity imported.` | 证书不是 Developer ID Application（例如误建成 Apple Development 或 Developer ID Installer），或者证书已被撤销或过期。到开发者网站核对证书类型和状态 |
+| “Import the Developer ID certificate” 报错 `MACOS_CERT_P12_BASE64 has no private key` | Secret 里的 `.p12` 只有证书。先比对日志里的 `Secret .p12 sha256` 和本地 `shasum -a 256 DeveloperID.p12`：不一致，说明 Secret 里存的是另一个文件，用第 6.1 节的 `gh secret set` 从正确的文件重新写入；一致，就按第 2.4 节确认，再按第 2.3 节在「我的证书」里重新导出 |
+| 旧版 workflow 报 `security: SecItemCopyMatching: The specified item could not be found in the keychain.`，且导入时只显示 `1 certificate imported.` | macOS 的 `security import` 没有读出私钥：要么 `.p12` 真的没有私钥，要么私钥是不加密的 `Key bag`，或用了它不支持的算法（OpenSSL 能读出，`security` 会悄悄跳过）。现在的 workflow 会先用 OpenSSL 把 `.p12` 重新打包成 3DES/SHA1 格式再导入，后两种情况会自动修正 |
+| “Import the Developer ID certificate” 报错 `Could not read MACOS_CERT_P12_BASE64`，或 `security import` 报 MAC 校验失败或密码错误 | `MACOS_CERT_PASSWORD` 与导出密码不一致；或者 `.p12` 是用 OpenSSL 3 默认算法生成的，按第 2.5 节的参数重新生成 |
+| 同一步报 `No valid Developer ID Application identity`，但日志显示 `1 identity imported.` | 证书不是 Developer ID Application（例如误建成 Apple Development 或 Developer ID Installer），或者证书已被撤销或过期。到开发者网站核对证书类型和状态 |
 | `security import` 报格式错误 | base64 粘贴不完整或混入了空格、换行。按第 5 节的 `cmp` 自检后重新粘贴 |
 | “Archive with Developer ID signing” 报找不到签名身份或团队不匹配 | `APPLE_TEAM_ID` 和证书括号里的 Team ID 不一致 |
 | “Archive” 报其他签名设置冲突 | Apple 打包器生成的工程模板变了。看日志里的目标名和设置项，调整 workflow 中 `xcodebuild archive` 的参数 |

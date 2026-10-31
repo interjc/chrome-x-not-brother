@@ -110,20 +110,61 @@ jobs:
           curl -fsSL -o "$RUNNER_TEMP/DeveloperIDG2CA.cer" \
             https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
           security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$KEYCHAIN" || true
-          echo "$MACOS_CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
-          import_result=$(security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" \
+          # Repack the .p12 with OpenSSL before handing it to macOS: Keychain
+          # Access, Xcode, and OpenSSL 1/3 exports differ in bag encryption,
+          # and `security import` silently drops key bags it cannot read.
+          openssl_bin="$(brew --prefix openssl@3 2>/dev/null)/bin/openssl"
+          [ -x "$openssl_bin" ] || openssl_bin=/usr/bin/openssl
+          source_p12="$RUNNER_TEMP/source.p12"
+          signing_p12="$RUNNER_TEMP/signing.p12"
+          echo "$MACOS_CERT_P12_BASE64" | base64 --decode > "$source_p12"
+          echo "Secret .p12 sha256: $(shasum -a 256 "$source_p12" | cut -d ' ' -f 1)"
+          echo "  Compare locally with: shasum -a 256 DeveloperID.p12"
+          # Older exports use RC2, which OpenSSL 3 reads only with -legacy.
+          p12_read() {
+            "$openssl_bin" pkcs12 $legacy -in "$source_p12" \
+              -passin env:MACOS_CERT_PASSWORD "$@"
+          }
+          legacy=""
+          if ! p12_read -nodes -out /dev/null 2>/dev/null; then
+            legacy="-legacy"
+          fi
+          if ! p12_read -nodes -out /dev/null; then
+            rm -f "$source_p12"
+            echo "::error title=Could not read MACOS_CERT_P12_BASE64::OpenSSL cannot open the .p12. Check MACOS_CERT_PASSWORD and that the base64 is complete (docs/apple-signing.md, sections 2.4 and 5)."
+            exit 1
+          fi
+          echo "Secret .p12 structure (no key material):"
+          p12_read -info -noout 2>&1 | sed 's/^/  /'
+          key_lines=$(p12_read -nocerts -nodes 2>/dev/null \
+            | grep -c "PRIVATE KEY-----" || true)
+          if [ "$key_lines" -eq 0 ]; then
+            rm -f "$source_p12"
+            echo "::error title=MACOS_CERT_P12_BASE64 has no private key::The stored .p12 contains only a certificate. If the sha256 above differs from your local DeveloperID.p12, the secret holds a different file; otherwise re-export from Keychain Access > login > My Certificates (docs/apple-signing.md, section 2.3)."
+            exit 1
+          fi
+          # -export reads its input twice (key, then certificates), so it needs
+          # a file rather than a pipe. Keep it private and remove it at once.
+          bundle_pem="$RUNNER_TEMP/bundle.pem"
+          (umask 077 && p12_read -nodes -out "$bundle_pem" 2>/dev/null)
+          rm -f "$source_p12"
+          "$openssl_bin" pkcs12 -export -in "$bundle_pem" -out "$signing_p12" \
+            -passout env:MACOS_CERT_PASSWORD \
+            -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1 \
+            || { rm -f "$bundle_pem"; exit 1; }
+          rm -f "$bundle_pem"
+          import_result=$(security import "$signing_p12" -k "$KEYCHAIN" \
             -P "$MACOS_CERT_PASSWORD" -f pkcs12 -A -T /usr/bin/codesign 2>&1) || {
-            rm -f "$RUNNER_TEMP/cert.p12"
-            echo "::error title=Could not import MACOS_CERT_P12_BASE64::$import_result. Check MACOS_CERT_PASSWORD and that the base64 is complete (docs/apple-signing.md, sections 2.4 and 5)."
+            rm -f "$signing_p12"
+            echo "::error title=Could not import the signing identity::$import_result"
             exit 1
           }
-          rm "$RUNNER_TEMP/cert.p12"
+          rm -f "$signing_p12"
           echo "p12 import: $import_result"
-          # A .p12 with the private key reports "1 identity imported"; a
-          # certificate-only export reports "1 certificate imported".
           if ! security find-identity -v -p codesigning "$KEYCHAIN" \
             | grep "Developer ID Application"; then
-            echo "::error title=MACOS_CERT_P12_BASE64 has no signing identity::The .p12 imported as \"$import_result\" but holds no Developer ID Application private key. Re-export it from Keychain Access > login > My Certificates with the private key underneath (docs/apple-signing.md, section 2.3)."
+            security find-identity -p codesigning "$KEYCHAIN" || true
+            echo "::error title=No valid Developer ID Application identity::The key imported as \"$import_result\" but no valid Developer ID Application identity is available. Check that the certificate is a Developer ID Application certificate, not revoked or expired, and that its private key matches (docs/apple-signing.md, section 8)."
             exit 1
           fi
           security set-key-partition-list -S apple-tool:,apple:,codesign: \
