@@ -41,6 +41,27 @@ npm run build
 
 After a rebuild, click **Reload** on the extension card, then refresh any X tabs that are already open.
 
+### Safari
+
+The Safari build is a community channel: it is not on the App Store, does not update itself, and follows the Chrome build's features. Every version's packages are on [GitHub Releases](https://github.com/interjc/chrome-x-not-brother/releases).
+
+**Signed app (recommended; Safari 18.4 or later on macOS)**
+
+1. Download `Not-Brother-Safari-<version>.zip`, unzip it, drag **Not Brother.app** into Applications, and open it once.
+2. Open Safari → Settings → Extensions and turn on **Not Brother**.
+3. Open x.com, click the extension icon next to the address bar, and choose **Always Allow on This Website**.
+
+To update, download the new version and replace the old app. Your local fieldbook and settings are kept.
+
+**Temporary load (no app; removed when Safari quits)**
+
+1. Download `not-brother-safari-<version>.zip` and unzip it.
+2. Safari → Settings → Advanced: turn on **Show features for web developers**.
+3. Safari → Settings → Developer: turn on **Allow unsigned extensions**, click **Add Temporary Extension…**, and choose the unzipped folder that contains `manifest.json`.
+4. Allow it on x.com as in step 3 above.
+
+Differences from Chrome: Safari has no side panel, so the toolbar icon opens the same Status / Rules / Options view as a popup, and settings do not sync across devices.
+
 ## Usage
 
 The first time you open the side panel after install, you see a data notice. Annotation and local collection start only after you click **Agree and start**. Before that, the expanded dock on X and the collapsed floating button both show **Review & agree**; you can also right-click the toolbar icon and choose the same item. Those entries only open the full notice; they do not record consent for you. You can pause later at any time.

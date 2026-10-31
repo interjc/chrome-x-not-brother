@@ -81,6 +81,9 @@ a { color: inherit; }
 
 /* Side panel */
 .app--sidepanel { display: flex; flex-direction: column; min-width: 290px; overflow: hidden; }
+/* Action popup on hosts without a side panel (Safari): popups size to content, so pin the frame. */
+.surface-popup body { width: 400px; }
+.surface-popup .app--sidepanel { height: 580px; min-height: 0; }
 .side-header { align-items: center; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; padding: 14px 16px; }
 .side-tabs {
   display: grid;

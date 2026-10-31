@@ -2,6 +2,7 @@ import { zipSync } from "fflate";
 import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { runNpm } from "./run.mjs";
+import { toSafariManifest } from "./safari-manifest.mjs";
 
 const root = process.cwd();
 const artifactsDir = path.join(root, "artifacts");
@@ -37,11 +38,23 @@ async function removeOldZips(directory) {
 }
 
 const packageJson = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
-const zipName = `not-brother-${packageJson.version}.zip`;
-const archive = zipSync(await collect(path.join(root, "dist")), { level: 9 });
+const files = await collect(path.join(root, "dist"));
+const chromeManifest = JSON.parse(new TextDecoder().decode(files["manifest.json"]));
+const safariFiles = {
+  ...files,
+  "manifest.json": new TextEncoder().encode(
+    `${JSON.stringify(toSafariManifest(chromeManifest), null, 2)}\n`,
+  ),
+};
+const archives = [
+  [`not-brother-${packageJson.version}.zip`, files],
+  [`not-brother-safari-${packageJson.version}.zip`, safariFiles],
+];
 await mkdir(artifactsDir, { recursive: true });
 await removeOldZips(artifactsDir);
 await removeOldZips(path.join(root, "output"));
-const artifactPath = path.join(artifactsDir, zipName);
-await writeFile(artifactPath, archive);
-console.log(`Created ${path.relative(root, artifactPath)}`);
+for (const [zipName, entries] of archives) {
+  const artifactPath = path.join(artifactsDir, zipName);
+  await writeFile(artifactPath, zipSync(entries, { level: 9 }));
+  console.log(`Created ${path.relative(root, artifactPath)}`);
+}

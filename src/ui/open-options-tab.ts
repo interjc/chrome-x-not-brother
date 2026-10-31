@@ -1,7 +1,12 @@
+import { hasSidePanel } from "../platform/capabilities";
 import { updateSettings } from "../storage/settings";
 
 export async function openSidePanelOptionsTab(): Promise<boolean> {
   const persist = updateSettings({ sidePanelTab: "options" });
+  if (!hasSidePanel()) {
+    await persist.catch(() => undefined);
+    return false;
+  }
   try {
     await chrome.sidePanel.open({ windowId: chrome.windows.WINDOW_ID_CURRENT });
     await persist;

@@ -2,6 +2,7 @@ import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { STORE_PUBLIC_URLS } from "./project-urls.mjs";
+import { SAFARI_MIN_VERSION, SAFARI_POPUP, toSafariManifest } from "./safari-manifest.mjs";
 
 const dist = path.join(process.cwd(), "dist");
 const required = [
@@ -11,6 +12,7 @@ const required = [
   "page-bridge.js",
   "content-script.css",
   "sidepanel.html",
+  "popup.html",
   "sidepanel.js",
   "sidepanel.css",
   "dashboard.html",
@@ -144,6 +146,21 @@ if (
   manifest.options_ui?.open_in_tab !== false
 ) {
   throw new Error("Manifest must declare an Options page that can open the side panel tab");
+}
+if (manifest.action?.default_popup) {
+  throw new Error("The Chrome manifest must not declare a popup; the action opens the side panel");
+}
+
+const safariManifest = toSafariManifest(manifest);
+if (
+  safariManifest.version !== manifest.version ||
+  safariManifest.side_panel ||
+  safariManifest.permissions.includes("sidePanel") ||
+  safariManifest.action?.default_popup !== SAFARI_POPUP ||
+  safariManifest.browser_specific_settings?.safari?.strict_min_version !== SAFARI_MIN_VERSION ||
+  JSON.stringify(safariManifest.content_scripts) !== JSON.stringify(manifest.content_scripts)
+) {
+  throw new Error("The Safari manifest must swap only the side panel for the toolbar popup");
 }
 
 const legalFiles = [

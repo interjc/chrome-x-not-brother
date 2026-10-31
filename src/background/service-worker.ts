@@ -15,6 +15,7 @@ import { appendQuickFilterRule } from "../domain/filter-rules";
 import { filterRuleSetStatus } from "../domain/filter-rule-matching";
 import type { ObserverSettings } from "../domain/types";
 import { resolveUiLocale } from "../i18n";
+import { hasSidePanel, setBadgeTextColor } from "../platform/capabilities";
 import { actionPresentation } from "./action-state";
 import {
   CONSENT_CONTEXT_MENU_ID,
@@ -57,7 +58,8 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   }
 });
 
-void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+// Hosts without a side panel (Safari) show the same view as the popup.html action popup.
+if (hasSidePanel()) void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 void purgeUnknownObservations();
 void initializeActionState();
 watchSidePanelVisibility();
@@ -65,7 +67,7 @@ void hydrateTrackedSidePanels();
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== CONSENT_CONTEXT_MENU_ID) return;
-  const sidePanelOpen = tab?.windowId === undefined
+  const sidePanelOpen = tab?.windowId === undefined || !hasSidePanel()
     ? null
     : chrome.sidePanel.open({ windowId: tab.windowId });
   void openConsentSurface(sidePanelOpen);
@@ -263,6 +265,10 @@ chrome.runtime.onMessage.addListener(
         return false;
       }
       if (message.tab) void updateSettings({ sidePanelTab: message.tab });
+      if (!hasSidePanel()) {
+        sendResponse({ ok: false, error: "This browser has no extension side panel" });
+        return false;
+      }
       if (message.toggle && isTrackedSidePanelOpen(tab.windowId)) {
         void closeExtensionSidePanel(tab).then(
           () => {
@@ -362,7 +368,7 @@ async function syncActionState(settings: ObserverSettings): Promise<void> {
   await Promise.all([
     chrome.action.setBadgeText({ text: presentation.badgeText }),
     chrome.action.setBadgeBackgroundColor({ color: presentation.badgeColor }),
-    chrome.action.setBadgeTextColor({ color: "#16221B" }),
+    setBadgeTextColor("#16221B"),
     chrome.action.setTitle({ title: presentation.title }),
   ]);
 }

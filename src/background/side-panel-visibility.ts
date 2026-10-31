@@ -26,10 +26,10 @@ export async function hydrateTrackedSidePanels(): Promise<void> {
 }
 
 export function watchSidePanelVisibility(): void {
-  chrome.sidePanel.onOpened?.addListener?.((info) => {
+  chrome.sidePanel?.onOpened?.addListener?.((info) => {
     rememberSidePanelOpen(info.windowId);
   });
-  chrome.sidePanel.onClosed?.addListener?.((info) => {
+  chrome.sidePanel?.onClosed?.addListener?.((info) => {
     rememberSidePanelClosed(info.windowId);
   });
 }
