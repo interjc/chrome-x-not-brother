@@ -15,7 +15,7 @@ const shared = {
   bundle: true,
   sourcemap: watch,
   minify: !watch,
-  target: "chrome114",
+  target: ["chrome114", "safari18"],
   logLevel: "info",
   assetNames: "assets/[name]-[hash]",
   loader: {

@@ -28,6 +28,8 @@
 | [发布指南](release.md) · [EN](en/release.md) | 版本、检查、打包、商店准备和回滚 |
 | [Chrome Web Store 上架](chrome-web-store.md) | 开发者账号、文案、素材、隐私披露、审核、更新与回滚 |
 | [Chrome Web Store 三语文案](store-listing.md) | 可粘贴的中英日名称、简介、详细说明、更新说明、权限理由与审核备注 |
+| [Safari 支持方案](safari.md) | 一套代码，`main` 上版本变化时由 GitHub Actions 自动构建 Safari 包挂到 Release，用户手动安装：兼容性对照、能力检测、manifest 改写 |
+| [Apple 签名与公证密钥配置](apple-signing.md) | Developer ID 证书、App Store Connect API Key 的生成方法和 GitHub Secrets 清单 |
 
 公开隐私政策和条款的 HTML 在 [pages/](../pages/)，由 GitHub Pages 发布：
 
@@ -47,7 +49,8 @@ assets/branding/   品牌源图
 assets/store/      Chrome Web Store 图标、截图与宣传图
 pages/             GitHub Pages：公开隐私政策与使用条款
 public/            Manifest、HTML、内容样式与图标
-scripts/           构建、校验、打包
+scripts/           构建、校验、打包、Safari manifest 与 Release 说明
+.github/workflows/ GitHub Pages 部署与 GitHub Release（含 Safari 签名 App）
 skills/            项目级开发 skill
 docs/              开发者与维护文档（默认中文）
 docs/en/           安装与贡献所需的英文文档

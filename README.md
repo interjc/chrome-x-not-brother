@@ -41,6 +41,27 @@ npm run build
 
 重新构建后，先在扩展卡片上点「重新加载」，再刷新已经打开的 X 标签页。
 
+### Safari
+
+Safari 版是社区渠道：不在 App Store 上架，不会自动更新，功能以 Chrome 版为准。每个版本的安装包都在 [GitHub Releases](https://github.com/interjc/chrome-x-not-brother/releases)。
+
+**签名 App（推荐，需要 macOS 上的 Safari 18.4 或更高版本）**
+
+1. 下载 `Not-Brother-Safari-<版本>.zip`，解压后把 **Not Brother.app** 拖进「应用程序」，打开一次。
+2. 打开 Safari →「设置」→「扩展」，勾选 **Not Brother**。
+3. 打开 x.com，点击地址栏旁的扩展图标，选择「在此网站上始终允许」。
+
+更新时下载新版本覆盖旧 App 即可，本地档案和设置会保留。
+
+**临时加载（无需安装 App，退出 Safari 后失效）**
+
+1. 下载 `not-brother-safari-<版本>.zip` 并解压。
+2. Safari →「设置」→「高级」，勾选「显示网页开发者功能」。
+3. Safari →「设置」→「开发者」，勾选「允许未签名的扩展」，点击 **Add Temporary Extension…**，选择解压后包含 `manifest.json` 的文件夹。
+4. 按上面第 3 步允许它访问 x.com。
+
+和 Chrome 版的区别：Safari 没有侧栏，点击工具栏图标会以弹窗打开同样的「状态 / 规则 / 选项」；设置不会跨设备同步。
+
 ## 使用
 
 安装后第一次打开侧栏，会先看到数据说明。只有你点「同意并开始」后，扩展才会标注页面并写入本地档案。未同意时，X 页面展开的 dock 和收起后的悬浮球旁都会显示「查看说明并同意」；也可以右键工具栏图标选择同名菜单项。它们只打开完整说明，不会代替你直接同意。之后可随时暂停。

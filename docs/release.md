@@ -52,11 +52,14 @@ npm run release
 
 `artifacts/not-brother-<version>.zip`
 
+同一次打包还会写出 `artifacts/not-brother-safari-<version>.zip`（同一份 `dist/`，只把 manifest 换成 Safari 版）。它不上传 Chrome 商店，由 GitHub Release 自动分发，见下文「GitHub Release 与 Safari」。
+
 不要手压 `dist/`。解压后根目录必须直接是 `manifest.json`。
 
 6. 在干净 Chrome 配置里 Load unpacked `dist/`，按 [测试指南](testing.md) 做相关验收。
 7. Dashboard → 该条目 → Package → 上传新 ZIP。更新三种语言的 listing 更新说明。隐私字段若没变就不用改。取消自动发布后提交审核。
 8. 审核通过后 30 天内点 Publish。新增权限会让已装用户再授权。
+9. 把版本提交推到 `main`（或合并包含它的 PR）。`package.json` 版本变化会触发 GitHub Release 自动发布，不需要手动操作。
 
 `npm run validate:dist` 仍会检查：三语 Summary 不超过 132 字且与 store-listing 一致；当前版本的三语更新说明标题都在。
 
@@ -71,13 +74,13 @@ npm run release
 | `npm run build` | 产出 `dist/` |
 | `npm run validate:dist` | 检查 dist、权限、商店 URL、版本文案 |
 | `npm run skills:validate` | 检查项目 skill |
-| `npm run package` | 构建、校验，删除旧 ZIP，并把当前版写到 `artifacts/` |
+| `npm run package` | 构建、校验，删除旧 ZIP，并把当前版的 Chrome 与 Safari ZIP 写到 `artifacts/` |
 | `npm run verify:pages` | 请求公开隐私政策和条款页 |
 | `npm run version:bump -- patch` | 同步升版本、更新 package-lock 并插入商店更新说明标题 |
 | `npm run release` | 完整发布流水线；检查、构建并打包生成 `artifacts/not-brother-<version>.zip` |
 | `npm run release:patch` | 升级 patch 版本并执行完整发布流水线 |
 
-对应文件在 `scripts/`：`build.mjs`、`validate-dist.mjs`、`package.mjs`、`verify-pages.mjs`、`bump-version.mjs`、`release.mjs`。
+对应文件在 `scripts/`：`build.mjs`、`validate-dist.mjs`、`package.mjs`、`safari-manifest.mjs`、`release-notes.mjs`、`verify-pages.mjs`、`bump-version.mjs`、`release.mjs`。
 
 ## 商店更新时记得
 
@@ -87,6 +90,18 @@ npm run release
 - 商店审核通过不代表 X 允许额外行为。
 
 政策和字段细节见 [Chrome Web Store 标准上架指南](chrome-web-store.md)。
+
+## GitHub Release 与 Safari
+
+`.github/workflows/release.yml` 在 `main` 上的 `package.json` 变化时运行。如果 `v<version>` 还没有 Release，它会：
+
+1. 在 Linux 上执行 `npm ci`、`npm run check`、`npm run package`；
+2. 创建 tag 和 Release `v<version>`，附上 Chrome ZIP 和 Safari 扩展文件夹 ZIP，正文取自 [store-listing.md](store-listing.md) 中的英文更新说明（`scripts/release-notes.mjs`）；
+3. 仓库变量 `SAFARI_SIGNING` 为 `true` 时，再在 macOS 上生成 Safari App，用 Developer ID 签名、公证，作为 `Not-Brother-Safari-<version>.zip` 追加到同一个 Release。
+
+已有 Release 的版本会直接跳过，所以普通依赖升级不会重复发版。还没有 tag 的旧版本可以在 Actions 页面手动 **Run workflow** 补发；签名失败后修好配置，可以勾选 `safari_only` 只重做签名 App。
+
+Chrome Web Store 上传仍然手动完成。签名所需的证书和 API Key 配置见 [Apple 签名与公证密钥配置](apple-signing.md)，Safari 方案说明见 [Safari 支持方案](safari.md)。
 
 ## 回滚
 

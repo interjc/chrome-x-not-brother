@@ -43,4 +43,10 @@ describe("openSidePanelOptionsTab", () => {
     expect(await openSidePanelOptionsTab()).toBe(false);
     expect(syncStorage.get(SETTINGS_KEY)).toMatchObject({ sidePanelTab: "options" });
   });
+
+  it("falls back to the standalone page on hosts without a side panel", async () => {
+    vi.stubGlobal("chrome", { ...chrome, sidePanel: undefined });
+    expect(await openSidePanelOptionsTab()).toBe(false);
+    expect(syncStorage.get(SETTINGS_KEY)).toMatchObject({ sidePanelTab: "options" });
+  });
 });

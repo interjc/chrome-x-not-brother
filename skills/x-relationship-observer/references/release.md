@@ -24,6 +24,10 @@ The release script executes:
 
 The uploadable archive is `artifacts/not-brother-<version>.zip`. Each `npm run package` deletes previous `not-brother-*.zip` files in `artifacts/` (and leftover copies in `output/`) before writing the new archive.
 
+The same run writes `artifacts/not-brother-safari-<version>.zip`: identical files with the manifest from `scripts/safari-manifest.mjs` (no side panel, `popup.html` as the action popup, Safari 18.4 floor). Never upload it to the Chrome Web Store.
+
+After the version commit reaches `main`, `.github/workflows/release.yml` creates the `v<version>` GitHub Release with both ZIPs and, when `SAFARI_SIGNING` is `true`, a Developer ID-signed, notarized Safari app. Signing secrets are documented in `docs/apple-signing.md`; the Safari approach is in `docs/safari.md`.
+
 6. Load `dist/` unpacked in a clean Chrome profile and execute `docs/testing.md`.
 7. Inspect the ZIP; it must contain `manifest.json` at the archive root.
 8. For Chrome Web Store submission, disclose the single-site host access and local relationship data accurately. The privacy-policy URL must be the GitHub Pages HTML page, not a GitHub blob link. Re-check current X terms and Chrome Web Store policies before every public release.
