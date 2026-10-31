@@ -47,7 +47,7 @@ Release 附件 `not-brother-safari-<version>.zip`：扩展文件夹本身。Safa
 只有仓库变量 `SAFARI_SIGNING` 为 `true` 时才运行；没配置时 Release 里仍有方式 B 的包，workflow 不会报红。步骤：
 
 1. 从 Release 下载 Safari 文件夹 ZIP 并解压；
-2. 把 Developer ID 证书导入一个临时 keychain，同时导入 Apple 的 Developer ID G2 中间证书；
+2. 记录 Secret 中 `.p12` 的 sha256 和结构（不含密钥内容），用 OpenSSL 检查其中有私钥，再重新打包成 macOS `security import` 一定能读的 3DES/SHA1 格式（Keychain、Xcode、OpenSSL 各版本导出的加密方式不同，`security` 读不了的私钥会被悄悄跳过）；然后导入一个临时 keychain，同时导入 Apple 的 Developer ID G2 中间证书；
 3. `xcrun safari-web-extension-packager` 生成只含 macOS 的 Xcode 工程（`--copy-resources --no-open --no-prompt --force`）。工程**只在 CI 里临时生成，不提交进仓库**；scheme 用 `xcodebuild -list -json` 自动选取；
 4. `xcodebuild archive`：手动指定 `Developer ID Application` 身份，开启 hardened runtime 和 `--timestamp`。`MARKETING_VERSION` 取 manifest 版本，`CURRENT_PROJECT_VERSION` 取 `GITHUB_RUN_NUMBER`。打包器模板只用到不受限的 entitlements，所以不需要注册 App ID，也不需要描述文件；
 5. `notarytool submit --wait`：状态不是 `Accepted` 时打印公证日志并失败；随后执行 `stapler staple` 和 `spctl --assess`；
