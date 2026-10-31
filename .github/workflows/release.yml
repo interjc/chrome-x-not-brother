@@ -234,11 +234,23 @@ jobs:
             CODE_SIGN_IDENTITY="Developer ID Application" \
             PROVISIONING_PROFILE_SPECIFIER="" \
             CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
+            CODE_SIGN_ENTITLEMENTS="$GITHUB_WORKSPACE/scripts/safari/NotBrother.entitlements" \
             ENABLE_HARDENED_RUNTIME=YES \
             OTHER_CODE_SIGN_FLAGS="--timestamp --keychain $KEYCHAIN"
           app=$(find "$RUNNER_TEMP/NotBrother.xcarchive/Products/Applications" \
             -maxdepth 1 -name "*.app" | head -n 1)
           codesign --verify --deep --strict --verbose=2 "$app"
+          # Safari ignores an extension that is not sandboxed, and none of the
+          # signature, Gatekeeper, or notarization checks catch that.
+          for bundle in "$app" "$app"/Contents/PlugIns/*.appex; do
+            entitlements=$(codesign -d --entitlements :- "$bundle" 2>/dev/null || true)
+            echo "$(basename "$bundle") entitlements:"
+            echo "$entitlements" | grep -A1 "<key>" | sed 's/^/  /'
+            if ! echo "$entitlements" | grep -q "com.apple.security.app-sandbox"; then
+              echo "::error title=Missing App Sandbox entitlement::$(basename "$bundle") was signed without com.apple.security.app-sandbox, so Safari would not list the extension."
+              exit 1
+            fi
+          done
           for bundle in "$app" "$app"/Contents/PlugIns/*.appex; do
             plist="$bundle/Contents/Info.plist"
             echo "$(basename "$bundle"): $(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")," \

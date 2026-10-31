@@ -312,6 +312,8 @@ spctl --assess --type execute --verbose=2 "Not Brother.app"
 | “Archive” 报 `Embedded binary's bundle identifier is not prefixed with the parent app's bundle identifier` | 打包器为 App 和扩展生成了不一致的 Bundle ID。当前 workflow 在 “Generate the Safari app project” 一步会统一成 `SAFARI_BUNDLE_ID` 和 `SAFARI_BUNDLE_ID.Extension`；如果仍然出现，看这一步日志里的 “Packager bundle IDs” 和 “Pinned bundle IDs” |
 | “Archive” 报其他签名设置冲突 | Apple 打包器生成的工程模板变了。看日志里的目标名和设置项，调整 workflow 中 `xcodebuild archive` 的参数 |
 | “Notarize and staple” 报 401 或鉴权失败 | `ASC_KEY_ID`、`ASC_ISSUER_ID`、`.p8` 三者不是同一把 Key，或者这把 Key 已被撤销 |
+| “Archive” 报 `Missing App Sandbox entitlement` | App 或扩展签名时没有带上 App Sandbox。确认仓库里有 `scripts/safari/NotBrother.entitlements`，并且 workflow 的 `xcodebuild archive` 传了 `CODE_SIGN_ENTITLEMENTS` |
+| App 已安装、`spctl` 显示 `Notarized Developer ID`，但 Safari「设置 → 扩展」里没有 Not Brother | 在 Mac 上运行 `codesign -d --entitlements - "/Applications/Not Brother.app/Contents/PlugIns/Not Brother Extension.appex"`：如果只输出一行 `Executable=…`，说明这是加入沙盒检查之前构建的包，下载最新的 `not-brother-safari-app-<version>.zip` 替换即可。如果输出里有 `com.apple.security.app-sandbox`，就退出 Safari、再打开一次 App，并确认 Safari 版本在 18.4 以上 |
 | 公证状态为 `Invalid` | job 会打印 `notarytool log`。常见原因是缺少 hardened runtime 或安全时间戳，workflow 已经设置了这两项；把日志发 Issue 或交给维护者处理 |
 
 修好之后，按第 7 节手动 **Run workflow** 重跑；如果改的是代码或 workflow，合并到 `main` 就会自动重跑。

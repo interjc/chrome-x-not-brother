@@ -63,6 +63,10 @@ Safari 版和 Chrome 版是同一份代码，但不上 App Store，需要从 Git
 
 到 [下载页](https://github.com/interjc/chrome-x-not-brother/releases/latest) 下载新的 `not-brother-safari-app-<版本>.zip`，先退出 Safari，再把新的 Not Brother.app 拖进「应用程序」并选择替换。本地档案、规则和设置都会保留。同一个版本号的 Safari 安装包也可能会更新修复，以下载页上最新的文件为准。
 
+**在 Safari 扩展列表里找不到 Not Brother？**
+
+先完全退出 Safari（⌘Q），再打开一次「应用程序」里的 Not Brother，然后重新打开 Safari。仍然没有的话，到 [下载页](https://github.com/interjc/chrome-x-not-brother/releases/latest) 下载最新的 `not-brother-safari-app-<版本>.zip` 替换旧 App：较早构建的安装包有缺陷，Safari 会忽略其中的扩展。
+
 **卸载**
 
 先在 Safari「设置 → 扩展」里取消勾选，再把「应用程序」里的 Not Brother.app 移到废纸篓。

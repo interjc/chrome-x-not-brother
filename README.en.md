@@ -63,6 +63,10 @@ The Safari build comes from the same code as the Chrome build, but it is not on 
 
 Download the new `not-brother-safari-app-<version>.zip` from the [release page](https://github.com/interjc/chrome-x-not-brother/releases/latest), quit Safari, then drag the new Not Brother.app into Applications and choose Replace. Your local fieldbook, rules, and settings are kept. The Safari packages for a given version may also be refreshed with fixes, so always take the newest file on the release page.
 
+**Not Brother missing from Safari's extension list?**
+
+Quit Safari completely (⌘Q), open Not Brother from Applications once more, then reopen Safari. If it is still missing, download the newest `not-brother-safari-app-<version>.zip` from the [release page](https://github.com/interjc/chrome-x-not-brother/releases/latest) and replace the old app: an early build had a defect that made Safari ignore its extension.
+
 **Uninstall**
 
 Turn the extension off in Safari Settings → Extensions, then move Not Brother.app from Applications to the Trash.
