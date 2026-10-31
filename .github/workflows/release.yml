@@ -31,9 +31,9 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -83,7 +83,7 @@ jobs:
       VERSION: ${{ needs.release.outputs.version }}
       BUNDLE_ID: ${{ vars.SAFARI_BUNDLE_ID || 'io.github.interjc.notbrother' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Locate signing scratch files
         run: |
@@ -106,19 +106,31 @@ jobs:
           security create-keychain -p "$keychain_password" "$KEYCHAIN"
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "$keychain_password" "$KEYCHAIN"
-          echo "$MACOS_CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
-          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" \
-            -P "$MACOS_CERT_PASSWORD" -f pkcs12 -A -T /usr/bin/codesign
+          # The intermediate goes in first so find-identity can validate the chain.
           curl -fsSL -o "$RUNNER_TEMP/DeveloperIDG2CA.cer" \
             https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
           security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$KEYCHAIN" || true
+          echo "$MACOS_CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          import_result=$(security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" \
+            -P "$MACOS_CERT_PASSWORD" -f pkcs12 -A -T /usr/bin/codesign 2>&1) || {
+            rm -f "$RUNNER_TEMP/cert.p12"
+            echo "::error title=Could not import MACOS_CERT_P12_BASE64::$import_result. Check MACOS_CERT_PASSWORD and that the base64 is complete (docs/apple-signing.md, sections 2.4 and 5)."
+            exit 1
+          }
+          rm "$RUNNER_TEMP/cert.p12"
+          echo "p12 import: $import_result"
+          # A .p12 with the private key reports "1 identity imported"; a
+          # certificate-only export reports "1 certificate imported".
+          if ! security find-identity -v -p codesigning "$KEYCHAIN" \
+            | grep "Developer ID Application"; then
+            echo "::error title=MACOS_CERT_P12_BASE64 has no signing identity::The .p12 imported as \"$import_result\" but holds no Developer ID Application private key. Re-export it from Keychain Access > login > My Certificates with the private key underneath (docs/apple-signing.md, section 2.3)."
+            exit 1
+          fi
           security set-key-partition-list -S apple-tool:,apple:,codesign: \
             -s -k "$keychain_password" "$KEYCHAIN" >/dev/null
           security list-keychains -d user -s "$KEYCHAIN" \
             $(security list-keychains -d user | tr -d '"')
-          rm "$RUNNER_TEMP/cert.p12"
           echo "$ASC_KEY_P8_BASE64" | base64 --decode > "$ASC_KEY_PATH"
-          security find-identity -v -p codesigning "$KEYCHAIN" | grep "Developer ID Application"
 
       - name: Generate the Safari app project
         run: |

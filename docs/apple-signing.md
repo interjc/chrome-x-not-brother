@@ -100,13 +100,20 @@ security find-identity -v -p codesigning
 
 输出里应有一行 `"Developer ID Application: <你的名字> (<TEAMID>)"`。括号里的 10 位字符就是 Team ID，第 3 节会用到。
 
-再确认 `.p12` 本身包含证书和私钥（会提示输入第 2.3 节设的导出密码）：
+**上传前务必确认 `.p12` 里有私钥。**这是最常见的错误：只导出了证书，导入 CI 时日志显示 `1 certificate imported.`，而不是 `1 identity imported.`。执行下面的命令，输入第 2.3 节设置的导出密码：
 
 ```bash
-openssl pkcs12 -in DeveloperID.p12 -info -noout
+openssl pkcs12 -in DeveloperID.p12 -nocerts -nodes | grep -c "PRIVATE KEY-----"
 ```
 
-只要不报错（输出中能看到 `Certificate bag` 和 `Shrouded Keybag` 等字样）就说明两者都在。报 “mac verify failure” 表示密码不对。
+- 输出 `2`（`BEGIN` 和 `END` 各一行）：有私钥，可以继续。
+- 输出 `0`：**没有私钥**，回到第 2.3 节重新导出。
+- 报 `mac verify failure`：密码不对。
+
+`.p12` 里没有私钥，通常是下面两种情况之一：
+
+1. **导出位置不对**：在「证书」（Certificates）分类里导出，或者展开后右键了私钥那一行。必须在「我的证书」（My Certificates）里右键**证书那一行**。
+2. **这台 Mac 上根本没有私钥**：「我的证书」里找不到这张证书，或者证书下面没有私钥。说明 CSR 是在另一台 Mac 上生成的，或者是在别的机器上用 Xcode 创建的证书。去那台机器上导出；找不到那台机器，就按第 2 节重新创建一张证书。旧证书如果从未用来签名分发过，可以在开发者网站撤销，腾出名额。
 
 ### 2.5 没有 Mac 时：用 OpenSSL 生成
 
@@ -258,8 +265,10 @@ spctl --assess --type execute --verbose=2 "Not Brother.app"
 
 | 失败的步骤和现象 | 原因与处理 |
 | --- | --- |
+| “Import the Developer ID certificate” 报错 `MACOS_CERT_P12_BASE64 has no signing identity`，日志中有 `p12 import: 1 certificate imported.`（旧版 workflow 显示为 `security: SecItemCopyMatching: The specified item could not be found in the keychain.`） | `.p12` 里只有证书、没有私钥。按第 2.4 节确认，再按第 2.3 节在「我的证书」里重新导出，更新 `MACOS_CERT_P12_BASE64` 和 `MACOS_CERT_PASSWORD` |
 | “Import the Developer ID certificate” 中 `security import` 报 MAC 校验失败或密码错误 | `MACOS_CERT_PASSWORD` 与导出密码不一致；或者 `.p12` 是用 OpenSSL 3 默认算法生成的，按第 2.5 节的参数重新生成 |
-| 同一步最后的 `grep "Developer ID Application"` 失败 | `.p12` 里没有私钥（导出时右键的是私钥行，或者是在「证书」而不是「我的证书」里导出的），或者 base64 粘贴不完整。按第 2.3 节重新导出，按第 5 节自检 |
+| 同一步报 `has no signing identity`，但日志显示 `1 identity imported.` | 证书不是 Developer ID Application（例如误建成 Apple Development 或 Developer ID Installer），或者证书已被撤销或过期。到开发者网站核对证书类型和状态 |
+| `security import` 报格式错误 | base64 粘贴不完整或混入了空格、换行。按第 5 节的 `cmp` 自检后重新粘贴 |
 | “Archive with Developer ID signing” 报找不到签名身份或团队不匹配 | `APPLE_TEAM_ID` 和证书括号里的 Team ID 不一致 |
 | “Archive” 报其他签名设置冲突 | Apple 打包器生成的工程模板变了。看日志里的目标名和设置项，调整 workflow 中 `xcodebuild archive` 的参数 |
 | “Notarize and staple” 报 401 或鉴权失败 | `ASC_KEY_ID`、`ASC_ISSUER_ID`、`.p8` 三者不是同一把 Key，或者这把 Key 已被撤销 |
