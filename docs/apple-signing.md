@@ -309,6 +309,7 @@ spctl --assess --type execute --verbose=2 "Not Brother.app"
 | 同一步报 `No valid Developer ID Application identity`，但日志显示 `1 identity imported.` | 证书不是 Developer ID Application（例如误建成 Apple Development 或 Developer ID Installer），或者证书已被撤销或过期。到开发者网站核对证书类型和状态 |
 | `security import` 报格式错误 | base64 粘贴不完整或混入了空格、换行。按第 5 节的 `cmp` 自检后重新粘贴 |
 | “Archive with Developer ID signing” 报找不到签名身份或团队不匹配 | `APPLE_TEAM_ID` 和证书括号里的 Team ID 不一致 |
+| “Archive” 报 `Embedded binary's bundle identifier is not prefixed with the parent app's bundle identifier` | 打包器为 App 和扩展生成了不一致的 Bundle ID。当前 workflow 在 “Generate the Safari app project” 一步会统一成 `SAFARI_BUNDLE_ID` 和 `SAFARI_BUNDLE_ID.Extension`；如果仍然出现，看这一步日志里的 “Packager bundle IDs” 和 “Pinned bundle IDs” |
 | “Archive” 报其他签名设置冲突 | Apple 打包器生成的工程模板变了。看日志里的目标名和设置项，调整 workflow 中 `xcodebuild archive` 的参数 |
 | “Notarize and staple” 报 401 或鉴权失败 | `ASC_KEY_ID`、`ASC_ISSUER_ID`、`.p8` 三者不是同一把 Key，或者这把 Key 已被撤销 |
 | 公证状态为 `Invalid` | job 会打印 `notarytool log`。常见原因是缺少 hardened runtime 或安全时间戳，workflow 已经设置了这两项；把日志发 Issue 或交给维护者处理 |
