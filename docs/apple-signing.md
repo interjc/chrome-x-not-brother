@@ -82,10 +82,12 @@ CSR 是一个文本文件，里面有你的公钥和姓名信息。生成 CSR �
 
 `.p12` 是把**证书和私钥打包在一起**并用密码加密的文件。CI 签名时同时需要这两者，所以要导出 `.p12`，单独一个 `.cer` 不够。
 
-1. 打开钥匙串访问，左侧选 **登录**，顶部标签选 **我的证书**（My Certificates）。只有带私钥的证书才会出现在这里。
-2. 找到 `Developer ID Application: <你的名字> (<10 位 Team ID>)`。
+1. 打开钥匙串访问，左侧选 **登录**，顶部标签选 **我的证书**（My Certificates）。只有带私钥的证书才会出现在这里。**先清空右上角的搜索框**。
+2. 找到 `Developer ID Application: <你的名字> (<10 位 Team ID>)`。证书名称由 Apple 生成，**不是**你在 CSR 里填的常用名称，所以搜 CSR 的名字（例如 “Not Brother”）找不到它。
+
+> **容易混淆**：在 **密钥**（Keys）标签页里，能看到以 CSR 常用名称命名的一对 “public key / private key”，例如 “Not Brother Developer ID”。它们只是第 2.1 节生成的密钥，**不是证书**。从这里导出得到的 `.p12` 只有私钥，CI 会报 `is incomplete … no certificate`。如果「我的证书」里没有 `Developer ID Application: …`，说明证书还没装进钥匙串：到 [Certificates](https://developer.apple.com/account/resources/certificates/list) 点开这张证书，**Download**，双击 `.cer` 装进「登录」钥匙串，它就会出现在「我的证书」里，下面挂着那把私钥。
 3. 点左侧的小三角展开，**下面必须挂着一把私钥**。没有私钥说明你不在生成 CSR 的那台 Mac 上，或者选错了条目。
-4. 右键点**证书那一行**（不是展开后的私钥行）→ **导出 “Developer ID Application: …”…**。
+4. 右键点**证书那一行**（菜单里显示“导出 “Developer ID Application: …”…”）。**不要**右键展开后的私钥那一行：那样导出的 `.p12` 里只有私钥，没有证书。
 5. 文件格式选 **个人信息交换 (.p12)**，文件名填 `DeveloperID.p12`，保存。
 6. 系统要求设置导出密码：设一个强密码，输入两次。**这个密码就是 Secret `MACOS_CERT_PASSWORD` 的值**，请立刻存进密码管理器。
 7. 系统可能再弹一次框，要求输入 **Mac 登录密码**，用来授权钥匙串导出私钥。这个密码和上一步设的密码不是同一个。
@@ -100,20 +102,55 @@ security find-identity -v -p codesigning
 
 输出里应有一行 `"Developer ID Application: <你的名字> (<TEAMID>)"`。括号里的 10 位字符就是 Team ID，第 3 节会用到。
 
-**上传前务必确认 `.p12` 里有私钥。**这是最常见的错误：只导出了证书，导入 CI 时日志显示 `1 certificate imported.`，而不是 `1 identity imported.`。执行下面的命令，输入第 2.3 节设置的导出密码：
+**上传前务必确认 `.p12` 里同时有私钥和证书。**签名两者缺一不可，而钥匙串很容易只导出其中一个。执行下面两条命令，每次都输入第 2.3 节设置的导出密码。
+
+数私钥，结果应为 `1`：
 
 ```bash
-openssl pkcs12 -in DeveloperID.p12 -nocerts -nodes | grep -c "PRIVATE KEY-----"
+openssl pkcs12 -in DeveloperID.p12 -nocerts -nodes | grep -c "BEGIN.*PRIVATE KEY"
 ```
 
-- 输出 `2`（`BEGIN` 和 `END` 各一行）：有私钥，可以继续。
-- 输出 `0`：**没有私钥**，回到第 2.3 节重新导出。
-- 报 `mac verify failure`：密码不对。
+数证书，结果应为 `1` 或更多：
 
-`.p12` 里没有私钥，通常是下面两种情况之一：
+```bash
+openssl pkcs12 -in DeveloperID.p12 -nokeys | grep -c "BEGIN CERTIFICATE"
+```
 
-1. **导出位置不对**：在「证书」（Certificates）分类里导出，或者展开后右键了私钥那一行。必须在「我的证书」（My Certificates）里右键**证书那一行**。
-2. **这台 Mac 上根本没有私钥**：「我的证书」里找不到这张证书，或者证书下面没有私钥。说明 CSR 是在另一台 Mac 上生成的，或者是在别的机器上用 Xcode 创建的证书。去那台机器上导出；找不到那台机器，就按第 2 节重新创建一张证书。旧证书如果从未用来签名分发过，可以在开发者网站撤销，腾出名额。
+报 `mac verify failure` 说明密码不对。两个数里有一个是 `0`，就对照下表处理：
+
+| 结果 | 原因 | 处理 |
+| --- | --- | --- |
+| 私钥 `1`，证书 `0` | 导出的是**私钥那一行**：展开证书后，右键了下面的私钥 | 重新导出，右键**证书那一行**；或者按下面的“用 `.cer` 补上证书”处理 |
+| 私钥 `0`，证书 `1` | 在「证书」（Certificates）分类里导出的，或者这台 Mac 上根本没有私钥 | 去「我的证书」里导出。「我的证书」里找不到这张证书，或证书下面没有私钥，说明 CSR 是在另一台 Mac 上生成的，或者证书是在别的机器上用 Xcode 创建的：去那台机器导出；找不到那台机器，就按第 2 节重新创建一张证书。旧证书如果从未用来签名分发过，可以在开发者网站撤销，腾出名额 |
+
+**用 `.cer` 补上证书**（适用于“私钥 `1`、证书 `0`”）。不想重新导出时，可以用现有的私钥文件和证书合成一个完整的 `.p12`：
+
+1. 在 [Certificates](https://developer.apple.com/account/resources/certificates/list) 中点开这张 Developer ID Application 证书，点 **Download**，得到 `developerID_application.cer`。随时可以重新下载。
+2. 把证书转成 PEM：
+
+```bash
+openssl x509 -inform DER -in developerID_application.cer -out developer-id.pem
+```
+
+3. 取出私钥（这是未加密的私钥文件，第 5 步会删掉）：
+
+```bash
+openssl pkcs12 -in DeveloperID.p12 -nocerts -nodes -out developer-id.key
+```
+
+4. 合成新的 `.p12`，并设置导出密码：
+
+```bash
+openssl pkcs12 -export -inkey developer-id.key -in developer-id.pem -out DeveloperID-full.p12 -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1
+```
+
+5. 删除未加密的私钥文件：
+
+```bash
+rm developer-id.key
+```
+
+6. 对 `DeveloperID-full.p12` 重新执行上面两条自检命令，然后用它更新 Secret（第 5、6 节）。如果第 4 步设的密码和原来不同，也要更新 `MACOS_CERT_PASSWORD`。
 
 ### 2.5 没有 Mac 时：用 OpenSSL 生成
 
@@ -265,8 +302,9 @@ spctl --assess --type execute --verbose=2 "Not Brother.app"
 
 | 失败的步骤和现象 | 原因与处理 |
 | --- | --- |
-| “Import the Developer ID certificate” 报错 `MACOS_CERT_P12_BASE64 has no private key` | Secret 里的 `.p12` 只有证书。先比对日志里的 `Secret .p12 sha256` 和本地 `shasum -a 256 DeveloperID.p12`：不一致，说明 Secret 里存的是另一个文件，用第 6.1 节的 `gh secret set` 从正确的文件重新写入；一致，就按第 2.4 节确认，再按第 2.3 节在「我的证书」里重新导出 |
-| 旧版 workflow 报 `security: SecItemCopyMatching: The specified item could not be found in the keychain.`，且导入时只显示 `1 certificate imported.` | macOS 的 `security import` 没有读出私钥：要么 `.p12` 真的没有私钥，要么私钥是不加密的 `Key bag`，或用了它不支持的算法（OpenSSL 能读出，`security` 会悄悄跳过）。现在的 workflow 会先用 OpenSSL 把 `.p12` 重新打包成 3DES/SHA1 格式再导入，后两种情况会自动修正 |
+| “Import the Developer ID certificate” 报错 `MACOS_CERT_P12_BASE64 is incomplete`，日志显示 `Secret .p12 holds 1 private key(s) and 0 certificate(s)`（结构里只有 `Shrouded Keybag`，没有 `Certificate bag`） | 导出的是私钥那一行，`.p12` 里没有证书。按第 2.4 节的表格处理：重新导出证书那一行，或者用 `.cer` 补上证书 |
+| 同一步报 `is incomplete`，日志显示 `0 private key(s)` | `.p12` 里只有证书。先比对日志里的 `Secret .p12 sha256` 和本地 `shasum -a 256 DeveloperID.p12`：不一致，说明 Secret 里存的是另一个文件，用第 6.1 节的 `gh secret set` 从正确的文件重新写入；一致，就按第 2.4 节处理 |
+| 旧版 workflow 报 `security: SecItemCopyMatching: The specified item could not be found in the keychain.` | 没有得到完整的签名身份：`.p12` 缺私钥或缺证书，或者私钥的加密格式 macOS 读不了。（旧版日志里的 `1 certificate imported.` 是 Apple 中间证书的导入结果，不能说明 `.p12` 的内容。）现在的 workflow 会逐项检查并报出具体原因；格式问题会先用 OpenSSL 重新打包成 3DES/SHA1，自动修正 |
 | “Import the Developer ID certificate” 报错 `Could not read MACOS_CERT_P12_BASE64`，或 `security import` 报 MAC 校验失败或密码错误 | `MACOS_CERT_PASSWORD` 与导出密码不一致；或者 `.p12` 是用 OpenSSL 3 默认算法生成的，按第 2.5 节的参数重新生成 |
 | 同一步报 `No valid Developer ID Application identity`，但日志显示 `1 identity imported.` | 证书不是 Developer ID Application（例如误建成 Apple Development 或 Developer ID Installer），或者证书已被撤销或过期。到开发者网站核对证书类型和状态 |
 | `security import` 报格式错误 | base64 粘贴不完整或混入了空格、换行。按第 5 节的 `cmp` 自检后重新粘贴 |

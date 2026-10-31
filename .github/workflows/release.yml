@@ -109,7 +109,8 @@ jobs:
           # The intermediate goes in first so find-identity can validate the chain.
           curl -fsSL -o "$RUNNER_TEMP/DeveloperIDG2CA.cer" \
             https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
-          security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$KEYCHAIN" || true
+          echo "Apple Developer ID G2 intermediate: $(security import \
+            "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$KEYCHAIN" 2>&1 || true)"
           # Repack the .p12 with OpenSSL before handing it to macOS: Keychain
           # Access, Xcode, and OpenSSL 1/3 exports differ in bag encryption,
           # and `security import` silently drops key bags it cannot read.
@@ -137,10 +138,18 @@ jobs:
           echo "Secret .p12 structure (no key material):"
           p12_read -info -noout 2>&1 | sed 's/^/  /'
           key_lines=$(p12_read -nocerts -nodes 2>/dev/null \
-            | grep -c "PRIVATE KEY-----" || true)
-          if [ "$key_lines" -eq 0 ]; then
+            | grep -c "BEGIN.*PRIVATE KEY" || true)
+          cert_lines=$(p12_read -nokeys 2>/dev/null \
+            | grep -c "BEGIN CERTIFICATE" || true)
+          echo "Secret .p12 holds $key_lines private key(s) and $cert_lines certificate(s)."
+          if [ "$key_lines" -eq 0 ] || [ "$cert_lines" -eq 0 ]; then
             rm -f "$source_p12"
-            echo "::error title=MACOS_CERT_P12_BASE64 has no private key::The stored .p12 contains only a certificate. If the sha256 above differs from your local DeveloperID.p12, the secret holds a different file; otherwise re-export from Keychain Access > login > My Certificates (docs/apple-signing.md, section 2.3)."
+            if [ "$key_lines" -eq 0 ]; then
+              missing="no private key (only the certificate was exported)"
+            else
+              missing="no certificate (only the private key row was exported)"
+            fi
+            echo "::error title=MACOS_CERT_P12_BASE64 is incomplete::The stored .p12 has $missing. Signing needs both. In Keychain Access > login > My Certificates, right-click the Developer ID Application certificate row itself (not the key under it) and export .p12, or rebuild it with OpenSSL (docs/apple-signing.md, sections 2.3 and 2.4). If the sha256 above differs from your local file, the secret holds a different file."
             exit 1
           fi
           # -export reads its input twice (key, then certificates), so it needs
