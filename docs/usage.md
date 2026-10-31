@@ -2,6 +2,19 @@
 
 **简体中文** · [English](en/usage.md)
 
+## 安装方式
+
+面向用户的完整步骤在根目录 [README 的「安装」](../README.md#%E5%AE%89%E8%A3%85)，这里只列要点：
+
+| 方式 | 安装来源 | 更新 |
+| --- | --- | --- |
+| Chrome 网上应用店 | 商店条目 | 自动 |
+| Chrome 离线安装 | [GitHub Release](https://github.com/interjc/chrome-x-not-brother/releases/latest) 里的 `not-brother-<版本>.zip`，解压后在 `chrome://extensions` 用「加载已解压的扩展程序」加载 | 手动替换文件夹内容后点「重新加载」 |
+| Safari（macOS，Safari 18.4+） | GitHub Release 里的 `not-brother-safari-app-<版本>.zip`，签名并公证过的 Mac App | 手动下载新 App 替换 |
+| Safari 临时加载 | GitHub Release 里的 `not-brother-safari-<版本>.zip`，在 Safari 开发者设置里用 Add Temporary Extension 加载 | 退出 Safari 即失效 |
+
+离线版、商店版和 Safari 版各自独立保存本地数据，换用另一种安装方式前，先导出档案和规则 JSON，见 [备份与恢复](#备份与恢复)。Release 的构建与附件说明见 [发布指南](release.md#github-release-与-safari) 和 [Safari 支持](safari.md)。
+
 ## 安装开发版本
 
 1. 按 [开发指南](development.md) 生成 `dist/`。
@@ -59,6 +72,8 @@
 ## Side Panel
 
 点击扩展工具栏图标打开侧栏。顶部可在 **状态**、**规则** 和 **选项** 之间切换：状态是观察概览和用户列表；规则页是拦截概览和当前登录账号的拦截规则编辑器；选项里是界面语言、页面徽标和时间线过滤。右键工具栏 NB 图标选择 **选项**，会直接打开侧栏的选项标签。`chrome://extensions` 里该扩展的“扩展程序选项”走同一入口。
+
+Safari 没有侧栏：点击工具栏图标会以弹窗（`popup.html`）打开同样的三个标签页；工具栏右键的“选项”在新标签页打开独立选项页。
 
 - 点击互关、单向关注、关注了你或拉黑了你的分类数字，可筛选下方用户；点击变化提示可查看全部未确认变化；
 - 再次点击当前分类可恢复全部最近观察；没有匹配用户时会显示筛选空状态；

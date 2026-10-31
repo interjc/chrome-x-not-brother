@@ -88,6 +88,27 @@ Use a dedicated test profile. Do not give account credentials to development too
 32. When upgrading from an older version, seed `chrome.storage.local` with old settings. If sync is empty, confirm preferences migrate into sync and `viewerHandle` into the new local key. If sync already has different preferences, confirm the sync values are kept. Changing preferences while signed out of Chrome or with sync off should still save immediately and survive restart. After signing in with Chrome Sync enabled, Chrome may restore those small preferences on other profiles; the relationship archive and `viewerHandle` must not appear there.
 33. On Side Panel Options, Options, and the fieldbook, confirm **Edit rules & view guide** sits beside **Apply custom filter rules**. Side Panel clicks switch to the Rules tab; fieldbook Options clicks open the Rules page. Confirm the guide fully explains handles, text, regex, expiry, update-by-id versus clear-and-replace, and privacy, and that the sample JSON parses and passes schema. Then add all three rule types and test enablement, case, and future/past expiry. With the master switch on, only matching posts on allowed surfaces hide; Profile, HoverCard, UserCell, and follow lists stay visible; post text does not appear in IndexedDB or exports. Download rule JSON, restore with clear-and-replace, then import from a public Gist that has one JSON file using update-by-id. Confirm same ids are replaced, new ids are appended, and Chrome asks for GitHub host access only after the click. Denying permission, using HTTP, exceeding 1 MiB, multiple JSON files, or an invalid regex leaves existing rules unchanged and shows a readable error. Turning the master switch off restores every rule-hidden post. Status, the fieldbook stats bar, and the dock should show active-rule count and lifetime intercepts.
 
+## Chrome offline install acceptance
+
+1. Download `not-brother-<version>.zip` from the GitHub Release and confirm it matches the Store upload `artifacts/not-brother-<version>.zip` for the same version.
+2. Unzip it into a fixed folder, turn on Developer mode in `chrome://extensions`, and add it with Load unpacked. Confirm the install guide, consent flow, and toolbar state match the Store build.
+3. Replace the folder contents with a newer zip, click Reload, and refresh X tabs. Confirm the archive and rules remain.
+4. Confirm it has a different extension ID from the Store build and does not share data; export the archive JSON and rules JSON as the README describes, import them, and confirm the migration works.
+
+## Safari manual acceptance
+
+Run this only for major versions or when users report problems. Use `not-brother-safari-app-<version>.zip` from the Release on Safari 18.4 or later on macOS.
+
+1. After unzipping and dragging it into Applications, `spctl -a -vvv "/Applications/Not Brother.app"` shows `accepted` and `source=Notarized Developer ID`, and opening the app shows no Gatekeeper warning.
+2. `codesign -d --entitlements - "/Applications/Not Brother.app/Contents/PlugIns/Not Brother Extension.appex"` includes `com.apple.security.app-sandbox`, and `pluginkit -mAvvv -p com.apple.Safari.web-extension` lists `io.github.interjc.notbrother.Extension`.
+3. After opening the app once, Not Brother appears in Safari Settings → Extensions and can be turned on.
+4. Before x.com is allowed, the page shows no dock and no badges. After choosing Always Allow on This Website and refreshing, the dock appears.
+5. Before consent there are no relationship badges and nothing is stored. After consent, Home and follow lists show badges, and recent observations never include the viewer.
+6. The toolbar icon opens the popup; the Status / Rules / Options tabs all work and fit inside it. The pre-consent toolbar context-menu entry and the dock's rule-editor entry open the dashboard.
+7. Turn on a timeline filter and a custom rule, and confirm posts hide accordingly.
+8. Quit and reopen Safari, then install a newer app over the old one. The archive, rules, and settings are still there.
+9. In light and dark mode, the popup, the dashboard, and the badges on X stay readable.
+
 ## Boundary checks
 
 In Chrome DevTools Network and on the X page, confirm the extension does not make X API requests, auto-scroll or navigate, click X buttons, or send developer-cloud telemetry or remote scripts. Only a user-clicked remote rule import visits an authorized public HTTPS/Gist source, and that request carries no X data or local rules. Chrome's own settings sync does not include the relationship archive, the rule document, or `viewerHandle`.

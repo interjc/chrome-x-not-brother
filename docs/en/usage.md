@@ -2,6 +2,19 @@
 
 [简体中文](../usage.md) · **English**
 
+## Install methods
+
+Full user-facing steps are in the root [README Install section](../../README.en.md#install). In short:
+
+| Method | Source | Updates |
+| --- | --- | --- |
+| Chrome Web Store | The Store listing | Automatic |
+| Chrome offline install | `not-brother-<version>.zip` from the [GitHub Release](https://github.com/interjc/chrome-x-not-brother/releases/latest), unzipped and added with Load unpacked in `chrome://extensions` | Replace the folder contents, then click Reload |
+| Safari (macOS, Safari 18.4+) | `not-brother-safari-app-<version>.zip` from the GitHub Release, a signed and notarized Mac app | Download and replace the app |
+| Safari temporary load | `not-brother-safari-<version>.zip` from the GitHub Release, added with Add Temporary Extension in Safari's Developer settings | Gone when Safari quits |
+
+The offline, Store, and Safari installs each keep their own local data. Before switching to another install method, export the archive and rules JSON; see [Backup and restore](#backup-and-restore). How Releases are built is in [Release](release.md#github-releases-and-safari) and [Safari support](../safari.md) (Simplified Chinese).
+
 ## Load a development build
 
 1. Produce `dist/` with the [development guide](development.md).
@@ -59,6 +72,8 @@ Installer-facing authoring steps, the form, export/backup, and recommended hosti
 ## Side Panel
 
 Click the toolbar icon to open the side panel. The top switches between **Status**, **Rules**, and **Options**: Status is the observation overview and user list; Rules is the hiding overview and the signed-in account's filter-rule editor; Options holds interface language, page badges, and timeline filters. Right-click the toolbar NB icon and choose **Options** to open the Options tab directly. The extension's "Extension options" entry on `chrome://extensions` uses the same path.
+
+Safari has no side panel: the toolbar icon opens the same three tabs as a popup (`popup.html`), and the toolbar menu's Options entry opens the standalone Options page in a new tab.
 
 - Activate the mutual, following-only, follows-you, or blocked-you counts to filter the list below; activate the changed callout to see every unreviewed change.
 - Activate the selected category again to restore all recent observations. A filtered empty state appears when nothing matches.

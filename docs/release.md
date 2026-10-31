@@ -99,9 +99,19 @@ npm run release
 2. 如果 `v<version>` 还没有 Release：创建 tag 和 Release，附上 Chrome ZIP 和 Safari 扩展文件夹 ZIP，正文取自 [store-listing.md](store-listing.md) 中的英文更新说明（`scripts/release-notes.mjs`）。如果已有 Release：只用 `--clobber` 覆盖 Safari 文件夹 ZIP，Chrome ZIP 保持不变；
 3. 仓库变量 `SAFARI_SIGNING` 为 `true` 时，再在 macOS 上生成 Safari App，用 Developer ID 签名、公证，作为 `not-brother-safari-app-<version>.zip` 上传到同一个 Release（已有同名附件就覆盖）。
 
+每个 Release 带三个附件。文件名、Release 页面上显示的英文标签和正文里的“Which file do I need?”表格，都由 `scripts/release-notes.mjs` 的 `releaseAssets()` 统一生成；workflow 上传时用 `file#label` 设置标签：
+
+| 附件 | 内容 | 给谁 | 何时更新 |
+| --- | --- | --- | --- |
+| `not-brother-safari-app-<version>.zip` | 签名并公证的 Safari Mac App | Safari 用户 | 每次 push 到 `main` 覆盖 |
+| `not-brother-<version>.zip` | Chrome 扩展包，与 Chrome 商店上传的文件相同 | Chrome 离线安装，以及存档 | 只在版本首次发布时上传 |
+| `not-brother-safari-<version>.zip` | 未签名的 Safari 扩展文件夹 | 开发和测试时临时加载 | 每次 push 到 `main` 覆盖 |
+
+GitHub 还会自动附上两个 Source code 压缩包，那是源码快照，不是安装包。面向用户的下载说明写在 README 的「安装」一章；改动附件名或用途时，要同时更新 `releaseAssets()`、README 两个语言版本和本节。
+
 所以 Safari 相关的修复合并后，当前版本的 Safari 包就会更新，不必升版本号；Chrome ZIP 只在新版本第一次发布时上传。改了签名 Secrets 之后，可以在 Actions 页面手动 **Run workflow** 重跑。Release 附件名在 GitHub 上不区分大小写，新增附件时不要只用大小写区分。
 
-Chrome Web Store 上传仍然手动完成。签名所需的证书和 API Key 配置见 [Apple 签名与公证密钥配置](apple-signing.md)，Safari 方案说明见 [Safari 支持方案](safari.md)。
+Chrome Web Store 上传仍然手动完成。签名所需的证书和 API Key 配置见 [Apple 签名与公证密钥配置](apple-signing.md)，Safari 方案说明见 [Safari 支持](safari.md)。
 
 ## 回滚
 

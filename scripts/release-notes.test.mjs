@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractReleaseNotes, releaseBody } from "./release-notes.mjs";
+import { assetLabel, extractReleaseNotes, releaseAssets, releaseBody } from "./release-notes.mjs";
 
 const listing = `## English listing
 
@@ -28,14 +28,31 @@ describe("release notes", () => {
   });
 
   it("names release assets that stay distinct on GitHub's case-insensitive asset store", () => {
-    const names = [...releaseBody("- Fix.").matchAll(/`([^`]+\.zip)`/g)].map((match) => match[1]);
-    expect(names).toHaveLength(3);
+    const names = releaseAssets("1.2.3").map((asset) => asset.name);
+    expect(names).toEqual([
+      "not-brother-safari-app-1.2.3.zip",
+      "not-brother-1.2.3.zip",
+      "not-brother-safari-1.2.3.zip",
+    ]);
     expect(new Set(names.map((name) => name.toLowerCase())).size).toBe(names.length);
   });
 
-  it("lists the downloads after the notes", () => {
-    const body = releaseBody("- Fix.");
+  it("labels each asset with its audience and keeps the file name visible", () => {
+    for (const asset of releaseAssets("1.2.3")) {
+      expect(assetLabel(asset.name)).toBe(asset.label);
+      expect(asset.label).toContain(`(${asset.name})`);
+    }
+    expect(assetLabel("not-brother-safari-app-1.2.3.zip")).toMatch(/download this/);
+    expect(assetLabel("not-brother-1.2.3.zip")).toMatch(/offline install/);
+    expect(() => assetLabel("something-else.zip")).toThrow(/Unknown release asset/);
+  });
+
+  it("puts the notes first, then a table of every file", () => {
+    const body = releaseBody("- Fix.", "1.2.3");
     expect(body.startsWith("- Fix.\n")).toBe(true);
-    expect(body).toContain("Safari 18.4+");
+    for (const asset of releaseAssets("1.2.3")) expect(body).toContain(`\`${asset.name}\``);
+    expect(body).toContain("Safari users: download this one");
+    expect(body).toContain("Source code");
+    expect(body).not.toContain("<version>");
   });
 });
