@@ -57,9 +57,12 @@ jobs:
           VERSION: ${{ steps.meta.outputs.version }}
         run: |
           node scripts/release-notes.mjs "$VERSION" > "$RUNNER_TEMP/notes.md"
+          chrome="not-brother-$VERSION.zip"
+          safari="not-brother-safari-$VERSION.zip"
+          # file#label shows a plain-language label on the Release page.
           gh release create "v$VERSION" \
-            "artifacts/not-brother-$VERSION.zip" \
-            "artifacts/not-brother-safari-$VERSION.zip" \
+            "artifacts/$chrome#$(node scripts/release-notes.mjs --label "$chrome")" \
+            "artifacts/$safari#$(node scripts/release-notes.mjs --label "$safari")" \
             --target "$GITHUB_SHA" \
             --title "Not Brother v$VERSION" \
             --notes-file "$RUNNER_TEMP/notes.md"
@@ -69,9 +72,19 @@ jobs:
         env:
           VERSION: ${{ steps.meta.outputs.version }}
         run: |
-          gh release upload "v$VERSION" "artifacts/not-brother-safari-$VERSION.zip" --clobber
+          safari="not-brother-safari-$VERSION.zip"
+          gh release upload "v$VERSION" \
+            "artifacts/$safari#$(node scripts/release-notes.mjs --label "$safari")" --clobber
           node scripts/release-notes.mjs "$VERSION" > "$RUNNER_TEMP/notes.md"
           gh release edit "v$VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+          # Relabel the Chrome ZIP in place; its file stays as first published.
+          chrome="not-brother-$VERSION.zip"
+          chrome_api=$(gh release view "v$VERSION" --json assets \
+            --jq ".assets[] | select(.name == \"$chrome\") | .apiUrl")
+          if [ -n "$chrome_api" ]; then
+            gh api -X PATCH "$chrome_api" -f name="$chrome" \
+              -f label="$(node scripts/release-notes.mjs --label "$chrome")" >/dev/null
+          fi
           echo "Replaced not-brother-safari-$VERSION.zip from $GITHUB_SHA; the Chrome ZIP is unchanged."
 
   safari-app:
@@ -281,8 +294,10 @@ jobs:
         run: |
           # Asset names are case-insensitive on GitHub, so this must not differ
           # from not-brother-safari-<version>.zip by case alone.
-          ditto -c -k --keepParent "$APP" "$RUNNER_TEMP/not-brother-safari-app-$VERSION.zip"
-          gh release upload "v$VERSION" "$RUNNER_TEMP/not-brother-safari-app-$VERSION.zip" --clobber
+          app_zip="not-brother-safari-app-$VERSION.zip"
+          ditto -c -k --keepParent "$APP" "$RUNNER_TEMP/$app_zip"
+          gh release upload "v$VERSION" \
+            "$RUNNER_TEMP/$app_zip#$(node scripts/release-notes.mjs --label "$app_zip")" --clobber
 
       - name: Remove signing material
         if: always()

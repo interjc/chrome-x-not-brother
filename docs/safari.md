@@ -2,7 +2,7 @@
 
 Chrome Web Store 仍是唯一的正式发布渠道。Safari 只是锦上添花：**不上 Mac App Store，也不增加人工发布步骤**。每次合并到 `main`，GitHub Actions 都会重新构建 Safari 安装包，挂到当前版本的 GitHub Release 上（版本号没变就覆盖），Safari 用户自己下载安装。安装步骤写在 [README](../README.md#safari) / [README.en](../README.en.md#safari)。
 
-兼容性结论来自 Apple 官方文档、WWDC26 与 MDN `@mdn/browser-compat-data` 8.1.7（见文末来源），最后核验于 2026-10-31。
+**状态**：v0.5.14 的签名 App 已在维护者的 Mac 上完成首次安装测试（2026-10-31）：Safari 能识别扩展，扩展可以正常运行。兼容性结论来自 Apple 官方文档、WWDC26 与 MDN `@mdn/browser-compat-data` 8.1.7（见文末来源），最后核验于 2026-10-31。
 
 ## 1. 结构
 
@@ -15,21 +15,17 @@ Chrome Web Store 仍是唯一的正式发布渠道。Safari 只是锦上添花�
 
 本地发版流程不变：`npm run release:patch` → 上传 Chrome 商店 → 推到 `main`。
 
-## 2. 用户的两种安装方式
+## 2. 用户怎么安装
 
-### A. 签名并公证的 App（推荐）
+面向用户的步骤（含“下载哪个文件”的表格、更新、卸载、常见问题）写在 [README「安装」](../README.md#%E5%AE%89%E8%A3%85) / [README.en Install](../README.en.md#install)，这里只记设计取舍。
 
-Release 附件 `not-brother-safari-app-<version>.zip`：一个用 Developer ID 签名并经 Apple 公证的 macOS App，扩展就在这个 App 里。
+| 附件 | 用途 | 说明 |
+| --- | --- | --- |
+| `not-brother-safari-app-<version>.zip` | **推荐**：签名并公证的 Mac App，扩展就在其中 | 需要 Safari 18.4 及以上：Apple 从这个版本起允许在 App Store 之外分发 Developer ID 签名、公证过的扩展。Gatekeeper 不会拦，也不需要开发者模式，装好后长期有效。不会自动更新；Bundle ID 不变时覆盖安装会保留数据 |
+| `not-brother-safari-<version>.zip` | 后备：未签名的扩展文件夹 | Safari 26 起可以在「设置 → 开发者」里用 Add Temporary Extension 直接加载，需要先打开「允许未签名的扩展」。退出 Safari 后会被卸载，只适合开发测试，或者在签名还没配置好时临时提供 |
+| `not-brother-<version>.zip` | Chrome 扩展包 | 与 Chrome 商店上传的文件相同，同时用于 Chrome 离线安装 |
 
-- 要求 **Safari 18.4 及以上**：Apple 从这个版本起允许在 App Store 之外分发 Developer ID 签名、公证过的 Safari 扩展。
-- 已经公证，Gatekeeper 不会拦，也不需要开发者模式；装好后长期有效。
-- 不会自动更新：用户下载新版本覆盖旧 App。扩展数据保存在扩展自己的存储里，Bundle ID 不变时覆盖安装会保留数据。
-
-### B. 临时扩展（零签名后备）
-
-Release 附件 `not-brother-safari-<version>.zip`：扩展文件夹本身。Safari 26 起可以在「设置 → 开发者」里用 **Add Temporary Extension…** 直接加载，需要先打开「允许未签名的扩展」。**退出 Safari 后扩展会被卸载**，适合尝鲜，或者在签名还没配置好时先提供一个渠道。
-
-不提供未签名的 `.app`：用户既要绕过 Gatekeeper，又要在每次启动 Safari 时打开「允许未签名的扩展」，比 B 还麻烦。
+不提供未签名的 `.app`：用户既要绕过 Gatekeeper，又要在每次启动 Safari 时打开「允许未签名的扩展」，比临时加载还麻烦。
 
 ## 3. 自动构建
 
@@ -43,7 +39,7 @@ Release 附件 `not-brother-safari-<version>.zip`：扩展文件夹本身。Safa
 
 ### 3.2 `release` job（Ubuntu）
 
-`npm ci` → `npm run check` → `npm run package`，然后新版本执行 `gh release create v<version>`，附上 Chrome ZIP 和 Safari 文件夹 ZIP；已有版本执行 `gh release upload --clobber`，只替换 Safari 文件夹 ZIP。正文由 `scripts/release-notes.mjs` 从 [store-listing.md](store-listing.md) 中提取 `### Version <version> release notes`，并追加下载说明。
+`npm ci` → `npm run check` → `npm run package`，然后新版本执行 `gh release create v<version>`，附上 Chrome ZIP 和 Safari 文件夹 ZIP；已有版本执行 `gh release upload --clobber`，只替换 Safari 文件夹 ZIP。正文由 `scripts/release-notes.mjs` 从 [store-listing.md](store-listing.md) 中提取 `### Version <version> release notes`，再追加“Which file do I need?”表格。每个附件上传时都通过 `file#label` 带一个显示标签（例如 “Safari (Mac): app, download this (…)”），文字来自同一脚本的 `releaseAssets()`。覆盖 Safari 附件时会同时重新生成 Release 正文，并给首次发布时上传的 Chrome ZIP 补上标签，但不替换文件本身。
 
 ### 3.3 `safari-app` job（macOS，可选）
 
@@ -116,8 +112,44 @@ macOS runner 对公开仓库免费；私有仓库按 10 倍系数消耗 Actions 
 ## 6. 测试与维护约定
 
 - **自动**：`npm run check` 包含 Safari 形态的 service worker 测试、`toSafariManifest()` 和 `release-notes.mjs` 的单测；`npm run validate:dist` 校验两份 manifest。这些都在 Linux 上运行。
-- **人工**：只在大版本或用户报告问题时，用方式 A 的 App 在 Safari 中冒烟测试一次：授权 x.com、同意流程、徽标、弹窗、dashboard、时间线隐藏、重启后数据仍在。日常开发只测 Chrome。
+- **人工**：只在大版本或用户报告问题时，用签名 App 在 Safari 中冒烟测试一次：Safari 扩展列表里能看到 Not Brother、授权 x.com、同意流程、徽标、弹窗三个标签页、dashboard、时间线隐藏、重启 Safari 后数据仍在。清单见 [测试指南](testing.md#safari-手工验收)。日常开发只测 Chrome。
+- **在 Mac 上自检安装包**（App 已拖进「应用程序」）：
+
+```bash
+spctl -a -vvv "/Applications/Not Brother.app"
+```
+
+应显示 `accepted` 和 `source=Notarized Developer ID`。
+
+```bash
+codesign -d --entitlements - "/Applications/Not Brother.app/Contents/PlugIns/Not Brother Extension.appex"
+```
+
+应包含 `com.apple.security.app-sandbox`。如果只输出一行 `Executable=…`，Safari 不会识别这个扩展。
+
+```bash
+pluginkit -mAvvv -p com.apple.Safari.web-extension | grep -i -A3 notbrother
+```
+
+应能看到 `io.github.interjc.notbrother.Extension`；没有输出说明系统没有登记这个扩展。
 - **约定**：新代码用到 Safari 不支持的 API 时，必须经 `src/platform/` 做能力检测并提供兜底；产品边界与 Chrome 版完全一致。
+
+## 7. 首次发布踩过的坑
+
+v0.5.14 是第一次自动发布 Safari 包，从 Release 建好到 Safari 能识别扩展，一共修了下面这些问题。workflow 里对应的检查都会在出错时给出明确报错，这里记录原因，以后遇到类似现象可以直接对照。
+
+| # | 现象 | 原因 | 现在的处理 |
+| --- | --- | --- | --- |
+| 1 | Safari 中 service worker 起不来 | 模块顶层直接调用 `chrome.sidePanel.setPanelBehavior`，Safari 没有 `sidePanel` | `src/platform/capabilities.ts` 做能力检测；用 Safari 形态的 `chrome` 跑单测 |
+| 2 | 导入证书时报 `SecItemCopyMatching: The specified item could not be found` | Secret 里的 `.p12` 只有私钥：在钥匙串的「密钥」里导出了 CSR 生成的那把私钥（以 CSR 常用名称命名），而不是「我的证书」里的 `Developer ID Application: …` | 导入前分别清点私钥和证书，缺哪个就明确报哪个；手册写明两者的区别，并提供用 `.cer` 补全的办法（[签名手册](apple-signing.md) 第 2.3–2.4 节） |
+| 3 | 日志里的 `1 certificate imported.` 误导排查 | 那一行其实是 Apple 中间证书的导入结果，不是 `.p12` 的；另外 macOS `security import` 遇到读不了的私钥会悄悄跳过（例如未加密的 `Key bag`、PBES2 加密） | 中间证书的导入结果单独标注；`.p12` 先用 OpenSSL 读出，再重新打包成 3DES/SHA1 后导入；日志打印 `.p12` 的 sha256 和结构，方便和本地文件比对 |
+| 4 | archive 报 `Embedded binary's bundle identifier is not prefixed with the parent app's bundle identifier` | 打包器只把 `--bundle-identifier` 用在扩展上，App 的 ID 由 App 名推导成了 `io.github.interjc.Not-Brother` | 生成工程后统一改成 `BUNDLE_ID` / `BUNDLE_ID.Extension`，Swift 里的扩展 ID 也一起改 |
+| 5 | App 的最低系统版本是 macOS 26.5 | 打包器默认用 runner 自带的 SDK 版本作为部署目标 | 固定 `MACOSX_DEPLOYMENT_TARGET=13.0` |
+| 6 | 上传签名 App 报 `ReleaseAsset.name already exists` | GitHub 附件名不区分大小写，`Not-Brother-Safari-…` 和 `not-brother-safari-…` 被视为同名 | 改名为 `not-brother-safari-app-…`；单测保证三个附件名忽略大小写后仍不重复 |
+| 7 | App 已公证、能打开，但 Safari「扩展」里没有它；`pluginkit` 查不到 | 打包器生成的工程在手动 Developer ID 签名下，App 和扩展都**没有任何 entitlements**；Safari 忽略未沙盒化的扩展，而签名校验、Gatekeeper、公证都不会报错 | `scripts/safari/NotBrother.entitlements` 经 `CODE_SIGN_ENTITLEMENTS` 用于两者；archive 后检查 `com.apple.security.app-sandbox`，缺失就让构建失败 |
+| 8 | 只有版本号变化才触发构建，修 Safari 问题要等升版本 | 最初的触发条件只看 `package.json` | 改为每次 push 到 `main` 都构建，版本号不变时只覆盖 Safari 附件 |
+
+另外，打包器会提示 manifest 中的 `type`、`open_in_tab`、`world` 不被“当前版本的 Safari”支持。首次安装测试中扩展运行正常，这条提示目前可以忽略；如果以后 Safari 上出现徽标不显示等问题，先从 `world: "MAIN"` 的 `page-bridge.js` 查起。
 
 ## 来源
 

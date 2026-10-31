@@ -16,13 +16,47 @@ Not Brother（中文名：不是兄弟；日文名：兄貴じゃない）是一
 
 ## 安装
 
-### Chrome 网上应用店
+### 先看这里：该用哪种方式
 
-打开 [不是兄弟 · Chrome 网上应用店](https://chromewebstore.google.com/detail/dioanbgbpklflgochbljdehpjidckgfd)，点击「添加至 Chrome」。
+| 你的情况 | 安装方式 | 会自动更新吗 |
+| --- | --- | --- |
+| 用 Chrome，能打开 Chrome 网上应用店 | [Chrome 网上应用店](#chrome-网上应用店推荐)（推荐） | 会 |
+| 用 Chrome，但打不开商店，或想装某个指定版本 | [Chrome 离线安装](#chrome-离线安装) | 不会 |
+| 用 Mac 上的 Safari（18.4 或更高版本） | [Safari](#safari) | 不会 |
+| 开发者 | [从源码加载](#从源码加载开发者) | — |
 
-### 从源码加载
+离线安装和 Safari 用的文件都在 [GitHub 下载页（最新版本）](https://github.com/interjc/chrome-x-not-brother/releases/latest)。页面底部的 **Assets** 里有这些文件，每个文件旁都有一行英文说明：
 
-适合开发者，或商店版本尚未更新到你需要的提交时：
+| 文件 | 是什么 | 谁需要 |
+| --- | --- | --- |
+| `not-brother-safari-app-<版本>.zip` | Safari 用的 Mac App，已经过 Apple 签名和公证 | **Safari 用户下载这个** |
+| `not-brother-<版本>.zip` | Chrome 扩展包，和 Chrome 商店里的版本完全相同 | 需要 Chrome 离线安装的用户 |
+| `not-brother-safari-<版本>.zip` | 未签名的 Safari 扩展文件夹，退出 Safari 后会失效 | 开发和测试时临时加载用，普通用户不需要 |
+| Source code (zip) / Source code (tar.gz) | GitHub 自动附带的源码快照 | 不是安装包，不用下载 |
+
+### Chrome 网上应用店（推荐）
+
+打开 [不是兄弟 · Chrome 网上应用店](https://chromewebstore.google.com/detail/dioanbgbpklflgochbljdehpjidckgfd)，点击「添加至 Chrome」。之后会自动更新。
+
+### Chrome 离线安装
+
+适合打不开 Chrome 网上应用店，或者需要某个指定版本的情况。需要 Chrome 116 或更高版本。
+
+1. 打开 [下载页](https://github.com/interjc/chrome-x-not-brother/releases/latest)，在 **Assets** 里下载 `not-brother-<版本>.zip`。想要旧版本，就到 [全部版本](https://github.com/interjc/chrome-x-not-brother/releases) 里找对应版本。
+2. 解压到一个**长期保留**的文件夹，例如「文稿 / Not Brother」。Chrome 每次启动都会从这个文件夹读取扩展，**之后不要删除或移动它**。
+3. 在地址栏打开 `chrome://extensions`，打开右上角的 **开发者模式**。
+4. 点击 **加载已解压的扩展程序**，选择刚才解压出来的文件夹（里面能直接看到 `manifest.json`）。
+5. 点工具栏上的拼图图标，把 Not Brother 固定到工具栏。打开 [x.com](https://x.com)，阅读并同意隐私说明后，扩展开始工作。
+
+需要知道的几点：
+
+- **不会自动更新。** 更新时下载新的 `not-brother-<版本>.zip`，解压后用其中的文件替换原文件夹里的内容，然后在 `chrome://extensions` 的 Not Brother 卡片上点「重新加载」（↻），再刷新已打开的 X 标签页。文件夹位置不变，本地数据就会保留。
+- **离线版和商店版是两个独立的扩展**，本地档案和规则不互通，也不要同时启用，否则页面上会出现两套徽标。要从一个版本换到另一个版本，先在旧版里导出档案 JSON（见 [关系档案库](#关系档案库)）和规则 JSON（见 [导出和导入](#导出和导入)），装好新版后再导入。
+- Chrome 启动时可能会提示关闭开发者模式下的扩展，选择保留即可。
+
+### 从源码加载（开发者）
+
+适合开发者，或者需要商店版本还没包含的提交时：
 
 1. 安装 [Chrome](https://www.google.com/chrome/) 116 或更高版本，以及 [nvm](https://github.com/nvm-sh/nvm)。
 2. 克隆仓库并构建：
@@ -43,42 +77,55 @@ npm run build
 
 ### Safari
 
-Safari 版和 Chrome 版是同一份代码，但不上 App Store，需要从 GitHub 下载安装，也不会自动更新。支持 macOS 上的 **Safari 18.4 或更高版本**（「Safari →关于 Safari」可查看版本）。
+Safari 版和 Chrome 版是同一份代码，但不上 App Store，需要从 GitHub 下载安装，也不会自动更新。需要 macOS 上的 **Safari 18.4 或更高版本**，可以在「Safari → 关于 Safari」里查看版本。
 
-**安装**
+**第一次安装**
 
-1. 打开 [最新版本的下载页](https://github.com/interjc/chrome-x-not-brother/releases/latest)，在页面底部的 **Assets** 里下载 `not-brother-safari-app-<版本>.zip`。
-2. 双击解压，把得到的 **Not Brother.app** 拖进「应用程序」文件夹。
-3. 打开「应用程序」里的 **Not Brother**。这个 App 已经过 Apple 公证，可以直接打开。它只用来把扩展装进 Safari，窗口里会提示去 Safari 设置启用扩展，点按钮或直接关掉都行。
-4. 打开 Safari →「设置…」→「扩展」，勾选 **Not Brother**。
-5. 允许它在 x.com 上运行：打开 [x.com](https://x.com)，点地址栏旁的 Not Brother 图标，选择「**在此网站上始终允许**」。也可以在「设置 → 扩展 → Not Brother →编辑网站…」里把 x.com 设为「允许」。
-6. 第一次使用时会显示隐私说明，阅读并同意后，扩展才会开始标注和记录。
+| 步骤 | 操作 | 你会看到 |
+| --- | --- | --- |
+| 1 | 打开 [下载页](https://github.com/interjc/chrome-x-not-brother/releases/latest)，在 **Assets** 里下载 `not-brother-safari-app-<版本>.zip`（说明写着 “Safari (Mac): app, download this”） | 「下载」文件夹里出现这个 zip |
+| 2 | 双击 zip 解压，把 **Not Brother.app** 拖进「应用程序」文件夹 | 「应用程序」里出现 Not Brother |
+| 3 | 打开一次「应用程序」里的 **Not Brother** | 一个小窗口，提示在 Safari 设置里启用扩展。App 已经过 Apple 公证，可以直接打开。这个窗口可以直接关掉，之后也不需要再打开 App |
+| 4 | 打开 Safari →「设置…」→「扩展」，勾选 **Not Brother** | Not Brother 出现在已安装列表里，并被勾选 |
+| 5 | 打开 [x.com](https://x.com)，点地址栏旁的 Not Brother 图标，选择「**在此网站上始终允许**」 | 也可以在「设置 → 扩展 → Not Brother → 编辑网站…」里把 x.com 设为「允许」 |
+| 6 | 阅读并同意隐私说明 | 扩展开始在页面上标注关系 |
 
-**使用上和 Chrome 版的区别**
+**怎么确认装好了**：Safari 工具栏上有 Not Brother 图标；x.com 页面右下角有 NB 悬浮球；时间线上的用户名旁开始出现关系徽标。
 
-- Safari 没有侧栏。点工具栏上的 Not Brother 图标，会以弹窗打开同样的「状态 / 规则 / 选项」三个标签页。
+**和 Chrome 版的区别**
+
+- Safari 没有侧栏。点工具栏上的 Not Brother 图标，会以弹窗打开同样的「状态 / 规则 / 选项」三个标签页；完整的档案库在新标签页中打开。
 - 设置只保存在这台 Mac 上，不会跨设备同步。
 
 **更新**
 
-到 [下载页](https://github.com/interjc/chrome-x-not-brother/releases/latest) 下载新的 `not-brother-safari-app-<版本>.zip`，先退出 Safari，再把新的 Not Brother.app 拖进「应用程序」并选择替换。本地档案、规则和设置都会保留。同一个版本号的 Safari 安装包也可能会更新修复，以下载页上最新的文件为准。
+1. 到 [下载页](https://github.com/interjc/chrome-x-not-brother/releases/latest) 下载新的 `not-brother-safari-app-<版本>.zip` 并解压。
+2. 退出 Safari（⌘Q）。
+3. 把新的 Not Brother.app 拖进「应用程序」，选择「替换」，然后打开一次。
 
-**在 Safari 扩展列表里找不到 Not Brother？**
-
-先完全退出 Safari（⌘Q），再打开一次「应用程序」里的 Not Brother，然后重新打开 Safari。仍然没有的话，到 [下载页](https://github.com/interjc/chrome-x-not-brother/releases/latest) 下载最新的 `not-brother-safari-app-<版本>.zip` 替换旧 App：较早构建的安装包有缺陷，Safari 会忽略其中的扩展。
+本地档案、规则和设置都会保留。同一个版本号的 Safari 安装包也可能会更新修复，以下载页上最新的文件为准。
 
 **卸载**
 
-先在 Safari「设置 → 扩展」里取消勾选，再把「应用程序」里的 Not Brother.app 移到废纸篓。
+先在 Safari「设置 → 扩展」里取消勾选 Not Brother，再把「应用程序」里的 Not Brother.app 移到废纸篓。
 
-**不想安装 App？临时加载**
+**常见问题**
 
-适合尝鲜。**退出 Safari 后扩展会被移除**，下次要重新加载。
+| 现象 | 怎么办 |
+| --- | --- |
+| Safari「设置 → 扩展」里没有 Not Brother | 先退出 Safari（⌘Q），再打开一次 Not Brother.app，然后重新打开 Safari。确认 Safari 版本在 18.4 以上。仍然没有的话，下载最新的 `not-brother-safari-app-<版本>.zip` 替换旧 App：较早构建的安装包有缺陷，Safari 会忽略其中的扩展 |
+| x.com 上没有徽标，也没有 NB 悬浮球 | 还没允许它访问 x.com。点地址栏旁的 Not Brother 图标，选择「在此网站上始终允许」 |
+| 有 NB 悬浮球，但不标注 | 还没同意隐私说明。点 NB 悬浮球或工具栏图标，阅读并同意 |
+| 打开 App 时提示无法验证开发者 | 只从本仓库的 [下载页](https://github.com/interjc/chrome-x-not-brother/releases/latest) 下载，不要使用别处转发的副本 |
 
-1. 在下载页下载 `not-brother-safari-<版本>.zip`，然后解压。
+**临时加载（开发测试用）**
+
+不安装 App，直接加载扩展文件夹。**退出 Safari 后扩展会被移除**，下次需要重新加载。
+
+1. 在下载页下载 `not-brother-safari-<版本>.zip` 并解压。
 2. Safari →「设置…」→「高级」，勾选「显示网页开发者功能」。
-3. Safari →「设置…」→「开发者」，勾选「允许未签名的扩展」，点 **Add Temporary Extension…**，选择解压后包含 `manifest.json` 的那个文件夹。
-4. 按上面安装步骤的第 5、6 步，允许它访问 x.com 并同意隐私说明。
+3. Safari →「设置…」→「开发者」，勾选「允许未签名的扩展」，点击 **Add Temporary Extension…**，选择解压后包含 `manifest.json` 的文件夹。
+4. 按「第一次安装」的第 5、6 步，允许它访问 x.com 并同意隐私说明。
 
 ## 使用
 

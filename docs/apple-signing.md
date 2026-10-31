@@ -1,6 +1,6 @@
 # Apple 签名与公证密钥配置手册
 
-`.github/workflows/release.yml` 中的 `safari-app` job 做两件事：先用你的 **Developer ID Application 证书**给 Safari App 签名，再用 **App Store Connect API Key** 把 App 提交给 Apple 公证。本手册逐项说明这些材料怎么生成、生成后得到什么文件、要交给 GitHub 的是哪个值。方案背景见 [Safari 支持方案](safari.md)。
+`.github/workflows/release.yml` 中的 `safari-app` job 做两件事：先用你的 **Developer ID Application 证书**给 Safari App 签名，再用 **App Store Connect API Key** 把 App 提交给 Apple 公证。本手册逐项说明这些材料怎么生成、生成后得到什么文件、要交给 GitHub 的是哪个值。方案背景见 [Safari 支持](safari.md)。
 
 整个流程只需做一次。没配置之前，Release 里照样有 Chrome ZIP 和 Safari 临时加载用的文件夹 ZIP，只是没有签名 App。
 
@@ -300,21 +300,23 @@ spctl --assess --type execute --verbose=2 "Not Brother.app"
 
 ## 8. 常见失败
 
-| 失败的步骤和现象 | 原因与处理 |
-| --- | --- |
-| “Import the Developer ID certificate” 报错 `MACOS_CERT_P12_BASE64 is incomplete`，日志显示 `Secret .p12 holds 1 private key(s) and 0 certificate(s)`（结构里只有 `Shrouded Keybag`，没有 `Certificate bag`） | 导出的是私钥那一行，`.p12` 里没有证书。按第 2.4 节的表格处理：重新导出证书那一行，或者用 `.cer` 补上证书 |
-| 同一步报 `is incomplete`，日志显示 `0 private key(s)` | `.p12` 里只有证书。先比对日志里的 `Secret .p12 sha256` 和本地 `shasum -a 256 DeveloperID.p12`：不一致，说明 Secret 里存的是另一个文件，用第 6.1 节的 `gh secret set` 从正确的文件重新写入；一致，就按第 2.4 节处理 |
-| 旧版 workflow 报 `security: SecItemCopyMatching: The specified item could not be found in the keychain.` | 没有得到完整的签名身份：`.p12` 缺私钥或缺证书，或者私钥的加密格式 macOS 读不了。（旧版日志里的 `1 certificate imported.` 是 Apple 中间证书的导入结果，不能说明 `.p12` 的内容。）现在的 workflow 会逐项检查并报出具体原因；格式问题会先用 OpenSSL 重新打包成 3DES/SHA1，自动修正 |
-| “Import the Developer ID certificate” 报错 `Could not read MACOS_CERT_P12_BASE64`，或 `security import` 报 MAC 校验失败或密码错误 | `MACOS_CERT_PASSWORD` 与导出密码不一致；或者 `.p12` 是用 OpenSSL 3 默认算法生成的，按第 2.5 节的参数重新生成 |
-| 同一步报 `No valid Developer ID Application identity`，但日志显示 `1 identity imported.` | 证书不是 Developer ID Application（例如误建成 Apple Development 或 Developer ID Installer），或者证书已被撤销或过期。到开发者网站核对证书类型和状态 |
-| `security import` 报格式错误 | base64 粘贴不完整或混入了空格、换行。按第 5 节的 `cmp` 自检后重新粘贴 |
-| “Archive with Developer ID signing” 报找不到签名身份或团队不匹配 | `APPLE_TEAM_ID` 和证书括号里的 Team ID 不一致 |
-| “Archive” 报 `Embedded binary's bundle identifier is not prefixed with the parent app's bundle identifier` | 打包器为 App 和扩展生成了不一致的 Bundle ID。当前 workflow 在 “Generate the Safari app project” 一步会统一成 `SAFARI_BUNDLE_ID` 和 `SAFARI_BUNDLE_ID.Extension`；如果仍然出现，看这一步日志里的 “Packager bundle IDs” 和 “Pinned bundle IDs” |
-| “Archive” 报其他签名设置冲突 | Apple 打包器生成的工程模板变了。看日志里的目标名和设置项，调整 workflow 中 `xcodebuild archive` 的参数 |
-| “Notarize and staple” 报 401 或鉴权失败 | `ASC_KEY_ID`、`ASC_ISSUER_ID`、`.p8` 三者不是同一把 Key，或者这把 Key 已被撤销 |
-| “Archive” 报 `Missing App Sandbox entitlement` | App 或扩展签名时没有带上 App Sandbox。确认仓库里有 `scripts/safari/NotBrother.entitlements`，并且 workflow 的 `xcodebuild archive` 传了 `CODE_SIGN_ENTITLEMENTS` |
-| App 已安装、`spctl` 显示 `Notarized Developer ID`，但 Safari「设置 → 扩展」里没有 Not Brother | 在 Mac 上运行 `codesign -d --entitlements - "/Applications/Not Brother.app/Contents/PlugIns/Not Brother Extension.appex"`：如果只输出一行 `Executable=…`，说明这是加入沙盒检查之前构建的包，下载最新的 `not-brother-safari-app-<version>.zip` 替换即可。如果输出里有 `com.apple.security.app-sandbox`，就退出 Safari、再打开一次 App，并确认 Safari 版本在 18.4 以上 |
-| 公证状态为 `Invalid` | job 会打印 `notarytool log`。常见原因是缺少 hardened runtime 或安全时间戳，workflow 已经设置了这两项；把日志发 Issue 或交给维护者处理 |
+按 workflow 步骤排列。出错的步骤名就是 Actions 日志里红色的那一步。
+
+| 步骤 | 现象 | 原因与处理 |
+| --- | --- | --- |
+| Import the Developer ID certificate | 报 `MACOS_CERT_P12_BASE64 is incomplete`，日志显示 `Secret .p12 holds 1 private key(s) and 0 certificate(s)`（结构里只有 `Shrouded Keybag`，没有 `Certificate bag`） | 导出的是「密钥」里那把私钥（以 CSR 常用名称命名），`.p12` 里没有证书。按第 2.3 节在「我的证书」里右键证书那一行重新导出，或者按第 2.4 节用 `.cer` 补上证书 |
+| 同上 | 报 `is incomplete`，日志显示 `0 private key(s)` | `.p12` 里只有证书。先比对日志里的 `Secret .p12 sha256` 和本地 `shasum -a 256 DeveloperID.p12`：不一致，说明 Secret 里存的是另一个文件，用第 6.1 节的 `gh secret set` 从正确的文件重新写入；一致，就按第 2.4 节处理 |
+| 同上 | 报 `Could not read MACOS_CERT_P12_BASE64`，或者 MAC 校验失败、密码错误 | `MACOS_CERT_PASSWORD` 与导出密码不一致，或者 base64 不完整（按第 5 节的 `cmp` 自检后重新写入） |
+| 同上 | 报 `No valid Developer ID Application identity`，但日志显示 `1 identity imported.` | 证书不是 Developer ID Application（例如误建成 Apple Development 或 Developer ID Installer），或者已被撤销、已过期。到开发者网站核对证书类型和状态 |
+| 同上（旧版 workflow） | 报 `security: SecItemCopyMatching: The specified item could not be found in the keychain.` | 没有得到完整的签名身份。旧版日志里的 `1 certificate imported.` 是 Apple 中间证书的导入结果，不能说明 `.p12` 的内容。现在的 workflow 会逐项检查并报出具体原因；macOS 读不了的私钥格式会先用 OpenSSL 重新打包，自动修正 |
+| Archive with Developer ID signing | 找不到签名身份，或团队不匹配 | `APPLE_TEAM_ID` 和证书括号里的 Team ID 不一致 |
+| 同上 | `Embedded binary's bundle identifier is not prefixed with the parent app's bundle identifier` | 打包器为 App 和扩展生成了不一致的 Bundle ID。“Generate the Safari app project” 一步会统一成 `SAFARI_BUNDLE_ID` 和 `SAFARI_BUNDLE_ID.Extension`；仍然出现的话，看那一步日志里的 “Packager bundle IDs” 和 “Pinned bundle IDs” |
+| 同上 | `Missing App Sandbox entitlement` | App 或扩展签名时没有带上 App Sandbox。确认仓库里有 `scripts/safari/NotBrother.entitlements`，并且 `xcodebuild archive` 传了 `CODE_SIGN_ENTITLEMENTS` |
+| 同上 | 其他签名设置冲突 | Apple 打包器生成的工程模板变了。看日志里的目标名和设置项，调整 workflow 中 `xcodebuild archive` 的参数 |
+| Notarize and staple | 401 或鉴权失败 | `ASC_KEY_ID`、`ASC_ISSUER_ID`、`.p8` 三者不是同一把 Key，或者这把 Key 已被撤销 |
+| 同上 | 公证状态为 `Invalid` | job 会打印 `notarytool log`。常见原因是缺少 hardened runtime 或安全时间戳，workflow 已经设置了这两项；把日志发 Issue 或交给维护者处理 |
+| Attach the signed app to the release | `HTTP 422 … ReleaseAsset.name already exists` | GitHub 附件名不区分大小写，新附件名只和已有附件差在大小写上。附件名统一由 `scripts/release-notes.mjs` 的 `releaseAssets()` 定义，单测会检查是否重复 |
+| 用户安装后 | App 已安装、`spctl` 显示 `Notarized Developer ID`，但 Safari「设置 → 扩展」里没有 Not Brother | 在 Mac 上运行 `codesign -d --entitlements - "/Applications/Not Brother.app/Contents/PlugIns/Not Brother Extension.appex"`。只输出一行 `Executable=…`，说明这是加入沙盒检查之前构建的包，下载最新的 `not-brother-safari-app-<version>.zip` 替换即可。输出里有 `com.apple.security.app-sandbox`，就退出 Safari、再打开一次 App，并确认 Safari 版本在 18.4 以上 |
 
 修好之后，按第 7 节手动 **Run workflow** 重跑；如果改的是代码或 workflow，合并到 `main` 就会自动重跑。
 

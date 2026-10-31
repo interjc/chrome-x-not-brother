@@ -99,6 +99,16 @@ Policy and field details: [Chrome Web Store listing guide](../chrome-web-store.m
 2. if `v<version>` has no Release yet, creates the tag and Release with the Chrome ZIP and the Safari extension-folder ZIP, using the English release notes from [store-listing.md](../store-listing.md) (`scripts/release-notes.mjs`). If the Release exists, it overwrites only the Safari folder ZIP with `--clobber` and leaves the Chrome ZIP unchanged;
 3. when the repository variable `SAFARI_SIGNING` is `true`, builds the Safari app on macOS, signs it with Developer ID, notarizes it, and uploads it to the same Release as `not-brother-safari-app-<version>.zip`, replacing an existing asset of that name.
 
+Each Release carries three assets. Their names, the English labels shown on the Release page, and the "Which file do I need?" table in the body all come from `releaseAssets()` in `scripts/release-notes.mjs`; the workflow sets each label with `file#label` when it uploads:
+
+| Asset | Contents | For | Refreshed |
+| --- | --- | --- | --- |
+| `not-brother-safari-app-<version>.zip` | Signed, notarized Safari Mac app | Safari users | Overwritten on every push to `main` |
+| `not-brother-<version>.zip` | The Chrome extension package, identical to the Chrome Web Store upload | Chrome offline installs and archiving | Uploaded only when a version is first released |
+| `not-brother-safari-<version>.zip` | Unsigned Safari extension folder | Temporary loading for development and testing | Overwritten on every push to `main` |
+
+GitHub also adds two Source code archives, which are repository snapshots rather than installers. User-facing download guidance lives in the README Install section; when an asset's name or purpose changes, update `releaseAssets()`, both README languages, and this section together.
+
 Safari fixes therefore reach the current version's Safari packages as soon as they merge, without a version bump; the Chrome ZIP is uploaded only when a version is first released. After changing signing secrets, rerun with **Run workflow** on the Actions page. GitHub release asset names are case-insensitive, so never add an asset that differs from another only by case.
 
 The Chrome Web Store upload stays manual. Signing setup is in [Apple signing keys](../apple-signing.md) (Simplified Chinese); the Safari plan is in [Safari support](../safari.md) (Simplified Chinese).

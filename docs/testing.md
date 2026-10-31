@@ -88,6 +88,27 @@ npm run skills:validate
 32. 从旧版本升级时，先在 `chrome.storage.local` 准备旧设置：若 sync 为空，确认偏好迁入 sync、`viewerHandle` 迁入新的 local key；若 sync 已有不同偏好，确认保留 sync 值。未登录 Chrome 或关闭同步时修改偏好仍应立即保存并在重启后保留；登录并启用 Chrome Sync 后由 Chrome 在其他配置恢复这些小型偏好，关系档案和 `viewerHandle` 不应出现。
 33. 在 Side Panel 选项页、Options 和档案库确认“编辑规则与查看教程”紧邻“应用自定义拦截规则”开关；侧栏点击后切到规则标签，档案库选项页点击后打开规则页。确认教程完整解释 handle、文字、正则、时效、导入时的按 ID 更新或清空覆盖和隐私，并且示例 JSON 可解析且通过 schema。随后添加三种规则并测试启停、大小写和未来/已过期时间；打开总开关后只隐藏允许页面的匹配帖子，Profile、HoverCard、UserCell 和关注列表不隐藏，正文不出现在 IndexedDB 或导出。下载规则 JSON 后选择清空覆盖用文件恢复；再从只有一个 JSON 文件的公开 Gist 导入并选择按 ID 更新，确认相同 id 被替换、新 id 被追加，且 Chrome 只在点击后请求 GitHub host 权限。拒绝权限、使用 HTTP、超过 1 MiB、多个 JSON 文件或无效正则时，现有规则保持不变且出现可读错误。关闭总开关后全部规则隐藏结果恢复。状态页、档案库统计条和 dock 应显示生效规则数与累计拦截。
 
+## Chrome 离线安装验收
+
+1. 从 GitHub Release 下载 `not-brother-<版本>.zip`，确认它与同版本商店上传的 `artifacts/not-brother-<版本>.zip` 内容一致。
+2. 解压到一个固定文件夹，在 `chrome://extensions` 打开开发者模式并用“加载已解压的扩展程序”加载，确认安装引导页、同意流程和工具栏状态与商店版相同。
+3. 用新版本的 zip 替换文件夹内容，点“重新加载”并刷新 X 标签页，确认档案和规则保留。
+4. 确认它和商店版是两个扩展 ID，数据不互通；按 README 的说明导出档案 JSON 和规则 JSON 再导入，确认可以迁移。
+
+## Safari 手工验收
+
+只在大版本或用户报告问题时做。使用 Release 里的 `not-brother-safari-app-<版本>.zip`，在 macOS 上的 Safari 18.4 或更高版本中测试。
+
+1. 解压并拖进「应用程序」后，`spctl -a -vvv "/Applications/Not Brother.app"` 显示 `accepted` 和 `source=Notarized Developer ID`；打开 App 不出现 Gatekeeper 警告。
+2. `codesign -d --entitlements - "/Applications/Not Brother.app/Contents/PlugIns/Not Brother Extension.appex"` 包含 `com.apple.security.app-sandbox`；`pluginkit -mAvvv -p com.apple.Safari.web-extension` 能找到 `io.github.interjc.notbrother.Extension`。
+3. 打开一次 App 后，Not Brother 出现在 Safari「设置 → 扩展」中，可以勾选启用。
+4. 未授权 x.com 时，页面上没有 dock 和徽标；在地址栏旁选择「在此网站上始终允许」并刷新后，dock 出现。
+5. 同意前没有关系徽标、不写入档案；同意后首页和关注列表出现徽标，最近观察中没有本人。
+6. 点击工具栏图标打开弹窗，「状态 / 规则 / 选项」三个标签页都能使用，内容不超出弹窗；同意前的工具栏右键入口和 dock 内的规则编辑入口打开 dashboard。
+7. 打开时间线过滤和一条自定义规则，确认帖子按规则隐藏。
+8. 退出并重新打开 Safari，再用新版本 App 覆盖安装，档案、规则和设置都还在。
+9. 浅色和深色模式下，弹窗、dashboard 和 X 页面上的徽标都可读。
+
 ## 边界检查
 
 在 Chrome DevTools Network 和 X 页面行为中确认：扩展没有发起 X API 请求、没有自动滚动或导航、没有对 X 按钮触发 click、没有开发者云端遥测或远程脚本。只有用户点击远程规则导入时才访问已授权的公开 HTTPS/Gist 来源，且请求不含 X 数据或本地规则。Chrome 自带的设置同步不包含关系档案、规则文档或 `viewerHandle`。
