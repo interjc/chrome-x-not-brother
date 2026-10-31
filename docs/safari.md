@@ -1,199 +1,265 @@
-# Safari 支持方案：一套代码，双商店发布
+# Safari 支持方案：GitHub Release 自动构建，手动安装
 
-本文研究如何用**最小维护成本**让 Not Brother 同时发布到 Chrome Web Store 和 Mac App Store（Safari）。这是**方案文档**，截至本文写作时仓库里还没有任何 Safari 专用代码；落地后要同步更新 [发布指南](release.md)、[测试指南](testing.md)、[技术架构](architecture.md)、`AGENTS.md` 和项目 skill 的 references。
+Chrome Web Store 仍是唯一的正式发布渠道。Safari 只是锦上添花：**不上 Mac App Store，不新增人工发布步骤**。`main` 分支上每出现一个新版本号，GitHub Actions 就自动构建 Safari 安装包并挂到 GitHub Release，Safari 用户自己下载安装。
 
-兼容性结论来自 Apple 官方文档与 MDN `@mdn/browser-compat-data` 8.1.7（见文末来源），最后核验于 2026-10-31。Safari 和 App Store Connect 变化较快，开工前请重新核对。
+这是**方案文档**，截至本文写作时仓库里还没有任何 Safari 专用代码。落地后要同步更新 [发布指南](release.md)、[测试指南](testing.md)、[使用指南](usage.md)、`AGENTS.md` 和项目 skill 的 references；面向用户的安装步骤写进 `README.md` / `README.en.md`。
+
+兼容性结论来自 Apple 官方文档、WWDC26 与 MDN `@mdn/browser-compat-data` 8.1.7（见文末来源），最后核验于 2026-10-31。
 
 ## 1. 结论
 
-**不分叉代码，也不维护第二个仓库或第二个 `src/`。** 只做三件事：
+| 层 | 做法 | 维护成本 |
+| --- | --- | --- |
+| 代码 | 同一个 `src/`、同一次 `npm run build`。Safari 缺失的 API 先做能力检测再调用，不做浏览器检测 | 一个很小的平台模块，外加几处调用点 |
+| 打包 | `npm run package` 从同一份 `dist/` 多生成一个 Safari ZIP，只是 manifest 由脚本改写 | 一个纯函数加单测 |
+| 发布 | 新增 `.github/workflows/release.yml`：`main` 上版本号变化时自动打 tag、建 Release、上传安装包 | 一次性配置，之后零操作 |
+| 分发 | 用户从 GitHub Release 下载：**A. 签名 App**（推荐，长期安装）或 **B. 临时扩展文件夹**（零配置，每次重启 Safari 要重新加载） | A 需要一次性配置 Apple 证书 Secrets；B 无 |
 
-1. **同一份构建产物**：`npm run build` 只产出一个 `dist/`。打包时从这一份 `dist/` 生成两个 ZIP，唯一区别是 Safari 版的 `manifest.json` 由脚本改写。
-2. **按能力检测，而不是按浏览器分支**：凡是 Safari 缺失的 API（主要是 `chrome.sidePanel`），调用前先判断 API 是否存在，缺失时走已有的兜底路径（弹窗或 dashboard 标签页）。代码里不出现 `isSafari`、User-Agent 判断。
-3. **Safari 原生壳交给 Apple 工具生成**：用 App Store Connect 网页版的 Safari Web Extension Packager 上传 ZIP，Apple 在云端生成 macOS App 并签名。仓库里**不提交 Xcode 工程、不写 Swift**。
+本地发版流程**完全不变**：照旧 `npm run release:patch`、上传 Chrome 商店、推送到 `main`。Safari 包由 CI 自动生成。
 
-预计长期要维护的 Safari 相关差异只有：一个约几十行的平台能力模块、一个 manifest 改写函数（含单测）、几条 i18n 文案、一段发布步骤。日常功能开发照旧只在 Chrome 里开发调试，发版时多上传一个 ZIP。
+## 2. 用户的两种安装方式
 
-## 2. 为什么改动量小
+### A. 签名并公证的 App（推荐）
 
-本项目已有的设计让 Safari 适配的成本很低：
+GitHub Release 附件 `Not-Brother-Safari-<version>.zip` 里是一个用你的 **Developer ID 签名并经 Apple 公证**的 macOS App，扩展就在这个 App 里。
 
-- 只用 MV3 标准能力：`storage`、`contextMenus`、内容脚本、service worker、`_locales`，全部可在 Safari 中使用。
-- 不依赖 `webRequest`、`tabs` 权限、`identity`、远程代码，这些正是 Safari 差异最大的区域。
-- 运行时代码全部本地打包（esbuild），没有构建链兼容性问题。
-- 已有兜底：侧边栏打不开时回退到 `dashboard.html`（同意披露、规则编辑入口都已如此），`runtime.getContexts` 已做存在性判断。
-- Safari 同时支持 `chrome.*` 命名空间和 Promise 风格，不必改成 `browser.*` 或引入 polyfill。
-- Safari 会**忽略**不认识的 manifest 键（例如 `side_panel`、`sidePanel` 权限、`minimum_chrome_version`），不会因此拒绝加载。
+- 要求 **Safari 18.4 及以上**：Apple 从这个版本起允许在 App Store 之外分发 Developer ID 签名、公证过的 Safari 扩展；更早的版本仍需打开“允许未签名扩展”。
+- 用户的步骤：下载 → 解压 → 把 App 拖进“应用程序” → 打开一次 → 在 Safari 设置的“扩展”里勾选 Not Brother → 允许它访问 x.com。
+- 已经公证，所以 Gatekeeper 不会拦，也不需要开发者模式；装好后长期有效。
+- 不会自动更新：用户要手动下载新版本覆盖旧 App。数据保存在扩展自己的存储里，覆盖安装后会保留（落地时验证一次）。
 
-## 3. Safari 兼容性对照（只列本项目用到的）
+### B. 临时扩展（零签名后备）
 
-| 能力 | 本项目用法 | Safari（macOS） | 处理 |
-| --- | --- | --- | --- |
-| `sidePanel` API 与 `side_panel` 键 | 状态 / 规则 / 选项主界面 | **不支持** | 改用工具栏弹窗 `action.default_popup` 加载 `sidepanel.html`，大页面仍用 dashboard |
-| `content_scripts[].world: "MAIN"` | `page-bridge.js` 读页面已加载的关系数据 | 18 起支持 | 最低版本定为 Safari 18，不需要改注入方式 |
-| `background.service_worker` + `type: "module"` | service worker | 15.4 / 16.4 起支持 | 无需改动 |
-| `action.setBadgeText` / `setTitle` | 工具栏状态 | 15.4 起支持 | 无需改动 |
-| `action.setBadgeBackgroundColor` | 徽标底色 | API 存在但**无效果** | 不改，只在文档里注明 |
-| `action.setBadgeTextColor` | 徽标文字色 | **不支持** | 先判断存在再调用 |
-| `runtime.getContexts` | 追踪侧边栏是否已打开 | 不支持 | 已做存在性判断 |
-| `contextMenus`（`action` 上下文） | 同意前的披露入口 | macOS 15.4 起支持；iOS 不支持 | macOS 无需改动 |
-| `options_ui.open_in_tab: false` | 内置选项入口 | 选项页**总在新标签页打开** | `options.tsx` 在侧边栏打不开时已经会切换为独立选项页；只需检查宽屏下的版式 |
-| `storage.sync` | 同步设置 | 能读写，但**不跨设备同步**，行为等同 `local` | 无需改动，文档注明 |
-| `storage.local` 配额 | 规则文档（单份上限 1 MB，按账号分开） | 默认 **5 MB**（Chrome 为 10 MB） | 多账号时留意；确实不够再评估 `unlimitedStorage` |
-| `optional_host_permissions` + `permissions.request` | 远程导入规则 | 15.5 起支持；只对具体 origin 弹授权 | 现在已经按解析出的具体 HTTPS 源申请，符合 Safari 模型 |
-| 内容脚本生效时机 | x.com 页面 | **用户在工具栏授权 x.com 后才注入** | 首次引导里加“允许在 x.com 上运行”的提示 |
-| IndexedDB（Dexie） | 观察档案库 | 支持 | 实测 service worker 被回收、重启 Safari 后数据仍在 |
+GitHub Release 附件 `not-brother-safari-<version>.zip` 是扩展文件夹本身。Safari 26 起可以不经过 Xcode 直接加载：
 
-结论：真正的阻断只有 **`chrome.sidePanel` 不存在**。现在 `src/background/service-worker.ts:60` 在模块顶层调用 `chrome.sidePanel.setPanelBehavior(...)`，在 Safari 中会抛 `TypeError`，导致整个 service worker 无法启动。其余差异都是降级处理或文档注明。
+1. Safari 设置 → 高级 → 勾选“显示网页开发者功能”；
+2. Safari 设置 → 开发者 → 勾选“允许未签名的扩展”，点击 **Add Temporary Extension…**，选择解压后包含 `manifest.json` 的文件夹；
+3. 在扩展设置里允许它访问 x.com。
 
-## 4. 代码怎么改（一次性工作）
+缺点：**退出 Safari 后扩展会被卸载**，下次要重新加载。适合尝鲜，或者在你还没配置签名 Secrets 时先提供一个渠道。
 
-### 4.1 平台能力层 `src/platform/`
+不建议提供未签名的 `.app`（Xcode 的 “Copy App” 导出）：用户既要绕过 Gatekeeper，又要每次启动 Safari 都打开“允许未签名的扩展”，比 B 还麻烦。
 
-新增一个小模块，集中处理平台差异 API，业务代码不再直接调用 `chrome.sidePanel`：
+## 3. 自动构建：`.github/workflows/release.yml`
 
-```ts
-// src/platform/capabilities.ts（示意）
-export function hasSidePanel(): boolean {
-  return typeof chrome.sidePanel?.open === "function";
-}
+### 3.1 触发条件
 
-export async function setBadgeTextColor(color: string): Promise<void> {
-  if (typeof chrome.action.setBadgeTextColor === "function") {
-    await chrome.action.setBadgeTextColor({ color });
-  }
-}
+现有发版习惯是本地执行 `npm run release:patch` 后，把 `release vX.Y.Z` 提交推到 `main`，仓库里没有 tag。因此 workflow 这样触发：
+
+- `push` 到 `main`，并且 `paths` 包含 `package.json`；
+- 读取 `package.json` 的 `version`；如果 tag `v<version>` 已存在就直接结束，所以普通依赖升级不会重复发版；
+- 另加 `workflow_dispatch`，方便手动重跑。
+
+### 3.2 两个 job
+
+```yaml
+# 示意，不是最终文件
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths: ["package.json"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      skip: ${{ steps.meta.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - id: meta
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.meta.outputs.skip != 'true'
+        run: |
+          npm ci
+          npm run check
+          npm run package          # 同时生成 Chrome 与 Safari 两个 ZIP
+      - if: steps.meta.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/release-notes.mjs "${{ steps.meta.outputs.version }}" > notes.md
+          gh release create "v${{ steps.meta.outputs.version }}" \
+            artifacts/not-brother-*.zip \
+            --title "v${{ steps.meta.outputs.version }}" --notes-file notes.md
+
+  safari-app:
+    needs: build
+    if: needs.build.outputs.skip != 'true' && vars.SAFARI_SIGNING == 'true'
+    runs-on: macos-latest
+    steps:
+      # 下载 Release 中的 Safari ZIP → 打包成 Xcode 工程 → Developer ID 签名
+      # → 公证 → 装订 → 上传到同一个 Release（命令见 3.3）
 ```
 
-需要接入的调用点：
+要点：
 
-| 文件 | 改动 |
-| --- | --- |
-| `src/background/service-worker.ts:60` | `setPanelBehavior` 只在 `hasSidePanel()` 时调用（**阻断项**） |
-| `src/background/service-worker.ts:70` | 右键菜单的披露入口：没有侧边栏时直接走 `openConsentSurface(null)`，打开 dashboard |
-| `src/background/service-worker.ts` 中的 `sidepanel:open` 消息处理（约 `:258`–`:290`） | 没有侧边栏时立即回复 `{ ok: false }`。现在会在监听函数里同步抛错，`sendResponse` 永远不会被调用 |
-| `src/content/index.ts` 中的 `handleSidePanelOpenFailure` | 现在只有同意前才回退到 dashboard，同意后只显示“请点工具栏图标”的提示。改为：平台没有侧边栏时也打开 dashboard（`openFilterRules` 已经会回退到 `#filter-rules`，不用改） |
-| `src/background/service-worker.ts:365` | 改为调用 `setBadgeTextColor` 包装函数 |
-| `src/background/side-panel-visibility.ts` | `chrome.sidePanel.onOpened` 等改为 `chrome.sidePanel?.` 访问 |
-| `src/ui/open-options-tab.ts` | 已有 try/catch 会返回 `false`，可以不改；改用 `hasSidePanel()` 判断可读性更好 |
+- 第一个 job 跑在 Linux 上，和本地 `npm run release` 用同一套命令，保证 Release 里的 Chrome ZIP 与商店版字节一致，也可以作为存档。
+- `scripts/release-notes.mjs` 是新增的小脚本：从 `docs/store-listing.md` 中提取 `### Version <version> release notes` 段落。`release.mjs` 已经要求这段存在。
+- 第二个 job 由仓库变量 `SAFARI_SIGNING` 控制开关。没配证书之前它不会运行，Release 里仍有方式 B 的文件夹 ZIP，不会报红。
+- macOS runner 对公开仓库免费；私有仓库按 10 倍系数消耗 Actions 分钟数，每次发版大约几分钟。
 
-原则：**只做能力检测，不做浏览器检测**。以后 Safari 如果补上某个 API，这些分支会自动走 Chrome 那条路径。
-
-### 4.2 弹窗代替侧边栏
-
-Safari 版 manifest 加上 `"action": { "default_popup": "sidepanel.html" }`，同一个页面以弹窗形式打开：
-
-- `sidepanel.html` 原本按侧边栏宽度设计。弹窗按内容决定尺寸，需要在 CSS 里给根元素加固定宽度（例如 `min-width: 380px`）和最大高度，超出部分滚动。用 CSS 处理，不用 JS 判断。
-- 不能在 Chrome 版 manifest 里也加 `default_popup`，否则会抢走点击图标打开侧边栏的行为。所以这个键只在 Safari 的 manifest 改写里加入（见 4.3）。
-- 页内“打开侧边栏规则页”的入口在 Safari 上会回退到 `dashboard.html#filter-rules`，这条回退路径已经存在。
-
-### 4.3 manifest 改写与打包
-
-新增一个纯函数 `scripts/safari-manifest.mjs`（配 Vitest 单测），输入 Chrome manifest，输出 Safari manifest：
-
-- 删除 `side_panel`、`minimum_chrome_version`，并从 `permissions` 中删除 `sidePanel`（Safari 会忽略它们，但删掉可以减少打包器警告和审核疑问）；
-- 新增 `action.default_popup: "sidepanel.html"`；
-- 新增 `browser_specific_settings.safari.strict_min_version: "18.0"`；
-- 其余字段（版本号、`_locales`、内容脚本、图标）**原样保留**。
-
-`scripts/package.mjs` 在生成 `artifacts/not-brother-<version>.zip` 后，再用同一份 `dist/` 加上改写后的 manifest 生成 `artifacts/not-brother-safari-<version>.zip`。文件名仍匹配 `not-brother-*.zip`，现有的“打包前删除旧 ZIP”规则自动覆盖它，不必另写清理逻辑。
-
-`scripts/validate-dist.mjs` 增加对 Safari manifest 的校验：版本号与 `package.json` 一致、不含 `side_panel`、含 `default_popup`、`world: "MAIN"` 仍在。
-
-`scripts/build.mjs` 的 esbuild `target` 从 `"chrome114"` 改为 `["chrome114", "safari18"]`，这样产物里不会出现 Safari 18 不支持的语法。两个 ZIP 仍共用这一份构建。
-
-### 4.4 首次引导与文案
-
-Safari 默认不给扩展任何站点权限。用户需要在 Safari 设置或工具栏中允许扩展在 x.com 上运行，内容脚本才会注入。
-
-- 欢迎页和同意披露页用 `chrome.permissions.contains({ origins: ["https://x.com/*"] })` 检测；未授权时显示一条“请在 Safari 中允许 Not Brother 访问 x.com”的提示。这同样是能力检测，在 Chrome 上永远返回已授权，提示不会出现。
-- 新增文案走 `src/i18n/`，中、英、日三份词库同时补全。
-
-### 4.5 不建议现在就做的
-
-- **iOS / iPadOS**：iOS 版 Safari 不支持 `contextMenus`，x.com 移动版 DOM 不同（`x-adapter.ts` 要重新适配），触屏也没有悬停卡片。创建 App 记录时只勾选 macOS。
-- **提交 Xcode 工程或写原生代码**：除非网页版打包器长期不可用，否则不引入（见 5.3）。
-- **`browser.*` polyfill**：Safari 原生支持 `chrome.*`，没必要加。
-
-## 5. 发布流程
-
-### 5.1 一次性准备（只做一次）
-
-1. 在 [App Store Connect](https://appstoreconnect.apple.com/) 新建 App：平台只选 **macOS**，Bundle ID 用反向域名（例如 `io.github.interjc.notbrother`，一经确定不要再改），填写 SKU。
-2. 填写 App 元数据：名称、副标题、描述可从 [Chrome Web Store 三语文案](store-listing.md) 改写。隐私政策 URL 复用 GitHub Pages 上的 `privacy.html`，支持 URL 用 GitHub Issues。
-3. App 隐私问卷：本扩展不收集、不上传数据，按“Data Not Collected”申报，但要与 [隐私政策](../terms/privacy.md) 逐项核对后再勾选。
-4. 截图：Mac App Store 接受 1280×800。`assets/store/` 下现有的 1280×800 截图可以直接复用，只需补拍 Safari 版弹窗界面替换侧边栏那张。
-5. 类别选 Productivity，与 Chrome Web Store 保持一致。
-
-### 5.2 每次发版（推荐：网页版打包，无需 Mac）
+### 3.3 macOS job 的核心命令
 
 ```bash
-npm run release          # 同时生成两个 ZIP
-```
-
-1. Chrome：照旧把 `artifacts/not-brother-<version>.zip` 上传到 Chrome Web Store。
-2. Safari：在 App Store Connect 依次进入 **Users and Access → Xcode Cloud → Safari Web Extension Packager → Upload**，上传 `artifacts/not-brother-safari-<version>.zip`。
-3. 打包完成后，先在 TestFlight 里安装验证（按 [测试指南](testing.md) 的 Safari 清单），再把这个构建加到新版本里提交审核。
-4. 更新说明复用 `docs/store-listing.md` 中同版本号的条目。
-
-注意：
-
-- 打包占用 Apple Developer Program 每月附带的 25 小时 Xcode Cloud 额度，本项目一次打包远用不完。
-- Apple 要求每次上传的版本号或构建号递增。本项目每次发版都会升 `manifest.version`，可以满足；第一次更新时要确认打包器如何从 manifest 推导版本号和构建号，并把结论补进本节。
-- 开发者论坛有人报告网页版打包器入口不显示、上传报网络错误、更新版本时出现 “Invalid Pre-Release Train”。遇到这些情况改用 5.3 的命令行方式。
-
-### 5.3 备用：在 Mac 上用命令行打包
-
-```bash
-unzip -o artifacts/not-brother-safari-<version>.zip -d /tmp/not-brother-safari
+unzip -q "not-brother-safari-$VERSION.zip" -d ext
 ```
 
 ```bash
-xcrun safari-web-extension-packager /tmp/not-brother-safari \
+xcrun safari-web-extension-packager ext \
   --app-name "Not Brother" \
   --bundle-identifier io.github.interjc.notbrother \
   --macos-only --swift --copy-resources \
-  --project-location ../not-brother-safari-xcode \
-  --no-open --no-prompt --force
+  --project-location build --no-open --no-prompt --force
 ```
 
-（`safari-web-extension-packager` 以前叫 `safari-web-extension-converter`。）
+```bash
+xcodebuild -project "build/Not Brother/Not Brother.xcodeproj" \
+  -scheme "Not Brother" -configuration Release \
+  -archivePath build/NotBrother.xcarchive archive \
+  MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+  DEVELOPMENT_TEAM="$APPLE_TEAM_ID" ENABLE_HARDENED_RUNTIME=YES \
+  -allowProvisioningUpdates \
+  -authenticationKeyPath "$ASC_KEY_PATH" \
+  -authenticationKeyID "$ASC_KEY_ID" \
+  -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+```
 
-然后在 Xcode 里 Archive，再上传到 App Store Connect。生成的 Xcode 工程放在**仓库之外**，每次发版用 `--force` 重新生成即可，不纳入版本管理；版本号和构建号在 Xcode 中设置为与 manifest 一致。
+```bash
+xcodebuild -exportArchive -archivePath build/NotBrother.xcarchive \
+  -exportOptionsPlist scripts/safari/ExportOptions.plist -exportPath build/export
+```
 
-### 5.4 以后再考虑：CI 自动化
+```bash
+ditto -c -k --keepParent "build/export/Not Brother.app" notarize.zip
+```
 
-等发版节奏稳定后，可以在 GitHub Actions 的 macOS runner 上执行 5.3 的流程，用 App Store Connect API Key（存为仓库 Secrets）上传。社区已有现成的 Action 可参考，但它是第三方代码，接入前要审阅它的源码和所需权限。没有稳定节奏前不建议引入。
+```bash
+xcrun notarytool submit notarize.zip --wait \
+  --key "$ASC_KEY_PATH" --key-id "$ASC_KEY_ID" --issuer "$ASC_ISSUER_ID"
+```
 
-## 6. 测试
+```bash
+xcrun stapler staple "build/export/Not Brother.app"
+```
 
-- **单测**：在 Vitest 中模拟 `chrome.sidePanel === undefined` 和 `chrome.action.setBadgeTextColor === undefined`，断言 service worker 模块能正常加载，且所有入口都回退到 dashboard 或弹窗；manifest 改写函数单独测试。这些测试在 Linux CI 上就能跑，不需要 Mac。
-- **手工验收**（每个大版本至少做一次，使用 TestFlight 构建）：授权 x.com、同意披露流程、徽标显示、弹窗三个标签页、dashboard 导入导出、规则快捷添加、时间线隐藏、退出 Safari 再打开后数据仍在、浅色 / 深色主题。
-- 日常开发和回归仍以 Chrome 为主。Safari 只在发版前做冒烟测试。
+```bash
+ditto -c -k --keepParent "build/export/Not Brother.app" "Not-Brother-Safari-$VERSION.zip"
+```
 
-## 7. 维护约定（落地后写进 AGENTS.md）
+```bash
+gh release upload "v$VERSION" "Not-Brother-Safari-$VERSION.zip"
+```
 
-- 新功能先查 Safari 是否支持所用的 API；不支持的 API 必须经过 `src/platform/` 做能力检测，并且有可用的兜底。
-- 禁止在业务代码中按 User-Agent 或 `isSafari` 分支。
-- 两个商店使用同一个版本号、同一份更新说明，同一天提交。
-- 产品边界不变：Safari 版同样不能自动滚动、不能调用私有接口、不能点击 X 的账号操作控件。
+说明：
 
-## 8. 工作量估计
+- Xcode 工程**每次在 CI 里重新生成，不提交进仓库**，所以不存在“第二份代码”。仓库里只多一个 `scripts/safari/ExportOptions.plist`（`method` 为 `developer-id`，`signingStyle` 为 `automatic`，加上 `teamID`）。
+- 签名前要把 Developer ID 证书导入一个临时 keychain（`security create-keychain` / `security import` / `security set-key-partition-list`），job 结束时删除。
+- 工程路径和 scheme 名以打包器实际生成的为准，首次运行时用 `xcodebuild -list` 确认后写死。
+- 第一次跑通时可能需要调整签名参数，例如 App 扩展的 entitlements 或 provisioning；跑通之后基本不用再改。
 
-| 项 | 规模 | 需要 Mac |
+### 3.4 一次性准备（只有方式 A 需要）
+
+1. 在 [Apple Developer](https://developer.apple.com/account/resources/certificates) 用 Account Holder 身份创建 **Developer ID Application** 证书，导出为 `.p12`。
+2. 在 App Store Connect → Users and Access → Integrations 创建 **Team API Key**（Developer 角色即可），下载 `.p8`。签名时自动管理 provisioning 和公证都用它。
+3. 在 Developer 账号里注册 Bundle ID `io.github.interjc.notbrother` 和扩展的 Bundle ID（打包器默认是 `<app>.Extension`）。也可以由 `-allowProvisioningUpdates` 自动创建。
+4. 在 GitHub 仓库的 Settings → Secrets and variables → Actions 中添加：
+
+| 名称 | 类型 | 内容 |
 | --- | --- | --- |
-| 平台能力层与调用点改造（含单测） | 小 | 否 |
-| manifest 改写、打包、校验脚本（含单测） | 小 | 否 |
-| 弹窗版式 CSS | 小 | 调试时最好有 |
-| Safari 授权提示与三语文案 | 小 | 否 |
-| App Store Connect 建档、元数据、隐私问卷、截图 | 一次性 | 否 |
-| TestFlight 实机验收 | 每次发版 | 需要一台装有 Safari 18+ 的 Mac |
+| `MACOS_CERT_P12_BASE64` | Secret | `.p12` 的 base64 |
+| `MACOS_CERT_PASSWORD` | Secret | `.p12` 密码 |
+| `APPLE_TEAM_ID` | Secret | 10 位 Team ID |
+| `ASC_KEY_ID` / `ASC_ISSUER_ID` | Secret | API Key 的 ID 与 Issuer ID |
+| `ASC_KEY_P8_BASE64` | Secret | `.p8` 的 base64 |
+| `SAFARI_SIGNING` | Variable | `true` 时启用 macOS job |
+
+证书有效期 5 年。到期前换一次 Secrets，其余不用管。
+
+## 4. 代码改动（最小集）
+
+既然只是锦上添花，代码只改**不改就跑不起来**的部分。
+
+### 4.1 必须改
+
+| 文件 | 改动 | 原因 |
+| --- | --- | --- |
+| `src/platform/capabilities.ts`（新） | `hasSidePanel()`、`setBadgeTextColor()` 等能力检测包装 | 集中处理平台差异，业务代码里不写 `isSafari` |
+| `src/background/service-worker.ts:60` | `setPanelBehavior` 只在 `hasSidePanel()` 时调用 | **阻断项**：Safari 没有 `chrome.sidePanel`，模块顶层直接抛 `TypeError`，整个 service worker 起不来 |
+| `src/background/service-worker.ts:70` | 没有侧边栏时直接 `openConsentSurface(null)` | 同意前的右键披露入口改为打开 dashboard |
+| `service-worker.ts` 中的 `sidepanel:open` 消息处理 | 没有侧边栏时立即回复 `{ ok: false }` | 否则监听函数同步抛错，`sendResponse` 永远不会被调用 |
+| `service-worker.ts:365` | 改用 `setBadgeTextColor()` 包装 | Safari 不支持 `setBadgeTextColor` |
+| `src/background/side-panel-visibility.ts` | `chrome.sidePanel.onOpened` 等改为 `chrome.sidePanel?.` 访问 | 同上 |
+| `scripts/safari-manifest.mjs`（新，配单测） | Chrome manifest → Safari manifest | 见 4.2 |
+| `scripts/package.mjs` | 额外写出 `artifacts/not-brother-safari-<version>.zip` | 文件名仍匹配 `not-brother-*.zip`，现有的旧包清理逻辑自动覆盖 |
+| `scripts/validate-dist.mjs` | 校验 Safari manifest：版本号一致、无 `side_panel`、有 `default_popup` | 防止 CI 产出坏包 |
+| `scripts/build.mjs` | esbuild `target` 改为 `["chrome114", "safari18"]` | 避免产物里出现 Safari 不支持的语法 |
+
+### 4.2 Safari manifest 改写
+
+- 删除 `side_panel` 和 `minimum_chrome_version`，从 `permissions` 中删除 `sidePanel`；
+- 新增 `action.default_popup: "sidepanel.html"`：Safari 用户点工具栏图标时，同一个页面以弹窗打开；
+- 新增 `browser_specific_settings.safari.strict_min_version: "18.4"`；
+- 其他字段原样保留。
+
+Chrome 版 manifest **不能**加 `default_popup`，否则点图标时会打开弹窗，不再打开侧边栏。
+
+顺带的好处：悬浮面板打开侧边栏失败时，现有提示是“请点工具栏图标”。在 Safari 上点图标正好打开弹窗，这条路径不用改。规则编辑入口已经会回退到 `dashboard.html#filter-rules`。
+
+### 4.3 可以不做（等有用户反馈再说）
+
+- 弹窗专用 CSS：先给 `sidepanel` 根元素加一个固定宽度保证能用，细调以后再说。
+- 应用内提示“请允许访问 x.com”和对应的三语文案：先在 README 的安装步骤里说明。
+- iOS / iPadOS：不支持 `contextMenus`，x.com 移动版 DOM 不同，不做。
+- Mac App Store：将来想上架时，同一个 Safari ZIP 可以直接用 App Store Connect 的网页版 Safari Web Extension Packager 上传，不影响本方案。
+
+## 5. Safari 兼容性对照（本项目用到的部分）
+
+| 能力 | Safari（macOS） | 处理 |
+| --- | --- | --- |
+| `sidePanel` / `side_panel` | **不支持** | 用 `default_popup` 弹窗和 dashboard 代替 |
+| `content_scripts[].world: "MAIN"` | 18 起支持 | `page-bridge.js` 不用改 |
+| `background.service_worker` + `type: "module"` | 15.4 / 16.4 起支持 | 不用改 |
+| `action.setBadgeText` / `setTitle` | 15.4 起支持 | 不用改 |
+| `action.setBadgeBackgroundColor` | API 存在但**无效果** | 不改 |
+| `action.setBadgeTextColor` | **不支持** | 能力检测 |
+| `runtime.getContexts` | 不支持 | 已有存在性判断 |
+| `contextMenus`（`action` 上下文） | 15.4 起支持 | 不用改 |
+| `options_ui.open_in_tab: false` | 总在新标签页打开 | `options.tsx` 已能切换为独立选项页 |
+| `storage.sync` | 能读写，但**不跨设备同步** | 不改，文档注明 |
+| `storage.local` 配额 | 默认 5 MB（Chrome 为 10 MB） | 多账号规则较大时留意 |
+| `optional_host_permissions` + `permissions.request` | 15.5 起支持，只对具体 origin 弹授权 | 现有实现已按具体源申请 |
+| 内容脚本注入 | 用户授权 x.com 后才注入 | 安装说明里写清楚 |
+| IndexedDB（Dexie） | 支持 | 验证重启 Safari、覆盖安装后数据仍在 |
+
+## 6. 测试与维护约定
+
+- **CI 自动**：`npm run check` 里加单测，模拟 `chrome.sidePanel === undefined`，断言 service worker 能正常加载、所有入口都能回退；manifest 改写函数单独测试。这些在 Linux 上就能跑。
+- **人工**：只在大版本或用户报告问题时，用方式 A 的 App 在 Safari 里冒烟测试一次：授权 x.com、同意流程、徽标、弹窗、dashboard、时间线隐藏。日常开发仍只测 Chrome。
+- **约定**（落地后写进 `AGENTS.md`）：新代码用到 Safari 不支持的 API 时，必须经 `src/platform/` 做能力检测并提供兜底；禁止在业务代码里按 User-Agent 分支；产品边界与 Chrome 版完全一致。
+- Release 页面和 README 注明：Safari 版是社区渠道，不经 App Store 审核，不会自动更新，以 Chrome 版为准。
 
 ## 来源
 
-- Apple：[Packaging and distributing Safari Web Extensions with App Store Connect](https://developer.apple.com/documentation/safariservices/packaging-and-distributing-safari-web-extensions-with-app-store-connect)
-- Apple：[Packaging a web extension for Safari](https://developer.apple.com/documentation/safariservices/packaging-a-web-extension-for-safari)
+- Apple：[Distributing your Safari web extension](https://developer.apple.com/documentation/safariservices/distributing-your-safari-web-extension)（Developer ID 签名与公证的商店外分发）
+- Apple Developer Forums：[thread 782005](https://developer.apple.com/forums/thread/782005)（Developer ID 签名扩展从 Safari 18.4 起受支持）
+- Apple：[WWDC26 Session 216](https://developer.apple.com/videos/play/wwdc2026/216/)，以及 [Stefan vd：在 Safari 26 中不用 Xcode 加载扩展](https://www.stefanvd.net/blog/?p=2105)（Add Temporary Extension）
+- Apple：[Packaging a web extension for Safari](https://developer.apple.com/documentation/safariservices/packaging-a-web-extension-for-safari)（`safari-web-extension-packager` 参数）
 - Apple：[Assessing your Safari web extension’s browser compatibility](https://developer.apple.com/documentation/safariservices/assessing-your-safari-web-extension-s-browser-compatibility)
-- Apple：[Safari extensions 提交说明](https://developer.apple.com/safari/extensions/submission)
+- Apple：[Notarizing macOS software before distribution](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)
 - MDN：[`@mdn/browser-compat-data`](https://github.com/mdn/browser-compat-data)（8.1.7，`webextensions` 部分）
-- Apple Developer Forums：网页版打包器的已知问题，例如 [thread 845245](https://developer.apple.com/forums/thread/845245)、[thread 843612](https://developer.apple.com/forums/thread/843612)、[thread 844441](https://developer.apple.com/forums/thread/844441)
