@@ -36,6 +36,10 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 - Adds local Zod-validated blacklist rules for handles, display names, and post content, with expiration, JSON file import/export, and one-time public HTTPS/Gist import behind optional per-site permission.
 - Makes first-run consent easier to find with a prominent entry beside the minimized NB button and an action-icon context-menu shortcut; both open the full disclosure before consent.
 
+### Version 0.5.14 release notes
+
+- No changes for Chrome users. Adds compatibility checks so the same code also runs as a separately distributed Safari build; Chrome behavior, permissions, and stored data are unchanged.
+
 ### Version 0.5.13 release notes
 
 - Reduces CPU usage while browsing X. Settings and filter status are cached and refreshed only when they change, scans skip video-player updates and the extension's own badges, the background fallback scan waits for a quiet moment, and data exchanged with the page is limited to the accounts actually on screen.
@@ -171,6 +175,10 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 - 小型偏好可通过用户启用的 Chrome Sync 同步，关系档案和当前 X handle 仍只保存在本机。旧 local 偏好迁移时不会覆盖 Chrome Sync 已有设置。
 - 未同意时，收起后的 NB 悬浮球旁会显示醒目入口，工具栏图标右键菜单也能打开完整隐私说明；入口不会直接代替用户同意。
+
+### 0.5.14 更新说明
+
+- Chrome 版功能不变。新增兼容检查，让同一份代码也能作为单独分发的 Safari 版运行；Chrome 上的行为、权限和本地数据都没有变化。
 
 ### 0.5.13 更新说明
 
@@ -308,6 +316,10 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 
 - 小さな設定をユーザーが有効にした Chrome Sync で同期し、関係アーカイブと現在の X ハンドルはローカルに保ちます。旧 local 設定の移行時も、Chrome Sync に既存の設定があれば上書きしません。
 - 未同意の場合、収納した NB ボタンの横に目立つ入口を表示し、ツールバーアイコンの右クリックメニューからも完全なプライバシー説明を開けます。入口だけで同意が確定することはありません。
+
+### 0.5.14 更新内容
+
+- Chrome 版の機能に変更はありません。同じコードを別配布の Safari 版としても動かせるよう互換性チェックを追加しました。Chrome での動作、権限、保存データは変わりません。
 
 ### 0.5.13 更新内容
 
