@@ -59,7 +59,7 @@ npm run release
 6. 在干净 Chrome 配置里 Load unpacked `dist/`，按 [测试指南](testing.md) 做相关验收。
 7. Dashboard → 该条目 → Package → 上传新 ZIP。更新三种语言的 listing 更新说明。隐私字段若没变就不用改。取消自动发布后提交审核。
 8. 审核通过后 30 天内点 Publish。新增权限会让已装用户再授权。
-9. 把版本提交推到 `main`（或合并包含它的 PR）。`package.json` 版本变化会触发 GitHub Release 自动发布，不需要手动操作。
+9. 把版本提交推到 `main`（或合并包含它的 PR）。新版本号会自动创建 GitHub Release，不需要手动操作。
 
 `npm run validate:dist` 仍会检查：三语 Summary 不超过 132 字且与 store-listing 一致；当前版本的三语更新说明标题都在。
 
@@ -93,13 +93,13 @@ npm run release
 
 ## GitHub Release 与 Safari
 
-`.github/workflows/release.yml` 在 `main` 上的 `package.json` 变化时运行。如果 `v<version>` 还没有 Release，它会：
+`.github/workflows/release.yml` 在每次 push 到 `main` 时运行：
 
 1. 在 Linux 上执行 `npm ci`、`npm run check`、`npm run package`；
-2. 创建 tag 和 Release `v<version>`，附上 Chrome ZIP 和 Safari 扩展文件夹 ZIP，正文取自 [store-listing.md](store-listing.md) 中的英文更新说明（`scripts/release-notes.mjs`）；
-3. 仓库变量 `SAFARI_SIGNING` 为 `true` 时，再在 macOS 上生成 Safari App，用 Developer ID 签名、公证，作为 `Not-Brother-Safari-<version>.zip` 追加到同一个 Release。
+2. 如果 `v<version>` 还没有 Release：创建 tag 和 Release，附上 Chrome ZIP 和 Safari 扩展文件夹 ZIP，正文取自 [store-listing.md](store-listing.md) 中的英文更新说明（`scripts/release-notes.mjs`）。如果已有 Release：只用 `--clobber` 覆盖 Safari 文件夹 ZIP，Chrome ZIP 保持不变；
+3. 仓库变量 `SAFARI_SIGNING` 为 `true` 时，再在 macOS 上生成 Safari App，用 Developer ID 签名、公证，作为 `not-brother-safari-app-<version>.zip` 上传到同一个 Release（已有同名附件就覆盖）。
 
-已有 Release 的版本会直接跳过，所以普通依赖升级不会重复发版。还没有 tag 的旧版本可以在 Actions 页面手动 **Run workflow** 补发；签名失败后修好配置，可以勾选 `safari_only` 只重做签名 App。
+所以 Safari 相关的修复合并后，当前版本的 Safari 包就会更新，不必升版本号；Chrome ZIP 只在新版本第一次发布时上传。改了签名 Secrets 之后，可以在 Actions 页面手动 **Run workflow** 重跑。Release 附件名在 GitHub 上不区分大小写，新增附件时不要只用大小写区分。
 
 Chrome Web Store 上传仍然手动完成。签名所需的证书和 API Key 配置见 [Apple 签名与公证密钥配置](apple-signing.md)，Safari 方案说明见 [Safari 支持方案](safari.md)。
 

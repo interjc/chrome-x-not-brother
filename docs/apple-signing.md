@@ -286,10 +286,10 @@ Variables 是明文，只放不敏感的值。
 
 ## 7. 验证
 
-1. 打开仓库的 **Actions → Release → Run workflow**，分支选 `main`。
-   - 当前版本还没有 Release 时，保持 `safari_only` 不勾选：会创建 Release，并在之后附上签名 App。
-   - 当前版本已经有 Release 时，勾选 `safari_only`：只重新生成签名 App，并覆盖 Release 里的同名附件。
-2. 等 `safari-app` job 变绿（公证通常需要几分钟），在 Release 页面下载 `Not-Brother-Safari-<version>.zip`。
+1. 打开仓库的 **Actions → Release → Run workflow**，分支选 `main`，运行。每次合并到 `main` 也会自动运行同样的流程：
+   - 当前版本还没有 Release 时，会创建 Release，并在之后附上签名 App；
+   - 当前版本已经有 Release 时，只重新生成 Safari 安装包，覆盖 Release 里的同名附件，Chrome ZIP 不变。
+2. 等 `safari-app` job 变绿（公证通常需要几分钟），在 Release 页面下载 `not-brother-safari-app-<version>.zip`。
 3. 在 Mac 上解压，确认 Gatekeeper 认可这个 App：
 
 ```bash
@@ -314,7 +314,7 @@ spctl --assess --type execute --verbose=2 "Not Brother.app"
 | “Notarize and staple” 报 401 或鉴权失败 | `ASC_KEY_ID`、`ASC_ISSUER_ID`、`.p8` 三者不是同一把 Key，或者这把 Key 已被撤销 |
 | 公证状态为 `Invalid` | job 会打印 `notarytool log`。常见原因是缺少 hardened runtime 或安全时间戳，workflow 已经设置了这两项；把日志发 Issue 或交给维护者处理 |
 
-修好之后，用第 7 节的方式勾选 `safari_only` 重跑。
+修好之后，按第 7 节手动 **Run workflow** 重跑；如果改的是代码或 workflow，合并到 `main` 就会自动重跑。
 
 ## 9. 续期、轮换与泄露处理
 
