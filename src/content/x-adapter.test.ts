@@ -1092,6 +1092,109 @@ describe("scanXDocument", () => {
   });
 });
 
+describe("relationship label precision", () => {
+  it.each([
+    ["link card", `<div data-testid="card.wrapper"><div data-testid="card.layoutSmall.detail">
+      <span>See who has blocked you</span><span>Follows you</span></div></div>`],
+    ["poll", `<div data-testid="cardPoll"><span>Follows you</span><span>已屏蔽你</span></div>`],
+    ["Community Note", `<div data-testid="birdwatch-pivot"><span>This account has blocked you</span></div>`],
+  ])("does not read %s text as platform relationship evidence", (_name, embedded) => {
+    const doc = fixture(`${accountSwitcher()}<article data-testid="tweet">
+      <div data-testid="User-Name"><span>Author</span><a href="/Author">@Author</a></div>
+      ${embedded}
+    </article>
+    <aside data-testid="HoverCard">
+      <a href="/Author"><span>Author</span><span>@Author</span></a>
+      <button data-testid="1-unfollow">Following</button>
+      <a href="/Author/following">10 Following</a>
+      <a href="/Author/followers">20 Followers</a>
+    </aside>`);
+    const candidate = scanXDocument(doc, "https://x.com/home", 100)
+      .find((item) => item.observation.handle === "Author");
+    expect(candidate?.observation.relationship).toBe("following_only");
+    expect(candidate?.observation.evidence).not.toContain("blocked-notice");
+    expect(candidate?.observation.evidence).not.toContain("follows-you-label");
+  });
+
+  it("matches the localized follows-you fallback only as a standalone label", () => {
+    const doc = fixture(`${accountSwitcher()}<main data-testid="primaryColumn">
+      <div data-testid="UserName"><span>Alice | follows you back</span><span>@Alice</span></div>
+      <button data-testid="1-unfollow">Following</button>
+    </main>`);
+    const [candidate] = scanXDocument(doc, "https://x.com/Alice", 100);
+    expect(candidate?.observation.relationship).toBe("following_only");
+
+    const labelled = fixture(`${accountSwitcher()}<main data-testid="primaryColumn">
+      <div data-testid="UserName"><span>Alice</span><span>@Alice</span><span>Follows you</span></div>
+      <button data-testid="1-unfollow">Following</button>
+    </main>`);
+    expect(scanXDocument(labelled, "https://x.com/Alice", 100)[0]?.observation.relationship)
+      .toBe("mutual");
+  });
+
+  it.each([
+    ["en", "Follow back"],
+    ["ja", "フォローバック"],
+    ["zh-CN", "回关"],
+  ])("reads a %s Follow back control as follows-you", (_locale, label) => {
+    const doc = fixture(`${accountSwitcher()}<div data-testid="UserCell">
+      <div data-testid="UserName"><span>Alice</span><span>@Alice</span></div>
+      <button data-testid="123-follow"><span>${label}</span></button>
+    </div>`);
+    const [candidate] = scanXDocument(doc, "https://x.com/search?q=alice", 100);
+    expect(candidate?.observation).toMatchObject({
+      relationship: "follows_you_only",
+      evidence: ["follow-control", "follows-you-label"],
+    });
+  });
+
+  it("reads a Follow back control on a follower notification row", () => {
+    const doc = fixture(`${accountSwitcher()}
+      <article data-testid="notification">
+        <a href="/Bob"><div data-testid="UserAvatar-Container-Bob"><img alt=""></div></a>
+        <a href="/Bob"><span>Bob</span></a><span>followed you</span>
+        <button data-testid="7-follow">Follow back</button>
+      </article>`);
+    const [candidate] = scanXDocument(doc, "https://x.com/notifications", 100);
+    expect(candidate?.observation.relationship).toBe("follows_you_only");
+  });
+
+  it("keeps a plain Follow control on a search card free of follows-you", () => {
+    const doc = fixture(`${accountSwitcher()}<div data-testid="UserCell">
+      <div data-testid="UserName"><span>Follow back</span><span>@Alice</span></div>
+      <button data-testid="123-follow">Follow</button>
+    </div>`);
+    const [candidate] = scanXDocument(doc, "https://x.com/search?q=alice", 100);
+    expect(candidate?.observation.relationship).toBe("unknown");
+  });
+
+  it("assumes not-followed-by only for the viewed profile header", () => {
+    const doc = fixture(`${accountSwitcher()}<main data-testid="primaryColumn">
+      <div data-testid="UserName"><span>Target</span><span>@Target</span></div>
+      <button data-testid="1-unfollow">Following</button>
+      <div data-testid="cellInnerDiv">
+        <div data-testid="UserCell">
+          <div data-testid="UserName"><span>Listed</span><span>@Listed</span></div>
+          <button data-testid="2-follow">Follow</button>
+        </div>
+      </div>
+    </main>`);
+    const candidates = scanXDocument(doc, "https://x.com/Target", 100);
+    expect(candidates.find((item) => item.observation.handle === "Target")?.observation.relationship)
+      .toBe("following_only");
+    const listed = candidates.find((item) => item.observation.handle === "Listed");
+    expect(listed?.observation.relationship).toBe("unknown");
+    expect(listed?.facts).toEqual({ following: false, followsYou: null, blockedBy: false });
+  });
+
+  it("does not pair a profile URL with a header still painted for another account", () => {
+    const doc = fixture(`${accountSwitcher()}<main data-testid="primaryColumn">
+      <div data-testid="UserName"><span>Me</span><span>@Viewer</span></div>
+    </main>`);
+    expect(scanXDocument(doc, "https://x.com/Alice", 100)).toEqual([]);
+  });
+});
+
 describe("hover card and tweet text helpers", () => {
   it("reads a loaded hover card handle and ignores tweet-body mentions", () => {
     const doc = fixture(`<article data-testid="tweet">
@@ -1263,7 +1366,7 @@ describe("skip selector prefilter invariant", () => {
 
 describe("observationAndBlockText", () => {
   function twoCalls(root: Element): { ordinary: string; block: string } {
-    const walk = (skip: string): string => {
+    const walk = (skip: string, separator: string): string => {
       const parts: string[] = [];
       const visit = (node: Node): void => {
         if (node.nodeType === Node.TEXT_NODE) {
@@ -1275,11 +1378,11 @@ describe("observationAndBlockText", () => {
         node.childNodes.forEach(visit);
       };
       visit(root);
-      return parts.join("").normalize("NFKC");
+      return parts.join(separator).normalize("NFKC");
     };
     return {
-      ordinary: walk(OBSERVATION_SKIP_SELECTOR),
-      block: walk(BLOCKED_NOTICE_SKIP_SELECTOR),
+      ordinary: walk(OBSERVATION_SKIP_SELECTOR, "\n"),
+      block: walk(BLOCKED_NOTICE_SKIP_SELECTOR, ""),
     };
   }
 

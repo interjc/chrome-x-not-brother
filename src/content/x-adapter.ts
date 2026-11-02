@@ -14,6 +14,8 @@ export interface ExtractedCandidate {
   observation: ObservationDraft;
   anchor: HTMLElement;
   acceptPageStoreRelationship?: boolean;
+  /** Partial DOM facts behind the observation; null fields had no evidence. */
+  facts?: RelationshipFacts;
 }
 
 const HANDLE_PATTERN = /^@?([A-Za-z0-9_]{1,15})$/;
@@ -30,8 +32,14 @@ export const HOVER_CARD_SELECTOR = '[data-testid="HoverCard"]';
 export const TWEET_TEXT_SELECTOR = '[data-testid="tweetText"]';
 export const USER_CONTENT_SELECTOR =
   `${TWEET_TEXT_SELECTOR}, [data-testid="card.layoutLarge.media"]`;
+// Link previews, polls, and Community Notes carry site- or user-authored text
+// ("See who follows you", "has blocked you") that is never platform relationship
+// chrome. They stay out of observation text without changing post-text matching.
+const EMBEDDED_CONTENT_SELECTOR =
+  '[data-testid^="card."], [data-testid="cardPoll"], [data-testid="birdwatch-pivot"]';
 export const OBSERVATION_SKIP_SELECTOR =
-  `${USER_CONTENT_SELECTOR}, [data-testid="UserDescription"], [data-xro-badge]`;
+  `${USER_CONTENT_SELECTOR}, ${EMBEDDED_CONTENT_SELECTOR}, ` +
+  '[data-testid="UserDescription"], [data-xro-badge]';
 export const BLOCKED_NOTICE_SKIP_SELECTOR =
   `${OBSERVATION_SKIP_SELECTOR}, ${USER_NAME_SELECTOR}`;
 export const PROFILE_BLOCKED_NOTICE_SKIP_SELECTOR =
@@ -109,6 +117,39 @@ const FOLLOWS_YOU_PATTERNS = [
   /已關注你/u,
 ];
 
+// The localized fallback for X's follow indicator is a standalone label. A
+// display name, link card, or quoted sentence that merely contains the phrase
+// is not the indicator.
+const FOLLOWS_YOU_LABEL_PATTERNS = [
+  /^follows you$/i,
+  /^フォローされています$/u,
+  /^关注了你$/u,
+  /^正在关注你$/u,
+  /^已關注你$/u,
+];
+
+// X labels its follow control "Follow back" only when the account already
+// follows the viewer.
+const FOLLOW_BACK_CONTROL_PATTERNS = [
+  /^follow back$/i,
+  /^フォローバック(?:する)?$/u,
+  /^回关$/u,
+];
+
+const TEXT_SEGMENT_SEPARATOR = "\n";
+
+function hasFollowsYouLabelText(text: string): boolean {
+  if (!matchesAny(text, FOLLOWS_YOU_PATTERNS)) return false;
+  return text.split(TEXT_SEGMENT_SEPARATOR).some((segment) => {
+    const value = cleanedText(segment);
+    return value.length > 0 && matchesAny(value, FOLLOWS_YOU_LABEL_PATTERNS);
+  });
+}
+
+function isFollowBackControl(control: Element): boolean {
+  return matchesAny(cleanedText(control.textContent ?? ""), FOLLOW_BACK_CONTROL_PATTERNS);
+}
+
 const SUGGESTION_HEADING_PATTERNS = [
   /who to follow/i,
   /you might like/i,
@@ -185,6 +226,7 @@ function textExcluding(
   element: Element,
   skipSelector: string,
   prefiltered = false,
+  separator = "",
 ): string {
   const parts: string[] = [];
   const visit = (node: Node): void => {
@@ -202,11 +244,12 @@ function textExcluding(
     }
   };
   visit(element);
-  return parts.join("").normalize("NFKC");
+  return parts.join(separator).normalize("NFKC");
 }
 
+/** Platform text with one text node per line, for standalone-label matching. */
 function platformText(element: Element): string {
-  return textExcluding(element, OBSERVATION_SKIP_SELECTOR, true);
+  return textExcluding(element, OBSERVATION_SKIP_SELECTOR, true, TEXT_SEGMENT_SEPARATOR);
 }
 
 function blockedNoticeText(element: Element, skipNestedProfileContent = false): string {
@@ -222,7 +265,9 @@ function blockedNoticeText(element: Element, skipNestedProfileContent = false): 
 /**
  * One traversal producing platformText(element) and blockedNoticeText(element)
  * (without nested-profile skipping): both skip OBSERVATION_SKIP content; the
- * block text additionally omits nested UserName subtrees.
+ * block text additionally omits nested UserName subtrees. Ordinary text keeps
+ * one text node per line so labels are matched whole; block text is joined
+ * because a notice can span a handle link and the sentence after it.
  */
 export function observationAndBlockText(
   element: Element,
@@ -255,7 +300,7 @@ export function observationAndBlockText(
   };
   visit(element, false);
   return {
-    ordinary: ordinary.join("").normalize("NFKC"),
+    ordinary: ordinary.join(TEXT_SEGMENT_SEPARATOR).normalize("NFKC"),
     block: block.join("").normalize("NFKC"),
   };
 }
@@ -654,10 +699,13 @@ function shouldAssumeNotFollowedBy(
   sourceType: SourceType,
   supplementalSurface: Element | null,
   suggestionSurface: boolean,
+  isProfileRoot: boolean,
 ): boolean {
   if (supplementalSurface !== null) return true;
   if (suggestionSurface) return false;
-  return sourceType === "following" || sourceType === "profile";
+  // Only the viewed profile's own header reliably paints "Follows you". Posts
+  // and UserCells elsewhere on a profile URL are ordinary cards.
+  return sourceType === "following" || isProfileRoot;
 }
 
 export function viewerHandleFromDocument(doc: Document): string | null {
@@ -719,7 +767,7 @@ function relationshipFacts(
     // blockSurfaces and textSurfaces hold the same elements here: walk once.
     const texts = textSurfaces.map(observationAndBlockText);
     blockText = texts.map((text) => text.block).join(" ");
-    ordinaryText = texts.map((text) => text.ordinary).join(" ");
+    ordinaryText = texts.map((text) => text.ordinary).join(TEXT_SEGMENT_SEPARATOR);
   }
   const evidence: EvidenceType[] = [];
   const blockedByNotice = matchesBlockedNotice(blockText);
@@ -732,16 +780,20 @@ function relationshipFacts(
     evidence.push("blocked-profile-summary-restriction");
   }
 
-  const controlIn = (area: Element, selector: string): boolean => {
+  const controlElementIn = (area: Element, selector: string): Element | null => {
     if ((isProfileRoot || controlsOnly) && area === surface) {
-      return firstDirect(area, selector) !== null;
+      return firstDirect(area, selector);
     }
-    return area.querySelector(selector) !== null;
+    return area.querySelector(selector);
   };
+  const controlIn = (area: Element, selector: string): boolean =>
+    controlElementIn(area, selector) !== null;
   const unfollowControl = relationshipSurfaces.some((area) =>
     controlIn(area, '[data-testid$="-unfollow"]'));
-  const followControl = relationshipSurfaces.some((area) =>
-    controlIn(area, '[data-testid$="-follow"]'));
+  const followControls = relationshipSurfaces
+    .map((area) => controlElementIn(area, '[data-testid$="-follow"]'))
+    .filter((control): control is Element => control !== null);
+  const followControl = followControls.length > 0;
   let following: boolean | null = null;
   if (unfollowControl) {
     following = true;
@@ -756,7 +808,8 @@ function relationshipFacts(
 
   const followsYouLabel = relationshipSurfaces.some((area) =>
     controlIn(area, '[data-testid="userFollowIndicator"]')) ||
-    matchesAny(ordinaryText, FOLLOWS_YOU_PATTERNS);
+    hasFollowsYouLabelText(ordinaryText) ||
+    (!unfollowControl && followControls.some(isFollowBackControl));
   let followsYou: boolean | null = null;
   if (followsYouLabel) {
     followsYou = true;
@@ -764,7 +817,12 @@ function relationshipFacts(
   } else if (sourceType === "followers") {
     followsYou = true;
     evidence.push("viewer-followers-list");
-  } else if (shouldAssumeNotFollowedBy(sourceType, supplementalSurface, suggestionSurface)) {
+  } else if (shouldAssumeNotFollowedBy(
+    sourceType,
+    supplementalSurface,
+    suggestionSurface,
+    isProfileRoot,
+  )) {
     followsYou = false;
   }
 
@@ -866,7 +924,7 @@ function observationFor(
   blockedByProfileSummaryRestriction = false,
   supplementalSurface: Element | null = null,
   suggestionSurface = false,
-): ObservationDraft {
+): { observation: ObservationDraft; facts: RelationshipFacts } {
   const { facts, evidence } = relationshipFacts(
     surface,
     sourceType,
@@ -875,7 +933,7 @@ function observationFor(
     supplementalSurface,
     suggestionSurface,
   );
-  return {
+  const observation: ObservationDraft = {
     userKey: handle.toLowerCase(),
     handle,
     displayName: displayNameFromArea(area, handle),
@@ -887,6 +945,7 @@ function observationFor(
     relationship: resolveRelationship(facts),
     evidence,
   };
+  return { observation, facts };
 }
 
 function isAvatarLink(link: Element): boolean {
@@ -974,10 +1033,13 @@ function profileCandidate(
   );
   const surface = doc.querySelector<HTMLElement>('[data-testid="primaryColumn"]');
   if (!handle || !area || !surface) return null;
-  return {
-    observation: observationFor(handle, area, surface, url, sourceType, observedAt),
-    anchor: area,
-  };
+  // During SPA navigation the header can still belong to the previous profile.
+  // Never pair the new URL's handle with another account's painted facts.
+  const painted = findHandle(area);
+  if (painted && painted.toLowerCase() !== handle.toLowerCase()) return null;
+  const { observation, facts } =
+    observationFor(handle, area, surface, url, sourceType, observedAt);
+  return { observation, anchor: area, facts };
 }
 
 export function scanXDocument(
@@ -1023,7 +1085,7 @@ export function scanXDocument(
       sourceType === "thread" &&
       hoverCard !== null &&
       hoverCardOmitsRelationshipCounts(hoverCard, handle);
-    const observation = observationFor(
+    const { observation, facts } = observationFor(
       handle,
       area,
       surface,
@@ -1039,6 +1101,7 @@ export function scanXDocument(
       observation,
       anchor: area,
       acceptPageStoreRelationship: !suggestionSurface,
+      facts,
     });
     const anchors = anchorsByUser.get(observation.userKey);
     if (anchors) anchors.push(area);

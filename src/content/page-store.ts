@@ -411,7 +411,11 @@ export function mergeSelectedPageUsers(
 export function readPageUserRelationships(doc: Document): Map<string, PageUserRelationship> {
   const users = new Map<string, PageUserRelationship>();
   usersFromReactStore(doc, users);
-  usersFromFibers(doc, users);
+  // The fiber walk has its own size budget. Sharing the map let a long
+  // session's store (often 500+ users) stop the walk before visible cells.
+  const fiberUsers = new Map<string, PageUserRelationship>();
+  usersFromFibers(doc, fiberUsers);
+  for (const user of fiberUsers.values()) rememberUser(users, user);
   return users;
 }
 
@@ -453,16 +457,23 @@ export function applyPageStoreRelationships(
     }
     if (isCollectableRelationship(candidate.observation.relationship)) continue;
     if (!pageUser) continue;
+    // Fill only the fields the DOM left unknown. A painted follow control or
+    // follow indicator is what the viewer sees now and outranks a store field
+    // that may predate it; it also completes a store entity that omits a field.
+    const dom = candidate.facts;
     const relationship = resolveRelationship({
-      following: pageUser.following,
-      followsYou: pageUser.followsYou,
+      following: dom?.following ?? pageUser.following,
+      followsYou: dom?.followsYou ?? pageUser.followsYou,
       blockedBy: false,
     });
     if (!isCollectableRelationship(relationship)) continue;
     candidate.observation = {
       ...candidate.observation,
       relationship,
-      evidence: ["page-user-entity"],
+      evidence: [
+        ...candidate.observation.evidence.filter((item) => item !== "insufficient-evidence"),
+        "page-user-entity",
+      ],
     };
   }
 }
