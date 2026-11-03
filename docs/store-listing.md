@@ -36,6 +36,11 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 - Adds local Zod-validated blacklist rules for handles, display names, and post content, with expiration, JSON file import/export, and one-time public HTTPS/Gist import behind optional per-site permission.
 - Makes first-run consent easier to find with a prominent entry beside the minimized NB button and an action-icon context-menu shortcut; both open the full disclosure before consent.
 
+### Version 0.5.15 release notes
+
+- More accurate relationship badges. Text in link previews, polls, and Community Notes, and display names that merely contain "follows you", no longer produce false "Follows you" or "Blocked you" labels. Posts and suggested accounts on a profile page are no longer marked as not following you, and a badge is never placed on a profile header that still shows the previous account.
+- Recognizes more real relationships: a "Follow back" button now counts as the account following you, and a follow button shown on the page is combined with relationship data X has already loaded instead of being replaced by possibly outdated data. No new permissions or network requests.
+
 ### Version 0.5.14 release notes
 
 - No changes for Chrome users. Adds compatibility checks so the same code also runs as a separately distributed Safari build; Chrome behavior, permissions, and stored data are unchanged.
@@ -175,6 +180,11 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 - 小型偏好可通过用户启用的 Chrome Sync 同步，关系档案和当前 X handle 仍只保存在本机。旧 local 偏好迁移时不会覆盖 Chrome Sync 已有设置。
 - 未同意时，收起后的 NB 悬浮球旁会显示醒目入口，工具栏图标右键菜单也能打开完整隐私说明；入口不会直接代替用户同意。
+
+### 0.5.15 更新说明
+
+- 关系标签更准确：链接预览、投票和社区笔记里的文字，以及恰好包含 “Follows you” 的显示名，不再被误判为“关注了你”或“拉黑了你”；个人主页上的帖子和推荐账号不再被标成“没关注你”；切换主页时，徽标不会贴到仍显示上一个账号的资料头部。
+- 识别出更多真实关系：“回关”按钮会被视为对方已关注你；页面上显示的关注按钮会与 X 已加载的关系数据合并，不再被可能过期的数据覆盖。不新增权限，也不发起新的网络请求。
 
 ### 0.5.14 更新说明
 
@@ -316,6 +326,11 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 
 - 小さな設定をユーザーが有効にした Chrome Sync で同期し、関係アーカイブと現在の X ハンドルはローカルに保ちます。旧 local 設定の移行時も、Chrome Sync に既存の設定があれば上書きしません。
 - 未同意の場合、収納した NB ボタンの横に目立つ入口を表示し、ツールバーアイコンの右クリックメニューからも完全なプライバシー説明を開けます。入口だけで同意が確定することはありません。
+
+### 0.5.15 更新内容
+
+- 関係ラベルの精度を上げました。リンクプレビュー、投票、コミュニティノートの文字や、たまたま「フォローされています」を含む表示名から、誤って「フォローされています」「ブロックされています」と判定しなくなりました。プロフィールページ上のポストやおすすめアカウントを「フォローされていない」と判定せず、前のアカウントのままのプロフィールヘッダーにバッジを付けることもありません。
+- 実際の関係をより多く認識します。「フォローバック」ボタンは相手にフォローされている証拠として扱い、ページに表示されたフォローボタンは X が読み込み済みの関係データと組み合わせ、古い可能性のあるデータで上書きしません。新しい権限やネットワーク通信は追加していません。
 
 ### 0.5.14 更新内容
 
