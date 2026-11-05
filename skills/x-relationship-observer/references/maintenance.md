@@ -12,7 +12,9 @@ Keep `UserName`, reply-thread `User-Name`, and occasional `User-Names` fixtures.
 
 Side Panel and Fieldbook avatar components must first use the latest stored, normalized X CDN `avatarUrl` captured for that handle. If it is absent or fails, try `https://unavatar.io/x/{handle}`; if that also fails, show the handle initial. A newly observed non-null avatar URL must be resent and replace the cached user value even when relationship evidence is unchanged. Never let a missing avatar erase the last known URL.
 
-Read already-loaded `following`, `followed_by`, `blocked_by`, and `muting` from the current page UI store, ancestor tweet fibers, and GraphQL responses the page itself already completed. Always merge those sources; do not stop after the first store user, or reply authors in a thread will be missed. Do not send new GraphQL requests or treat a missing entity as not-following. Painted DOM evidence wins for ordinary relationships, but explicit locale-independent `blocked_by=true` overrides stale ordinary follow evidence. Keep the main-world `page-bridge.js` and isolated observer both scoped to `https://x.com/*`.
+Read already-loaded `following`, `followed_by`, `blocked_by`, and `muting` from the current page UI store, ancestor tweet fibers, and GraphQL responses the page itself already completed. Always merge those sources; do not stop after the first store user, or reply authors in a thread will be missed. Do not send new GraphQL requests or treat a missing entity as not-following. Painted DOM evidence wins for ordinary relationships, field by field: when the DOM knows only `following` or only `followsYou`, keep that field and let the page entity fill just the missing one. Give the tweet-fiber walk its own size budget so a large store cannot starve it. Explicit locale-independent `blocked_by=true` overrides stale ordinary follow evidence.
+
+Keep link cards (`card.*`), polls (`cardPoll`), and Community Notes (`birdwatch-pivot`) out of relationship text, blocked-notice text, and identity extraction. Match the localized "Follows you" fallback only as a whole standalone text node, never as a substring of a display name or sentence. A `*-follow` control whose text is "Follow back" / "フォローバック" / "回关" is follows-you evidence. Only the viewed profile header assumes `followsYou=false` from a missing indicator; posts and UserCells under a profile URL do not. Never pair a profile URL handle with a header still painted for another handle. Keep the main-world `page-bridge.js` and isolated observer both scoped to `https://x.com/*`.
 
 Keep tweet/reply badges immediately before the visible `@handle`. Never insert after a timestamp or let `justify-content: space-between` park the badge at the far right of the name row. If `@handle` is hidden, place the badge after the display-name link and ignore time permalinks. When `User-Name` stacks the display name above `@handle` and contains no `time`, keep X's display name and handle on one row and put the relationship badge on the next line, with 1–2px between the left identity accent and the display name. Do not restyle a parent that already contains `time`. Removal must clear the injected row/stack markers as well as the badge.
 
@@ -27,6 +29,10 @@ For ordinary relationship enrichment, map each fully loaded, semantically visibl
 Keep the zero-record dock and side-panel guidance aligned across English, Japanese, and Simplified Chinese. Hover is a fallback when the page store has no complete facts, not a claim that Home requires opening every hover card.
 
 Known local relationships are returned to content scripts through bounded `users:lookup` batches. Each lookup names the signed-in account. Clear both the record cache and requested-key cache on `data:changed` so deletion and import are reflected, and clear them plus the sent-signature tracker whenever the signed-in account changes.
+
+## Pending real-page verification
+
+See "Pending real-page verification" in `docs/en/maintenance.md`. Two items wait for real X DOM samples: (1) the unverified `card.*` / `cardPoll` / `birdwatch-pivot` skips and the ja / zh-CN "Follow back" labels (zh-TW unknown); (2) a blocked notice inside a quoted post may be attributed to the outer author. Do not guess fixes without a captured DOM sample.
 
 ## Database changes
 

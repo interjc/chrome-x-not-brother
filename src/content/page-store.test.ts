@@ -359,6 +359,69 @@ describe("page store relationships", () => {
     });
   });
 
+  it("fills only the fields the DOM left unknown and keeps painted controls", () => {
+    const doc = fixture(`<div data-testid="SideNav_AccountSwitcher_Button"><span>@Viewer</span></div>
+      <div data-testid="UserCell">
+        <div data-testid="UserName"><span>Alice</span><span>@Alice</span></div>
+        <button data-testid="1-follow">Follow</button>
+      </div>
+      <div data-testid="UserCell">
+        <div data-testid="UserName"><span>Bob</span><span>@Bob</span></div>
+        <button data-testid="2-unfollow">Following</button>
+      </div>`);
+    const candidates = scanXDocument(doc, "https://x.com/search?q=a", 100);
+    const store = (handle: string, following: boolean | null, followsYou: boolean | null) => ({
+      handle,
+      following,
+      followsYou,
+      blockedBy: null,
+      muting: null,
+      displayName: null,
+      avatarUrl: null,
+    });
+    applyPageStoreRelationships(candidates, new Map([
+      // Stale store following=true; the painted Follow button says otherwise.
+      ["alice", store("Alice", true, true)],
+      // The store omits following; the painted Following button supplies it.
+      ["bob", store("Bob", null, true)],
+    ]));
+
+    const byHandle = new Map(candidates.map((item) => [item.observation.handle, item.observation]));
+    expect(byHandle.get("Alice")).toMatchObject({
+      relationship: "follows_you_only",
+      evidence: ["follow-control", "page-user-entity"],
+    });
+    expect(byHandle.get("Bob")).toMatchObject({
+      relationship: "mutual",
+      evidence: ["following-control", "page-user-entity"],
+    });
+  });
+
+  it("keeps walking fibers when a long session's store already holds many users", () => {
+    const entities: Record<string, unknown> = {};
+    for (let index = 0; index < 600; index += 1) {
+      entities[String(index)] = { screen_name: `user${index}`, following: false };
+    }
+    const doc = fixture(`<div data-testid="cellInnerDiv"><div data-testid="UserCell"></div></div>`);
+    attachStore(doc, entities);
+    const cell = doc.querySelector("[data-testid='cellInnerDiv']");
+    Object.defineProperty(cell, "__reactFiber$test", {
+      value: {
+        memoizedProps: { className: "host" },
+        child: {
+          memoizedProps: {
+            user: { screen_name: "CellUser", following: true, followed_by: false },
+          },
+        },
+      },
+    });
+
+    expect(readPageUserRelationships(doc).get("celluser")).toMatchObject({
+      following: true,
+      followsYou: false,
+    });
+  });
+
   it("still reads reply authors from tweet fibers when the store already has the viewer", () => {
     const doc = fixture(`<article data-testid="tweet">
       <div data-testid="User-Name"><a href="/ReplyAuthor/status/2"><span>Reply Author</span></a></div>

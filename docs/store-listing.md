@@ -43,6 +43,11 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 - Fixes your own accounts being marked "Blocked you" in X's account switcher menu. Accounts you have signed in with on this device are never badged or recorded.
 - JSON backups now name their account (schema v2); older backups still import.
 
+### Version 0.5.15 release notes
+
+- More accurate relationship badges. Text in link previews, polls, and Community Notes, and display names that merely contain "follows you", no longer produce false "Follows you" or "Blocked you" labels. Posts and suggested accounts on a profile page are no longer marked as not following you, and a badge is never placed on a profile header that still shows the previous account.
+- Recognizes more real relationships: a "Follow back" button now counts as the account following you, and a follow button shown on the page is combined with relationship data X has already loaded instead of being replaced by possibly outdated data. No new permissions or network requests.
+
 ### Version 0.5.14 release notes
 
 - No changes for Chrome users. Adds compatibility checks so the same code also runs as a separately distributed Safari build; Chrome behavior, permissions, and stored data are unchanged.
@@ -189,6 +194,11 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 - 切换到还没有档案的账号时，可以复制另一个账号的档案或从空白开始。档案库可以切换查看各账号的档案、合并到当前账号，或只清空一个账号。
 - 修复 X 账号切换菜单里自己的账号被标成「拉黑了你」。在这台设备登录过的账号都不会被标注或记录。
 - JSON 备份会写明所属账号（schema v2），旧备份仍可导入。
+
+### 0.5.15 更新说明
+
+- 关系标签更准确：链接预览、投票和社区笔记里的文字，以及恰好包含 “Follows you” 的显示名，不再被误判为“关注了你”或“拉黑了你”；个人主页上的帖子和推荐账号不再被标成“没关注你”；切换主页时，徽标不会贴到仍显示上一个账号的资料头部。
+- 识别出更多真实关系：“回关”按钮会被视为对方已关注你；页面上显示的关注按钮会与 X 已加载的关系数据合并，不再被可能过期的数据覆盖。不新增权限，也不发起新的网络请求。
 
 ### 0.5.14 更新说明
 
@@ -337,6 +347,11 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 - アーカイブのないアカウントに切り替えると、別のアカウントのアーカイブをコピーするか、空のまま始めるかを選べます。フィールドブックではアカウントごとのアーカイブの切り替え、現在のアカウントへの統合、1 アカウントだけの消去ができます。
 - X のアカウント切り替えメニューで自分のアカウントに「ブロックされています」と表示される問題を修正しました。この端末でログインしたことのあるアカウントは、表示も記録もされません。
 - JSON バックアップにアカウントが記録されるようになりました（schema v2）。以前のバックアップも読み込めます。
+
+### 0.5.15 更新内容
+
+- 関係ラベルの精度を上げました。リンクプレビュー、投票、コミュニティノートの文字や、たまたま「フォローされています」を含む表示名から、誤って「フォローされています」「ブロックされています」と判定しなくなりました。プロフィールページ上のポストやおすすめアカウントを「フォローされていない」と判定せず、前のアカウントのままのプロフィールヘッダーにバッジを付けることもありません。
+- 実際の関係をより多く認識します。「フォローバック」ボタンは相手にフォローされている証拠として扱い、ページに表示されたフォローボタンは X が読み込み済みの関係データと組み合わせ、古い可能性のあるデータで上書きしません。新しい権限やネットワーク通信は追加していません。
 
 ### 0.5.14 更新内容
 

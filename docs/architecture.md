@@ -38,7 +38,9 @@ flowchart LR
 - 只运行在 `https://x.com/*`；
 - 用 MutationObserver 观察用户正常浏览产生的 DOM；
 - MutationObserver 同时监听子树新增、关系文案和 `aria-disabled` / `disabled` / `data-testid` / `href` 等关键属性；目标落在 `tweetText` 或卡片媒体里的变更忽略，避免大量 @提及逐条插入时反复全页扫描；观察器运行且标签页可见时，每 2 秒兜底复扫当前已渲染 DOM，恢复焦点或从后台返回时立即复扫；
-- 所有选择器、保留路径和本地化文案位于 `src/content/x-adapter.ts`；平台关系文案和作者身份在跳过 `tweetText` 的前提下收集，不 `cloneNode` 整篇帖子，也不把正文 @提及当成作者；
+- 所有选择器、保留路径和本地化文案位于 `src/content/x-adapter.ts`；平台关系文案和作者身份在跳过 `tweetText` 的前提下收集，不 `cloneNode` 整篇帖子，也不把正文 @提及当成作者；链接卡片（`card.*`）、投票（`cardPoll`）和社区笔记（`birdwatch-pivot`）是站点或用户撰写的内容，同样不作为关系文案、拉黑通知或作者身份来源（不影响自定义规则的正文匹配）；
+- 本地化 “Follows you” 文案兜底只匹配整段独立标签（单个文本节点的完整内容），显示名、卡片标题或句子里含有该短语不算；`userFollowIndicator` 仍是首选证据。X 只在对方已关注你时把关注按钮写成 “Follow back” / “フォローバック” / “回关”，该按钮文字等同 follows-you 证据；
+- 只有个人主页自身头部（主栏资料区）缺少 “Follows you” 才视为 `followsYou=false`；同一主页 URL 下的帖子和 UserCell 按普通卡片处理。SPA 切换时若资料头部仍显示另一个 handle，不把新 URL 的 handle 与旧头部配对；
 - 把同一 handle 的候选按证据强度合并；
 - 从本地用户记录的前后基础关系动态推导变化展示：当前已是互关则显示“互关”；当前是我单向关注则默认显示“单向关注”，只有历史比对证明对方曾经关注我、现在我仍关注且对方不再关注才显示“对方取关”；其他单方可归因时显示“你已取关”或“对方拉黑”；明确双方都已取消关注（含 follows-you-only 变为 none）则不显示徽标；无法单方归因的转换保留通用 changed，dock 继续按 `hasChanged` 汇总；
 - Who-to-follow / 跟隨誰等建议模块的 UserCell 不得把缺少 “Follows you” 写成 `followsYou=false`；DOM 证据不足时保持 unknown，也不接受 page-store 把建议卡填成 none；
@@ -50,7 +52,7 @@ flowchart LR
 - 通知页的点赞、转帖和关注活动行使用 `data-testid="notification"`。参与者只取该行头像（`UserAvatar-Container-<handle>` 或其资料链接），徽标放进同一 handle 的显示名链接，没有显示名链接时放进头像链接。活动句（“关注了你”“赞了你的帖子”）不是当前关系；该行上的关注/取关控件和 `userFollowIndicator` 仍有效。没有这些控件时保持 unknown，由当前页已载入的用户实体或本地档案回标。没有头像的预览链接、嵌套帖子里的 @提及不是参与者。同一条通知里的多名参与者不共享一枚关注按钮；
 - 头像只从同 handle 的资料链接或精确 `UserAvatar-Container-<handle>` 读取声明的 X CDN `src` / `srcset`；不读列表 DOM 复用时可能仍是上一账号的 `currentSrc`，不从复合卡片任取第一张图片；再次观察到不同非空 URL 时覆盖该账号的缓存头像；Side Panel 与档案库优先显示这个最近观察值，缺失或失败时按 handle 请求公开头像，再失败显示 handle 首字母；
 - 通过 `users:lookup` 批量读取可见 handle 在当前登录账号档案里的已知关系，使已确认账号在证据浮层关闭后继续回标；登录账号变化时清空本页的记录缓存、查询记录和上报签名；
-- 读取 X 已经为当前页面载入的 UI store、tweet fiber（含祖先组件）以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`、`muting`，以及已有的 `name` / `profile_image_url_https`，给首页、评论区和通知活动行没有关注控件的账号补全关系，并补全 DOM 抽坏的显示名和头像；不发起新的 GraphQL 或 REST 请求；
+- 读取 X 已经为当前页面载入的 UI store、tweet fiber（含祖先组件）以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`、`muting`，以及已有的 `name` / `profile_image_url_https`，给首页、评论区和通知活动行没有关注控件的账号补全关系，并补全 DOM 抽坏的显示名和头像；不发起新的 GraphQL 或 REST 请求。补全按字段进行：DOM 已画出的关注控件或关注指示保留并优先于可能过期的实体字段，实体只填 DOM 未知的字段；tweet fiber 遍历有独立的数量预算，不因长会话 store 用户过多而提前停止；
 - 同意后若打开可选时间线过滤，用已载入的 `muting`、现场/本地 `blocked_by` 隐藏首页、搜索、通知和帖子详情/评论区里对应帖子单元格；页面 GraphQL 一返回静音/拉黑信号就立即隐藏。本地名单已有的账号立刻消失，第一次检测到的账号带短收起动画。不隐藏个人主页、浮窗或关注列表，也不把静音列表写入数据库；
 - `hideByFilterRules` 打开且同意版本有效时，通过 `filter-rules:get` 向 service worker 请求当前登录 X 账号命名空间下、已由 Zod 校验的规则快照，再用不依赖 Zod 的轻量匹配器预编译 handle 集合、contains 与正则。切换账号时丢弃上一账号的编译快照。候选帖正文选择器仍封装在 `x-adapter.ts`；正文只作为内存中的当前匹配输入，不写档案或消息。每次匹配重新检查到期时间，2 秒复扫负责在规则到期后恢复节点；规则存储变化通过 `chrome.storage.onChanged` 使快照失效并复扫。同意后可在 HoverCard 名字旁、帖子三个点菜单和帖子正文划词处用 `filter-rules:quick-add` 立即保存一条 handle 或 contains 规则；内容脚本不直接写规则文档，也不点击 X 的拉黑/静音；
 - 页面主世界 `page-bridge.js` 只把上述已载入字段回传给隔离世界的观察器；普通 DOM 证据优先，store / 已完成响应通常只填充内部 unknown，但明确 `blocked_by=true` 必须覆盖冲突的普通关注证据；

@@ -33,6 +33,13 @@ Ordinary-relationship completion may also use a fully loaded visible `HoverCard`
 
 Home timeline cards usually omit follow controls, but the current page UI store often already has that author's `following` / `followed_by`. When debugging “Home does not recognize”: first confirm the card extracted a handle; then confirm the console can read store or tweet-fiber user entities on `#react-root`; main-world `page-bridge.js` must already be injected. Hover is needed only when the store has no complete booleans. While the observer count is still zero, the dock only describes hover as a fallback.
 
+## Pending real-page verification
+
+These two items lack real X DOM samples. Add fixtures and address them once a suitable page is found:
+
+1. **Unverified selectors and strings**: the `card.*`, `cardPoll`, and `birdwatch-pivot` relationship-text skips follow common X markup, and the Japanese `フォローバック` and Simplified Chinese `回关` "Follow back" labels come from memory. A wrong guess only lowers recall; it cannot mislabel. The Traditional Chinese "Follow back" label is unknown and not included. Samples needed: posts with link cards, polls, and Community Notes, plus Follow back buttons in Japanese, Simplified Chinese, and Traditional Chinese UI.
+2. **A blocked notice inside a quoted post may be attributed to the outer author**: if a post quotes a post from an account that blocked the viewer and X shows a notice such as "from an account that blocked you" inside the quote box, that text currently joins the outer post's blocked-notice text, so the outer author may be mislabeled blocked-by. The quote-box notice cannot yet be told apart reliably from a thread author's own notice, so this is unchanged. Sample needed: the full `article` DOM of such a quoting post.
+
 ## Recovering from a wrong relationship
 
 - After an adapter fix, a later credible observation can update the current relationship.
