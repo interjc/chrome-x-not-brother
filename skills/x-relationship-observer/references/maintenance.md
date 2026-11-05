@@ -28,7 +28,7 @@ For ordinary relationship enrichment, map each fully loaded, semantically visibl
 
 Keep the zero-record dock and side-panel guidance aligned across English, Japanese, and Simplified Chinese. Hover is a fallback when the page store has no complete facts, not a claim that Home requires opening every hover card.
 
-Known local relationships are returned to content scripts through bounded `users:lookup` batches. Each lookup names the signed-in account. Clear both the record cache and requested-key cache on `data:changed` so deletion and import are reflected, and clear them plus the sent-signature tracker whenever the signed-in account changes.
+Known local relationships are returned to content scripts through bounded `users:lookup` batches. Each lookup and write names the account the page itself shows as signed in; never fall back to the last-known `viewerHandle` for archive reads or writes, because right after a switch it is the previous account. With the observer paused, still send an empty `observations:upsert` so the service worker records the new account for the Side Panel. Clear both the record cache and requested-key cache on `data:changed` so deletion and import are reflected, and clear them plus the sent-signature tracker whenever the signed-in account changes.
 
 ## Pending real-page verification
 

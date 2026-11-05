@@ -33,6 +33,8 @@ export function useUsers(
       setLoading(false);
       return undefined;
     }
+    // Another account's list must not linger while this one loads.
+    setUsers([]);
     setLoading(true);
     const skip = excludedKey ? excludedKey.split(",") : [];
     const subscription = liveQuery(() => getArchiveUsers(viewer, skip)).subscribe({

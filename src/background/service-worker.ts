@@ -37,6 +37,7 @@ import {
   updateSettings,
 } from "../storage/settings";
 import { getFilterRuleSet, saveFilterRuleSet } from "../storage/filter-rules";
+import { normalizeViewerNamespace } from "../storage/filter-rule-keys";
 import { getHideStats, incrementHideStats } from "../storage/hide-stats";
 import { hideStatsHaveIncrements, type HideStatsDelta } from "../domain/hide-stats";
 import {
@@ -324,17 +325,16 @@ async function handleUpsert(
   message: UpsertObservationsMessage,
 ): Promise<UpsertObservationsResponse> {
   const settings = await getSettings();
-  if (
-    settings.consentVersion < CURRENT_CONSENT_VERSION ||
-    !settings.observerEnabled
-  ) {
-    return { ok: true, users: [] };
-  }
-  // Relationships are relative to the signed-in account; without one there
-  // is no archive to write to.
-  const viewer = resolveViewer(message.viewerHandle, settings);
+  if (settings.consentVersion < CURRENT_CONSENT_VERSION) return { ok: true, users: [] };
+  // Relationships are relative to the account this page shows as signed in.
+  // Never fall back to the last-known account: right after a switch that is
+  // someone else, and the evidence would land in the wrong archive.
+  const viewer = normalizeViewerNamespace(message.viewerHandle);
   if (!viewer) return { ok: true, users: [] };
+  // Record the signed-in account even while the observer is paused, so the
+  // Side Panel and its Rules tab follow an account switch.
   const current = await adoptViewer(viewer);
+  if (!current.observerEnabled) return { ok: true, users: [] };
   const excluded = new Set(ownAccounts(current, viewer));
   const users = await upsertObservations(
     viewer,

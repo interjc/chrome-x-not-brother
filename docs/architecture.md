@@ -51,7 +51,7 @@ flowchart LR
 - 从首页时间线的 status permalink、作者头像和去掉格式字符的 `@handle` 识别作者身份；没有关注控件时仍输出内部 unknown，供本地档案回标，不把它当成未关注；帖子正文里的 @提及不是作者；
 - 通知页的点赞、转帖和关注活动行使用 `data-testid="notification"`。参与者只取该行头像（`UserAvatar-Container-<handle>` 或其资料链接），徽标放进同一 handle 的显示名链接，没有显示名链接时放进头像链接。活动句（“关注了你”“赞了你的帖子”）不是当前关系；该行上的关注/取关控件和 `userFollowIndicator` 仍有效。没有这些控件时保持 unknown，由当前页已载入的用户实体或本地档案回标。没有头像的预览链接、嵌套帖子里的 @提及不是参与者。同一条通知里的多名参与者不共享一枚关注按钮；
 - 头像只从同 handle 的资料链接或精确 `UserAvatar-Container-<handle>` 读取声明的 X CDN `src` / `srcset`；不读列表 DOM 复用时可能仍是上一账号的 `currentSrc`，不从复合卡片任取第一张图片；再次观察到不同非空 URL 时覆盖该账号的缓存头像；Side Panel 与档案库优先显示这个最近观察值，缺失或失败时按 handle 请求公开头像，再失败显示 handle 首字母；
-- 通过 `users:lookup` 批量读取可见 handle 在当前登录账号档案里的已知关系，使已确认账号在证据浮层关闭后继续回标；登录账号变化时清空本页的记录缓存、查询记录和上报签名；
+- 通过 `users:lookup` 批量读取可见 handle 在当前登录账号档案里的已知关系，使已确认账号在证据浮层关闭后继续回标；只用页面自己显示的登录账号查询和上报，页面没画出账号时不查不写；登录账号变化时清空本页的记录缓存、查询记录和上报签名；
 - 读取 X 已经为当前页面载入的 UI store、tweet fiber（含祖先组件）以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`、`muting`，以及已有的 `name` / `profile_image_url_https`，给首页、评论区和通知活动行没有关注控件的账号补全关系，并补全 DOM 抽坏的显示名和头像；不发起新的 GraphQL 或 REST 请求。补全按字段进行：DOM 已画出的关注控件或关注指示保留并优先于可能过期的实体字段，实体只填 DOM 未知的字段；tweet fiber 遍历有独立的数量预算，不因长会话 store 用户过多而提前停止；
 - 同意后若打开可选时间线过滤，用已载入的 `muting`、现场/本地 `blocked_by` 隐藏首页、搜索、通知和帖子详情/评论区里对应帖子单元格；页面 GraphQL 一返回静音/拉黑信号就立即隐藏。本地名单已有的账号立刻消失，第一次检测到的账号带短收起动画。不隐藏个人主页、浮窗或关注列表，也不把静音列表写入数据库；
 - `hideByFilterRules` 打开且同意版本有效时，通过 `filter-rules:get` 向 service worker 请求当前登录 X 账号命名空间下、已由 Zod 校验的规则快照，再用不依赖 Zod 的轻量匹配器预编译 handle 集合、contains 与正则。切换账号时丢弃上一账号的编译快照。候选帖正文选择器仍封装在 `x-adapter.ts`；正文只作为内存中的当前匹配输入，不写档案或消息。每次匹配重新检查到期时间，2 秒复扫负责在规则到期后恢复节点；规则存储变化通过 `chrome.storage.onChanged` 使快照失效并复扫。同意后可在 HoverCard 名字旁、帖子三个点菜单和帖子正文划词处用 `filter-rules:quick-add` 立即保存一条 handle 或 contains 规则；内容脚本不直接写规则文档，也不点击 X 的拉黑/静音；
@@ -71,7 +71,7 @@ flowchart LR
 - 设置工具栏按钮打开 Side Panel；
 - 用 action badge 同步显示 `ON` 或需要注意的 `!` 状态；
 - 首次安装打开本地 dashboard 引导页；
-- 用消息里的登录账号（缺省用本地设置里最后一个）决定读写哪个账号的档案；第一次见到的账号记入 `knownViewerHandles` 并从所有档案删除，同时认领 0.5.x 未归属的旧档案；识别不到账号时不写入；向 content script 返回当前账号的本地概览；
+- 用消息里的登录账号决定读写哪个账号的档案；写入不回退到本地设置里最后一个账号，消息没带账号就丢弃；观察器暂停时也记下消息里的账号，让侧栏跟上切换；第一次见到的账号记入 `knownViewerHandles` 并从所有档案删除，同时认领 0.5.x 未归属的旧档案；识别不到账号时不写入；向 content script 返回当前账号的本地概览；
 - 把新观察以及档案页的确认、删除、导入、清空广播给所有已注入的 X content script，使其清除关系查询缓存并合并复扫；广播使用现有 `chrome.tabs` 消息能力，不申请 `tabs` 权限也不读取标签页内容；
 - 仅向 `x.com` content script 返回其请求 handle 的已知本地用户记录；
 - 仅在同意版本有效且 `hideByFilterRules` 已打开时，读取并 Zod 校验 local 规则文档，再向请求的 `x.com` content script 返回规则快照；另提供 `filter-rules:status`，只返回是否正在应用和规则条数，不含规则正文，供 dock 状态使用；`filter-rules:quick-add` 在同意后把一条 handle 或 contains 规则写入当前账号命名空间并立即保存，必要时打开总开关；校验库与 unsafe-regex 检查不进入每个 X 页面的 content bundle；

@@ -154,7 +154,17 @@ function currentViewerHandle(): string | null {
     ?? null;
 }
 
+/**
+ * The account this page itself shows as signed in. Archive reads and writes use
+ * only this: the last-known account in settings belongs to whoever was signed in
+ * before an account switch, so it must never pick an archive.
+ */
+function pageViewerHandle(): string | null {
+  return viewerHandleFromDocument(document)?.toLowerCase() ?? null;
+}
+
 let archiveViewer: string | null = null;
+let announcedViewer: string | null = null;
 
 /**
  * Each signed-in account has its own archive. When X switches accounts in place,
@@ -162,7 +172,7 @@ let archiveViewer: string | null = null;
  * queried and written from scratch.
  */
 function syncArchiveViewer(): void {
-  const viewer = currentViewerHandle();
+  const viewer = pageViewerHandle();
   if (viewer === archiveViewer) return;
   archiveViewer = viewer;
   recordCache.clear();
@@ -740,13 +750,15 @@ async function refreshSummary(): Promise<void> {
   if (summaryRefreshInFlight) return;
   summaryRefreshInFlight = true;
   try {
+    const requested = currentViewerHandle();
     const response = await sendRuntimeMessage<
       GetSummaryResponse | { ok: false; error: string }
     >({
       type: "summary:get",
-      viewerHandle: currentViewerHandle(),
+      viewerHandle: requested,
     });
-    if (stopped) return;
+    // A switch while this was in flight: the next pass reads the new account.
+    if (stopped || requested !== currentViewerHandle()) return;
     if (response.ok) {
       latestSummary = response.summary;
       latestSummaryReadAt = Date.now();
@@ -800,11 +812,12 @@ function annotate(candidates: ExtractedCandidate[]): void {
 }
 
 async function hydrateRecordCache(candidates: ExtractedCandidate[]): Promise<void> {
+  const viewer = archiveViewer;
+  if (!viewer) return;
   const userKeys = [...new Set(candidates.map((item) => item.observation.userKey))]
     .filter((userKey) => !requestedUserKeys.has(userKey));
   if (userKeys.length === 0) return;
   for (const userKey of userKeys) requestedUserKeys.add(userKey);
-  const viewer = archiveViewer;
   try {
     const response = await sendRuntimeMessage<
       LookupUsersResponse | { ok: false; error: string }
@@ -859,6 +872,8 @@ async function processPage(): Promise<void> {
     return;
   }
   syncQuickRuleUi();
+  if (!settings.observerEnabled) await announceViewer(settings);
+  if (stopped) return;
   if (!settings.observerEnabled && !hidingEnabled) {
     removeRelationshipBadges();
     revealAllHiddenTweets();
@@ -868,8 +883,8 @@ async function processPage(): Promise<void> {
   if (latestSummary === null || Date.now() - latestSummaryReadAt > 30_000) {
     void refreshSummary();
   }
-  const viewerHandle = viewerHandleFromDocument(document);
-  const viewerKey = viewerHandle?.toLowerCase() ?? settings.viewerHandle;
+  const viewerHandle = pageViewerHandle();
+  const viewerKey = viewerHandle ?? settings.viewerHandle;
   const scanGeneration = evidenceGeneration;
   const scanHref = location.href;
   const candidates = scanXDocument(document, location.href).filter(
@@ -908,10 +923,12 @@ async function processPage(): Promise<void> {
   if (settings.showBadges) annotate(candidates);
   else removeRelationshipBadges();
 
+  // Without a signed-in account on the page there is no archive to write to.
+  if (!viewerHandle) return;
   const observations = observationSignatures.filterUnsent(
     bestObservations(collectableCandidates),
   );
-  const viewerNeedsSync = viewerKey !== null && settings.viewerHandle !== viewerKey;
+  const viewerNeedsSync = settings.viewerHandle !== viewerHandle;
   if (observations.length === 0 && !viewerNeedsSync) return;
 
   const message: UpsertObservationsMessage = {
@@ -931,6 +948,27 @@ async function processPage(): Promise<void> {
     }
   } catch (error) {
     handleRuntimeError(error, "Could not persist observations");
+  }
+}
+
+/**
+ * With the observer paused nothing else reports the signed-in account, so the
+ * Side Panel (and its Rules tab) would stay on the account used before a switch.
+ * An empty upsert records it without writing any observation.
+ */
+async function announceViewer(settings: ObserverSettings): Promise<void> {
+  const viewerHandle = pageViewerHandle();
+  if (!viewerHandle || settings.viewerHandle === viewerHandle) return;
+  if (announcedViewer === viewerHandle) return;
+  announcedViewer = viewerHandle;
+  try {
+    const response = await sendRuntimeMessage<
+      UpsertObservationsResponse | { ok: false; error: string }
+    >({ type: "observations:upsert", observations: [], viewerHandle });
+    if (!response.ok) announcedViewer = null;
+  } catch (error) {
+    announcedViewer = null;
+    handleRuntimeError(error, "Could not record the signed-in account");
   }
 }
 

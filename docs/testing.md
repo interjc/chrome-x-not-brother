@@ -46,7 +46,7 @@ npm run skills:validate
 - 自定义规则 Zod schema 规范化 handle，拒绝未知字段、重复 id/handle、无效或可能灾难性回溯的正则和超限 JSON；handle、显示名、正文、启停与到期匹配正确，关闭总开关或规则到期后帖子恢复；
 - content script 仅通过 service worker 的 `filter-rules:get` 取得已校验规则快照；未同意或总开关关闭时后台拒绝返回，content bundle 不包含 Zod 或 `safe-regex2`；
 - 规则文件导入会询问按 ID 更新或清空覆盖；相同 id 整条替换、没有的 id 新增；公开 HTTPS/Gist URL 解析、单 JSON 选择、截断 Raw 文件、超时/响应大小/HTTP/非法 JSON 错误都安全失败；规则只写当前登录账号命名空间下的 `chrome.storage.local`；
-- 多账号：0.5.x 的 Dexie 1 数据库用 `fake-indexeddb` 升到 3，旧档案复制到未归属，丢弃 unknown 和 `@logout` 这类路由保留字，认领后归到一个账号；同一 handle 在两个账号下互不影响；排除当前账号和所有自己的账号；跨账号复制幂等且保留源账号；v2 导出不带 `viewer` 字段并能导入另一个账号；第一次见到账号时把它从所有档案删除；X 账号切换菜单（`AccountSwitcher_*`、`/logout`、`button[data-testid="UserCell"]`）不产生候选、不算资料浮窗；侧栏在当前账号为空时提示复制或从空白开始，选后不再提示；
+- 多账号：0.5.x 的 Dexie 1 数据库用 `fake-indexeddb` 升到 3，旧档案复制到未归属，丢弃 unknown 和 `@logout` 这类路由保留字，认领后归到一个账号；同一 handle 在两个账号下互不影响；排除当前账号和所有自己的账号；跨账号复制幂等且保留源账号；v2 导出不带 `viewer` 字段并能导入另一个账号；第一次见到账号时把它从所有档案删除；上报没带登录账号时不写入、不回退到上一个账号，观察器暂停时也会记下新账号；X 账号切换菜单（`AccountSwitcher_*`、`/logout`、`button[data-testid="UserCell"]`）不产生候选、不算资料浮窗；侧栏在当前账号为空时提示复制或从空白开始，选后不再提示；
 - CSV escaping 与 JSON schema v1/v2 validation；
 - Manifest 文件、最小常驻权限、仅用于用户手势远程导入的 optional HTTPS host permission 和所需 build artifacts；
 - `en`、`ja`、`zh_CN` Manifest catalog、语言归一化、翻译占位符、关系与来源名称。
@@ -92,6 +92,7 @@ npm run skills:validate
     - 用 0.5.x 积累一些记录后升级到 0.6.0，档案库人数不变，归在最后登录的账号下，顶部出现一次性提示，点「知道了」后不再出现；
     - 在帖子页打开左下角账号菜单：没有「拉黑了你」，没有「加入"不是兄弟"名单」，档案里没有 `@logout`；
     - 切换到 @B：侧栏显示「@B 的档案」和复制 / 从空白开始的提示，页面上不再出现 @A 档案里的徽标；
+    - 暂停观察器、只开一个时间线过滤，再切回 @A：侧栏和规则页跟着显示 @A；
     - 点「复制」：@B 出现同样的记录，档案库切到 @A 仍在；另一次点「从空白开始」后刷新不再提示；
     - 档案库切换账号、合并到当前账号、清空、删除单条、导出 JSON（`schemaVersion: 2`、`viewerHandle` 正确）都只影响所选账号；把 @A 的备份导入 @B 前会先确认；
     - @A 和 @B 都不出现在任何档案、侧栏列表或页面徽标里。
