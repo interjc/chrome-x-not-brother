@@ -15,12 +15,14 @@ const evidenceSet = new Set<string>(EVIDENCE_TYPES);
 export function createDatabaseExport(
   users: UserRecord[],
   observations: ObservationRecord[],
+  viewerHandle: string | null = null,
   now = new Date(),
 ): DatabaseExport {
   return {
     format: "not-brother",
-    schemaVersion: 1,
+    schemaVersion: 2,
     exportedAt: now.toISOString(),
+    viewerHandle,
     users,
     observations,
   };
@@ -108,8 +110,18 @@ export function parseDatabaseExport(value: unknown): DatabaseExport {
     throw new Error("Invalid Not Brother export: root object");
   }
   const payload = value as Partial<DatabaseExport>;
-  if (payload.format !== "not-brother" || payload.schemaVersion !== 1) {
+  if (
+    payload.format !== "not-brother" ||
+    (payload.schemaVersion !== 1 && payload.schemaVersion !== 2)
+  ) {
     throw new Error("Invalid Not Brother export: unsupported schema");
+  }
+  if (
+    payload.schemaVersion === 2 &&
+    payload.viewerHandle !== null &&
+    !(isString(payload.viewerHandle) && /^[a-z0-9_]{1,15}$/.test(payload.viewerHandle))
+  ) {
+    throw new Error("Invalid Not Brother export: viewerHandle");
   }
   if (!isString(payload.exportedAt) || Number.isNaN(Date.parse(payload.exportedAt))) {
     throw new Error("Invalid Not Brother export: exportedAt");

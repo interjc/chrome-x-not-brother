@@ -13,7 +13,8 @@
 | [产品与界面设计](design.md) | 交互原则、标注语义和视觉语言 |
 | [国际化设计](localization.md) · [EN](en/localization.md) | 中英日自动切换、词库边界、扩展语言、仓库文档语言与商店本地化 |
 | [技术架构](architecture.md) · [EN](en/architecture.md) | 运行时数据流、模块边界和安全约束 |
-| [数据模型](data-model.md) | users、observations、合并和迁移规则 |
+| [数据模型](data-model.md) | 按账号分开的 accountUsers、accountObservations，合并、导出 v2 和迁移规则 |
+| [多账号](multi-account.md) | 档案按登录账号分开：账号菜单误判的根因、自己的账号排除、Dexie 1→3 迁移与旧数据认领、切换时复制或从空白开始、回滚 |
 | [自定义拦截规则](filter-rules.md) · [EN](en/filter-rules.md) | filter-rules JSON v1、匹配语义、限制与导入权限 |
 | [开发指南](development.md) · [EN](en/development.md) | nvm、安装、构建、目录与日常流程 |
 | [测试指南](testing.md) · [EN](en/testing.md) | 自动检查，Chrome、Chrome 离线安装与 Safari 的手工验收清单 |

@@ -16,6 +16,8 @@ export const DEFAULT_SETTINGS: ObserverSettings = {
   showBadges: true,
   dockCollapsed: false,
   viewerHandle: null,
+  knownViewerHandles: [],
+  dismissedArchivePrompts: [],
   uiLocale: "auto",
   hideMutedAccounts: false,
   hideBlockedByAccounts: false,
@@ -37,8 +39,22 @@ export function sidePanelTabPreference(value: unknown): SidePanelTab {
     : DEFAULT_SETTINGS.sidePanelTab;
 }
 
+export const MAX_KNOWN_VIEWERS = 20;
+const HANDLE_KEY_PATTERN = /^[a-z0-9_]{1,15}$/;
+
+export function handleKeyList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const keys: string[] = [];
+  for (const item of value) {
+    if (typeof item !== "string") continue;
+    const key = item.trim().replace(/^@/, "").toLowerCase();
+    if (HANDLE_KEY_PATTERN.test(key) && !keys.includes(key)) keys.push(key);
+  }
+  return keys.slice(-MAX_KNOWN_VIEWERS);
+}
+
 export function coerceSettings(
-  saved?: Partial<ObserverSettings> | null,
+  saved?: { [Key in keyof ObserverSettings]?: ObserverSettings[Key] | undefined } | null,
 ): ObserverSettings {
   return {
     consentVersion: saved?.consentVersion ?? DEFAULT_SETTINGS.consentVersion,
@@ -46,6 +62,8 @@ export function coerceSettings(
     showBadges: saved?.showBadges ?? DEFAULT_SETTINGS.showBadges,
     dockCollapsed: saved?.dockCollapsed ?? DEFAULT_SETTINGS.dockCollapsed,
     viewerHandle: saved?.viewerHandle ?? DEFAULT_SETTINGS.viewerHandle,
+    knownViewerHandles: handleKeyList(saved?.knownViewerHandles),
+    dismissedArchivePrompts: handleKeyList(saved?.dismissedArchivePrompts),
     uiLocale: uiLocalePreference(saved?.uiLocale),
     hideMutedAccounts: saved?.hideMutedAccounts ?? DEFAULT_SETTINGS.hideMutedAccounts,
     hideBlockedByAccounts:
@@ -55,8 +73,23 @@ export function coerceSettings(
   };
 }
 
-type SyncedObserverSettings = Omit<ObserverSettings, "viewerHandle">;
-type LocalObserverSettings = Pick<ObserverSettings, "viewerHandle">;
+type LocalSettingKey = "viewerHandle" | "knownViewerHandles" | "dismissedArchivePrompts";
+type SyncedObserverSettings = Omit<ObserverSettings, LocalSettingKey>;
+type LocalObserverSettings = Pick<ObserverSettings, LocalSettingKey>;
+
+const LOCAL_SETTING_KEYS = [
+  "viewerHandle",
+  "knownViewerHandles",
+  "dismissedArchivePrompts",
+] as const satisfies readonly LocalSettingKey[];
+
+function localSettings(settings: ObserverSettings): LocalObserverSettings {
+  return {
+    viewerHandle: settings.viewerHandle,
+    knownViewerHandles: settings.knownViewerHandles,
+    dismissedArchivePrompts: settings.dismissedArchivePrompts,
+  };
+}
 
 const SYNCED_SETTING_KEYS = [
   "consentVersion",
@@ -137,6 +170,8 @@ export async function getSettings(): Promise<ObserverSettings> {
   const next = coerceSettings({
     ...(savedSynced ?? legacyLocal),
     viewerHandle: viewerHandle ?? DEFAULT_SETTINGS.viewerHandle,
+    knownViewerHandles: savedLocal?.knownViewerHandles,
+    dismissedArchivePrompts: savedLocal?.dismissedArchivePrompts,
   });
 
   if (legacyLocal) {
@@ -144,9 +179,7 @@ export async function getSettings(): Promise<ObserverSettings> {
       await storage.sync.set({ [SETTINGS_KEY]: syncedSettings(next) });
     }
     if (!hasLocalViewer && hasOwn(legacyLocal, "viewerHandle")) {
-      await storage.local.set({
-        [LOCAL_SETTINGS_KEY]: { viewerHandle: next.viewerHandle } satisfies LocalObserverSettings,
-      });
+      await storage.local.set({ [LOCAL_SETTINGS_KEY]: localSettings(next) });
     }
     await storage.local.remove(SETTINGS_KEY);
   }
@@ -164,10 +197,8 @@ export async function updateSettings(
   if (SYNCED_SETTING_KEYS.some((key) => hasOwn(patch, key))) {
     writes.push(storage.sync.set({ [SETTINGS_KEY]: syncedSettings(next) }));
   }
-  if (hasOwn(patch, "viewerHandle")) {
-    writes.push(storage.local.set({
-      [LOCAL_SETTINGS_KEY]: { viewerHandle: next.viewerHandle } satisfies LocalObserverSettings,
-    }));
+  if (LOCAL_SETTING_KEYS.some((key) => hasOwn(patch, key))) {
+    writes.push(storage.local.set({ [LOCAL_SETTINGS_KEY]: localSettings(next) }));
   }
 
   await Promise.all(writes);

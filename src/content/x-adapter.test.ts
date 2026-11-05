@@ -578,6 +578,33 @@ describe("scanXDocument", () => {
     });
   });
 
+  it("ignores the side-nav account switcher menu that X also renders as a HoverCard", () => {
+    const doc = fixture(`${accountSwitcher("Alpha")}
+    <div id="layers"><div data-testid="HoverCard">
+      <div><div><span>Alpha</span><span>@Alpha</span></div></div>
+      <button data-testid="UserCell" aria-label="Switch to @Beta">
+        <div data-testid="User-Name"><span>Beta</span><span>@Beta</span></div>
+      </button>
+      <a href="/i/flow/login" data-testid="AccountSwitcher_AddAccount_Button">Add an existing account</a>
+      <a href="/account/switch" data-testid="AccountSwitcher_ManageAccounts_Button">Manage accounts</a>
+      <a href="/logout" data-testid="AccountSwitcher_Logout_Button">Log out @Alpha</a>
+    </div></div>`);
+
+    expect(visibleHoverCards(doc).size).toBe(0);
+    expect(scanXDocument(doc, "https://x.com/Someone/status/123", 100)).toEqual([]);
+    expect(scanXDocument(doc, "https://x.com/home", 100)).toEqual([]);
+  });
+
+  it("never reads app routes such as /logout as a handle", () => {
+    const doc = fixture(`<aside data-testid="HoverCard">
+      <a href="/logout">Log out</a>
+      <p>No following or follower links.</p>
+    </aside>`);
+
+    expect(handleFromHoverCard(doc.querySelector("aside")!)).toBeNull();
+    expect(scanXDocument(doc, "https://x.com/Someone/status/123", 100)).toEqual([]);
+  });
+
   it("keeps a repost-only restriction unknown when a normal hover card has counts", () => {
     const doc = fixture(`<div data-testid="cellInnerDiv"><article data-testid="tweet">
       <div data-testid="User-Name"><span>Protected</span><a href="/Protected">@Protected</a></div>

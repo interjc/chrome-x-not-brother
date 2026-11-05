@@ -46,7 +46,8 @@ npm run skills:validate
 - 自定义规则 Zod schema 规范化 handle，拒绝未知字段、重复 id/handle、无效或可能灾难性回溯的正则和超限 JSON；handle、显示名、正文、启停与到期匹配正确，关闭总开关或规则到期后帖子恢复；
 - content script 仅通过 service worker 的 `filter-rules:get` 取得已校验规则快照；未同意或总开关关闭时后台拒绝返回，content bundle 不包含 Zod 或 `safe-regex2`；
 - 规则文件导入会询问按 ID 更新或清空覆盖；相同 id 整条替换、没有的 id 新增；公开 HTTPS/Gist URL 解析、单 JSON 选择、截断 Raw 文件、超时/响应大小/HTTP/非法 JSON 错误都安全失败；规则只写当前登录账号命名空间下的 `chrome.storage.local`；
-- CSV escaping 与 JSON schema validation；
+- 多账号：0.5.x 的 Dexie 1 数据库用 `fake-indexeddb` 升到 3，旧档案复制到未归属，丢弃 unknown 和 `@logout` 这类路由保留字，认领后归到一个账号；同一 handle 在两个账号下互不影响；排除当前账号和所有自己的账号；跨账号复制幂等且保留源账号；v2 导出不带 `viewer` 字段并能导入另一个账号；第一次见到账号时把它从所有档案删除；X 账号切换菜单（`AccountSwitcher_*`、`/logout`、`button[data-testid="UserCell"]`）不产生候选、不算资料浮窗；侧栏在当前账号为空时提示复制或从空白开始，选后不再提示；
+- CSV escaping 与 JSON schema v1/v2 validation；
 - Manifest 文件、最小常驻权限、仅用于用户手势远程导入的 optional HTTPS host permission 和所需 build artifacts；
 - `en`、`ja`、`zh_CN` Manifest catalog、语言归一化、翻译占位符、关系与来源名称。
 
@@ -87,6 +88,13 @@ npm run skills:validate
 31. 侧栏默认在状态标签显示用户列表；切换到选项后出现语言、徽标和时间线过滤，状态列表被收起。右键工具栏图标选择 **选项**，确认侧栏打开并停在选项标签；三个时间线过滤默认关闭。打开“彻底隐藏已静音账号”后，首页互关但仍被静音的帖子消失，对方主页仍可打开；打开“隐藏拉黑了我的账号”后，本地已记录 blocked-by 的首页帖子以及帖子详情/评论区里该作者的回复都会消失。档案里已有的账号应立刻消失；第一次检测到的账号会先收起再隐藏。档案库的同一开关即时同步。
 32. 从旧版本升级时，先在 `chrome.storage.local` 准备旧设置：若 sync 为空，确认偏好迁入 sync、`viewerHandle` 迁入新的 local key；若 sync 已有不同偏好，确认保留 sync 值。未登录 Chrome 或关闭同步时修改偏好仍应立即保存并在重启后保留；登录并启用 Chrome Sync 后由 Chrome 在其他配置恢复这些小型偏好，关系档案和 `viewerHandle` 不应出现。
 33. 在 Side Panel 选项页、Options 和档案库确认“编辑规则与查看教程”紧邻“应用自定义拦截规则”开关；侧栏点击后切到规则标签，档案库选项页点击后打开规则页。确认教程完整解释 handle、文字、正则、时效、导入时的按 ID 更新或清空覆盖和隐私，并且示例 JSON 可解析且通过 schema。随后添加三种规则并测试启停、大小写和未来/已过期时间；打开总开关后只隐藏允许页面的匹配帖子，Profile、HoverCard、UserCell 和关注列表不隐藏，正文不出现在 IndexedDB 或导出。下载规则 JSON 后选择清空覆盖用文件恢复；再从只有一个 JSON 文件的公开 Gist 导入并选择按 ID 更新，确认相同 id 被替换、新 id 被追加，且 Chrome 只在点击后请求 GitHub host 权限。拒绝权限、使用 HTTP、超过 1 MiB、多个 JSON 文件或无效正则时，现有规则保持不变且出现可读错误。关闭总开关后全部规则隐藏结果恢复。状态页、档案库统计条和 dock 应显示生效规则数与累计拦截。
+34. 多账号（需要两个 X 账号，记为 @A、@B）：
+    - 用 0.5.x 积累一些记录后升级到 0.6.0，档案库人数不变，归在最后登录的账号下，顶部出现一次性提示，点「知道了」后不再出现；
+    - 在帖子页打开左下角账号菜单：没有「拉黑了你」，没有「加入"不是兄弟"名单」，档案里没有 `@logout`；
+    - 切换到 @B：侧栏显示「@B 的档案」和复制 / 从空白开始的提示，页面上不再出现 @A 档案里的徽标；
+    - 点「复制」：@B 出现同样的记录，档案库切到 @A 仍在；另一次点「从空白开始」后刷新不再提示；
+    - 档案库切换账号、合并到当前账号、清空、删除单条、导出 JSON（`schemaVersion: 2`、`viewerHandle` 正确）都只影响所选账号；把 @A 的备份导入 @B 前会先确认；
+    - @A 和 @B 都不出现在任何档案、侧栏列表或页面徽标里。
 
 ## Chrome 离线安装验收
 

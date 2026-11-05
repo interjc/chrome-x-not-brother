@@ -23,12 +23,12 @@ import {
 } from "./consent-entry";
 import { broadcastDataChanged } from "./data-change-broadcast";
 import {
-  deleteUserRecord,
   getObservationSummary,
   getUserRecords,
   purgeUnknownObservations,
   upsertObservations,
 } from "../storage/database";
+import { adoptViewer, ownAccounts, resolveViewer } from "../storage/account-archive";
 import {
   CURRENT_CONSENT_VERSION,
   SETTINGS_KEY,
@@ -49,7 +49,7 @@ import {
 } from "./side-panel-visibility";
 
 chrome.runtime.onInstalled.addListener(async (details) => {
-  await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+  if (hasSidePanel()) await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
   await purgeUnknownObservations();
   const settings = await getSettings();
   await syncExtensionUiState(settings);
@@ -61,6 +61,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 // Hosts without a side panel (Safari) show the same view as the popup.html action popup.
 if (hasSidePanel()) void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 void purgeUnknownObservations();
+void adoptLastKnownViewer();
 void initializeActionState();
 watchSidePanelVisibility();
 void hydrateTrackedSidePanels();
@@ -104,7 +105,11 @@ chrome.runtime.onMessage.addListener(
 
     if (message.type === "summary:get") {
       void getSettings()
-        .then((settings) => getObservationSummary(settings.viewerHandle))
+        .then((settings) => {
+          const viewer = resolveViewer(message.viewerHandle, settings);
+          if (!viewer) return { total: 0, followingOnly: 0, blockedBy: 0, changed: 0 };
+          return getObservationSummary(viewer, ownAccounts(settings, viewer));
+        })
         .then((summary) => sendResponse({ ok: true, summary } satisfies GetSummaryResponse))
         .catch((error: unknown) => sendResponse({
           ok: false,
@@ -124,7 +129,9 @@ chrome.runtime.onMessage.addListener(
             settings.consentVersion < CURRENT_CONSENT_VERSION ||
             !settings.observerEnabled
           ) return [];
-          return getUserRecords(message.userKeys, settings.viewerHandle);
+          const viewer = resolveViewer(message.viewerHandle, settings);
+          if (!viewer) return [];
+          return getUserRecords(viewer, message.userKeys, ownAccounts(settings, viewer));
         })
         .then((users) => sendResponse({ ok: true, users } satisfies LookupUsersResponse))
         .catch((error: unknown) => sendResponse({
@@ -323,18 +330,18 @@ async function handleUpsert(
   ) {
     return { ok: true, users: [] };
   }
-  const viewerHandle = message.viewerHandle?.toLowerCase() ?? null;
-  if (viewerHandle) {
-    if (settings.viewerHandle !== viewerHandle) {
-      await updateSettings({ viewerHandle });
-    }
-    await deleteUserRecord(viewerHandle);
-  }
+  // Relationships are relative to the signed-in account; without one there
+  // is no archive to write to.
+  const viewer = resolveViewer(message.viewerHandle, settings);
+  if (!viewer) return { ok: true, users: [] };
+  const current = await adoptViewer(viewer);
+  const excluded = new Set(ownAccounts(current, viewer));
   const users = await upsertObservations(
+    viewer,
     message.observations.filter(
       (observation) =>
         observation.relationship !== "unknown" &&
-        (!viewerHandle || observation.userKey !== viewerHandle),
+        !excluded.has(observation.userKey),
     ),
   );
   void broadcastDataChanged(chrome.tabs).catch(() => undefined);
@@ -344,6 +351,16 @@ async function handleUpsert(
 async function openDashboard(message: OpenDashboardMessage): Promise<void> {
   const suffix = message.section === "filter-rules" ? "#filter-rules" : "";
   await chrome.tabs.create({ url: chrome.runtime.getURL(`dashboard.html${suffix}`) });
+}
+
+async function adoptLastKnownViewer(): Promise<void> {
+  try {
+    const settings = await getSettings();
+    const viewer = resolveViewer(null, settings);
+    if (viewer) await adoptViewer(viewer);
+  } catch {
+    // The next observation from x.com adopts the signed-in account instead.
+  }
 }
 
 async function initializeActionState(): Promise<void> {

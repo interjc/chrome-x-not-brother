@@ -1,22 +1,35 @@
 # 数据模型
 
-数据库名：`not-brother-v1`，Dexie schema version：1。
+数据库名：`not-brother-v1`，Dexie schema version：3（0.6.0 起）。
+
+从 0.6.0 起档案按登录的 X 账号分开：关系是相对于登录账号的，每条记录多一个 `viewer` 字段（登录账号的小写 handle）。设计、迁移和界面见 [多账号：按登录账号分开档案](multi-account.md)。
 
 `chrome.storage.sync` 保存同意版本、观察开关、页面徽标、观察 dock 的 `dockCollapsed` 展示偏好、插件界面语言 `uiLocale`、侧栏当前标签 `sidePanelTab`，以及默认关闭的 `hideMutedAccounts` / `hideBlockedByAccounts` / `hideByFilterRules`。这些小型偏好共用一个远低于 8 KB 单项上限的对象；users/observations 和规则文档不进入 sync。Chrome 未登录、关闭同步或离线时，`storage.sync` 仍在当前设备工作，Chrome 之后自行恢复账号同步。
 
 拦截计数（规则/静音/拉黑隐藏的帖子累计）保存在 `chrome.storage.local`，按登录 X handle 分命名空间：`notBrother.hideStats.v1.ns.{handle}`。只存整数，不存帖子正文或 status id。同一浏览会话内用页面内存里的 status id 去重后再累加。
 
-仅用于排除本人的 `viewerHandle` 单独保存在 `chrome.storage.local`，避免同一 Chrome 账号在不同设备登录不同 X 账号时串用排除对象。升级时若发现旧版 `chrome.storage.local` 设置：sync 尚无设置才把旧偏好复制过去；sync 已有设置时保留 sync 值；两种情况都把旧 `viewerHandle` 迁到新的 local key，确认写入后再删除旧对象。旧设置没有 `dockCollapsed` 时默认展开，没有 `uiLocale` 时默认 `auto`，没有 `sidePanelTab` 时默认状态页，没有时间线过滤字段时默认关闭。静音状态不写入 users/observations。
-
-从 0.4.0 起，`unknown` 只是 adapter/domain 的内部结果，不是数据库状态。content script 不发送它，service worker 和 repository 也会防御性拒绝；扩展启动和安装时清理旧版本遗留的 unknown users 与 observations。
-
-## users
-
-每个规范化小写 handle 一条当前记录：
+`chrome.storage.local` 的本地设置对象（`notBrother.settings.local.v1`）不进入 sync，避免同一 Chrome 账号在不同设备登录不同 X 账号时串用：
 
 | 字段 | 含义 |
 | --- | --- |
-| `key` | 小写 handle，0.1 的主键 |
+| `viewerHandle` | 最后一次识别到的登录账号；侧栏显示它的档案 |
+| `knownViewerHandles` | 在这台设备上识别到过的所有登录账号，最多 20 个；任何档案都不采集、不显示它们 |
+| `dismissedArchivePrompts` | 已点过「从空白开始」的账号，侧栏不再提示从其他账号复制 |
+
+`notBrother.legacyArchiveClaim.v1` 记录 0.5.x 旧档案自动归给了哪个账号、多少人、是否已关掉提示，只用于档案库的一次性说明。
+
+升级时若发现旧版 `chrome.storage.local` 设置：sync 尚无设置才把旧偏好复制过去；sync 已有设置时保留 sync 值；两种情况都把旧 `viewerHandle` 迁到新的 local key，确认写入后再删除旧对象。旧设置没有 `dockCollapsed` 时默认展开，没有 `uiLocale` 时默认 `auto`，没有 `sidePanelTab` 时默认状态页，没有时间线过滤字段时默认关闭。静音状态不写入 users/observations。
+
+从 0.4.0 起，`unknown` 只是 adapter/domain 的内部结果，不是数据库状态。content script 不发送它，service worker 和 repository 也会防御性拒绝；扩展启动和安装时清理旧版本遗留的 unknown users 与 observations。
+
+## accountUsers
+
+每个登录账号下，每个规范化小写 handle 一条当前记录，主键 `[viewer+key]`。0.5.x 的表名是 `users`，主键只有 `key`。
+
+| 字段 | 含义 |
+| --- | --- |
+| `viewer` | 档案所属的登录账号，小写 handle；`""` 表示升级时还没归属的旧数据 |
+| `key` | 对方的小写 handle |
 | `handle` | 最近观察到的原始大小写 |
 | `displayName` / `avatarUrl` | 最近非空展示名，以及最近一次与同 handle 强绑定的 X CDN 头像 |
 | `profileUrl` | 标准 `https://x.com/<handle>` |
@@ -31,9 +44,9 @@
 
 handle 更名会在 0.1 中形成新记录，因为扩展不读取 X 私有 user ID。
 
-## observations
+## accountObservations
 
-自增 `id` 的历史快照，包含用户身份、关系、证据、来源与时间。相同状态只有在来源变化、关系变化或距离上一次记录超过 15 分钟时才追加历史，避免无限滚动 DOM 重建造成密集重复。
+自增 `id` 的历史快照，包含所属 `viewer`、用户身份、关系、证据、来源与时间，按 `[viewer+userKey]` 和 `[viewer+userKey+observedAt]` 索引。0.5.x 的表名是 `observations`。相同状态只有在来源变化、关系变化或距离上一次记录超过 15 分钟时才追加历史，避免无限滚动 DOM 重建造成密集重复。
 
 ## 合并规则
 
@@ -42,9 +55,10 @@ handle 更名会在 0.1 中形成新记录，因为扩展不读取 X 私有 user
 3. 两个不同的可见已知状态触发 `hasChanged=true`，旧状态进入 `previousRelationship`。转入 `none` 不标成待确认变化，也不显示徽标，包括 `follows_you_only → none`。
 4. 用户确认变化只清除 `hasChanged`，不删除历史。
 5. 迟到的旧时间戳观察可进入历史，但不能覆盖较新的当前状态。
-6. JSON 导入以 `lastSeenAt` 较新的用户摘要为主，保留较大的计数、最早时间和 change 标记；按 `userKey + observedAt` 跳过已有历史，使重复导入同一备份保持幂等。
+6. JSON 导入、跨账号复制和旧档案认领都以 `lastSeenAt` 较新的用户摘要为主，保留较大的计数、最早时间和 change 标记；按 `viewer + userKey + observedAt` 跳过已有历史，使重复导入或复制保持幂等。
 7. JSON/CSV 导出和 JSON 导入都过滤 unknown，旧备份不能重新引入它。
-8. service worker 获得 `viewerHandle` 后删除同 key 的 users 与 observations；所有概览查询、导入和导出也再次排除该 key。
+8. service worker 第一次识别到一个登录账号时，把它加入 `knownViewerHandles`，并从所有账号的档案里删除这个 handle；之后写入、查询、概览、导入、导出和复制都排除当前账号和所有 `knownViewerHandles`。
+9. 识别不到登录账号时不写入。所有读写都只针对一个 `viewer`；清空、删除和确认变化也只影响那个账号的档案。
 
 变化事件不新增数据库字段，也不改变导出 schema。展示层在 `hasChanged=true` 时根据 `previousRelationship → currentRelationship` 动态推导：当前已是 `mutual` 一律显示互关；当前 `following_only` 默认显示单向关注，仅当上一状态是 `mutual` 或 `follows_you_only` 时才覆盖为 `unfollowed_you`。`mutual → follows_you_only` 为 `you_unfollowed`，任意已知非 blocked 状态变为 `blocked_by` 为 `blocked_you`；其他双方同时变化的转换使用通用 `changed`。`none` 可写入 users 以撤掉过期徽标；`follows_you_only → none` 只撤标，不显示对方取关。因此旧档案无需迁移即可获得细分展示，dock 仍按 `hasChanged` 汇总一个变化总数。
 
@@ -62,6 +76,19 @@ content script 可通过 service worker 的 `users:lookup` 批量查询页面当
 
 规则由 Zod 判别联合校验：`user_handles` 保存规范化 handle 数组；`display_name` / `content` 保存 contains 或 safe-regex 匹配器；公共字段是稳定 `id`、用户标签、启用状态和可空 ISO 到期时间。导入默认以 id 做 upsert 并保留本地独有规则，也可由用户明确全量替换。到期和禁用规则仍保存在文档中但不匹配。content script 不直接读取这个文档；总开关和同意有效时，由 service worker 校验后通过 `filter-rules:get` 返回只读快照。完整结构与限制见 [自定义黑名单规则 v1](filter-rules.md)。
 
+## 导出格式
+
+JSON 导出 `schemaVersion: 2`，顶层 `viewerHandle` 是所导出的账号，users / observations 不带 `viewer` 字段，其余结构与 v1 相同。导入接受 v1 和 v2：都导入到档案库正在查看的账号；v2 的 `viewerHandle` 与之不同时先确认。
+
 ## 迁移
+
+### 0.5.x → 0.6.0（Dexie 1 → 3）
+
+1. version 2 新建 `accountUsers`、`accountObservations`，把 `users`、`observations` 整份复制过去，`viewer` 填 `""`。复制时丢弃 unknown 记录，以及 key 是 X 路由保留字（如 `logout`）的记录。
+2. version 3 删除旧表。
+3. IndexedDB 升级事务里读不到扩展设置，所以由 service worker 认领：启动时归给本地设置里的 `viewerHandle`；没有就归给第一个上报的登录账号。认领按导入规则合并，结果写进 `notBrother.legacyArchiveClaim.v1`。
+4. 0.5.x 打不开 version 3 的数据库，回滚前要先导出，见 [多账号 §9](multi-account.md#9-回滚)。
+
+### 规则
 
 关系数据库结构变化必须增加 Dexie version 并编写保留数据的迁移。设置存储变化必须保留旧偏好、避免覆盖已经存在的 sync 数据，并覆盖无 Chrome 登录/关闭同步时的本机行为。过滤规则的不兼容变化必须提高其独立 schemaVersion，并保留显式迁移或拒绝路径。同步更新数据模型文档、JSON schema、merge/import tests 和维护 skill reference。

@@ -42,4 +42,4 @@ Use `docs/store-listing.md` for ready-to-paste English, Japanese, and Simplified
 
 The distribution validator requires each localized Manifest description to appear exactly as the matching Store summary and requires release-note headings for the current version in all three languages. Update these together with every version bump.
 
-Rollback by reinstalling the prior archive. Do not clear IndexedDB during rollback unless a migration is proven incompatible and the user explicitly exports or accepts local data loss.
+Rollback by reinstalling the prior archive. From 0.6.0 the database is Dexie version 3, which 0.5.x cannot open: export each account's JSON first, uninstall, reinstall the older build, and only then import (0.5.x accepts schema v1 only; see `docs/multi-account.md`). Do not clear IndexedDB during rollback unless a migration is proven incompatible and the user explicitly exports or accepts local data loss.

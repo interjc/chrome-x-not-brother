@@ -100,7 +100,11 @@ describe("observer settings", () => {
       uiLocale: "ja",
     });
     expect(syncStorage.get(SETTINGS_KEY)).not.toHaveProperty("viewerHandle");
-    expect(localStorage.get(LOCAL_SETTINGS_KEY)).toEqual({ viewerHandle: "interjc" });
+    expect(localStorage.get(LOCAL_SETTINGS_KEY)).toEqual({
+      viewerHandle: "interjc",
+      knownViewerHandles: [],
+      dismissedArchivePrompts: [],
+    });
     expect(localStorage.has(SETTINGS_KEY)).toBe(false);
   });
 
@@ -132,7 +136,11 @@ describe("observer settings", () => {
       uiLocale: "zh-CN",
     });
     expect(syncStorage.get(SETTINGS_KEY)).toEqual(synced);
-    expect(localStorage.get(LOCAL_SETTINGS_KEY)).toEqual({ viewerHandle: "local-viewer" });
+    expect(localStorage.get(LOCAL_SETTINGS_KEY)).toEqual({
+      viewerHandle: "local-viewer",
+      knownViewerHandles: [],
+      dismissedArchivePrompts: [],
+    });
     expect(localStorage.has(SETTINGS_KEY)).toBe(false);
   });
 
@@ -155,7 +163,11 @@ describe("observer settings", () => {
     const settings = await updateSettings({ viewerHandle: "interjc" });
 
     expect(settings.viewerHandle).toBe("interjc");
-    expect(localStorage.get(LOCAL_SETTINGS_KEY)).toEqual({ viewerHandle: "interjc" });
+    expect(localStorage.get(LOCAL_SETTINGS_KEY)).toEqual({
+      viewerHandle: "interjc",
+      knownViewerHandles: [],
+      dismissedArchivePrompts: [],
+    });
     expect(syncStorage.has(SETTINGS_KEY)).toBe(false);
   });
 

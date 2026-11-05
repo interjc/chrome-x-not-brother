@@ -12,7 +12,7 @@ export default defineConfig({
         "src/content/{badge,extension-context,observation-signatures,observer-panel,periodic-rescan,process-scheduler,timeline-hide,x-adapter}.ts",
         "src/i18n/**/*.ts",
         "src/platform/**/*.ts",
-        "src/storage/{filter-rules,settings}.ts",
+        "src/storage/{account-archive,database,filter-rules,settings}.ts",
         "src/ui/hooks.ts",
         "src/ui/sidepanel.tsx",
         "src/ui/sidepanel-model.ts",

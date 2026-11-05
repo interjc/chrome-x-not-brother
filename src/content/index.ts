@@ -154,6 +154,28 @@ function currentViewerHandle(): string | null {
     ?? null;
 }
 
+let archiveViewer: string | null = null;
+
+/**
+ * Each signed-in account has its own archive. When X switches accounts in place,
+ * drop the previous account's records and sent signatures so the new archive is
+ * queried and written from scratch.
+ */
+function syncArchiveViewer(): void {
+  const viewer = currentViewerHandle();
+  if (viewer === archiveViewer) return;
+  archiveViewer = viewer;
+  recordCache.clear();
+  requestedUserKeys.clear();
+  observationSignatures.reset();
+  latestSummary = null;
+}
+
+/** The viewer and every other account seen signed in here are never candidates. */
+function isOwnAccount(userKey: string, viewerKey: string | null, settings: ObserverSettings): boolean {
+  return userKey === viewerKey || settings.knownViewerHandles.includes(userKey);
+}
+
 function rememberQuickBlockedHandles(
   rules: GetFilterRulesResponse["ruleSet"]["rules"],
 ): void {
@@ -539,7 +561,7 @@ function applyHideNow(scanned?: ExtractedCandidate[]): void {
   // processPage still persists exactly what its own pass resolved.
   const candidates = scanned?.map((candidate) => ({ ...candidate })) ??
     scanXDocument(document, location.href).filter(
-      (candidate) => candidate.observation.userKey !== viewerKey,
+      (candidate) => !isOwnAccount(candidate.observation.userKey, viewerKey, settings),
     );
   applyPageStoreRelationships(candidates, latestPageUsers);
   recordNewHides(applyTimelineHiding({
@@ -722,6 +744,7 @@ async function refreshSummary(): Promise<void> {
       GetSummaryResponse | { ok: false; error: string }
     >({
       type: "summary:get",
+      viewerHandle: currentViewerHandle(),
     });
     if (stopped) return;
     if (response.ok) {
@@ -781,13 +804,16 @@ async function hydrateRecordCache(candidates: ExtractedCandidate[]): Promise<voi
     .filter((userKey) => !requestedUserKeys.has(userKey));
   if (userKeys.length === 0) return;
   for (const userKey of userKeys) requestedUserKeys.add(userKey);
+  const viewer = archiveViewer;
   try {
     const response = await sendRuntimeMessage<
       LookupUsersResponse | { ok: false; error: string }
     >({
       type: "users:lookup",
       userKeys,
+      viewerHandle: viewer,
     });
+    if (viewer !== archiveViewer) return;
     if (!response.ok) {
       for (const userKey of userKeys) requestedUserKeys.delete(userKey);
       return;
@@ -806,6 +832,7 @@ async function processPage(): Promise<void> {
   const settings = await readSettings();
   if (stopped) return;
   latestSettings = settings;
+  syncArchiveViewer();
   if (settings.consentVersion >= CURRENT_CONSENT_VERSION && !filterStatusIsFresh()) {
     try {
       await refreshFilterStatus();
@@ -846,7 +873,7 @@ async function processPage(): Promise<void> {
   const scanGeneration = evidenceGeneration;
   const scanHref = location.href;
   const candidates = scanXDocument(document, location.href).filter(
-    (candidate) => candidate.observation.userKey !== viewerKey,
+    (candidate) => !isOwnAccount(candidate.observation.userKey, viewerKey, settings),
   );
   const pageUsers = await loadPageUserRelationships(
     document,

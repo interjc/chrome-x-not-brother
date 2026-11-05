@@ -21,7 +21,7 @@ Python is managed through pyenv. The repository currently has no Python runtime 
 - `src/background/`: persist messages, remove the signed-in viewer, expose summaries, show toolbar state, initialize Chrome side-panel/onboarding behavior, and maintain the localized pre-consent action context-menu entry.
 - `src/domain/`: types, relationship resolution, data merge semantics, derived unfollowed-you/you-unfollowed/blocked-you presentation, mutual-always-mutual display, none-for-both-unfollowed, import, and export.
 - `src/i18n/`: type-checked English, Japanese, and Simplified Chinese runtime catalogs, locale resolution, relationship labels, and source labels.
-- `src/storage/`: IndexedDB access, small Chrome-synced preferences, local viewer exclusion state, local filter-rule documents, and conflict-safe legacy settings migration.
+- `src/storage/`: per-account IndexedDB access (`database.ts`, Dexie 1→3 migration, copy/claim; tested with `fake-indexeddb`), viewer adoption and the legacy-archive claim (`account-archive.ts`), small Chrome-synced preferences, local viewer and own-account state, local filter-rule documents, and conflict-safe legacy settings migration.
 - `src/ui/`: side panel, its pure relationship filter model, user-gesture profile links, dashboard and custom-rule manager, Options page, shared components, presentation, and storage-change-aware settings/rule listeners.
 - `src/content/timeline-hide.ts`: opt-in Home/search/notification hiding of muted or known blocked-by tweet cells.
 - `src/content/quick-rules.ts`: after-consent HoverCard (name-adjacent), tweet `caret` menu, and tweet-text selection actions that save one filter rule immediately through the service worker.
