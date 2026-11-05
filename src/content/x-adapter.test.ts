@@ -579,11 +579,18 @@ describe("scanXDocument", () => {
   });
 
   it("ignores the side-nav account switcher menu that X also renders as a HoverCard", () => {
+    // Mirrors the live menu checked on 2026-11-05: only these three links and
+    // these testids, no profile links, no User-Name, handles only in text.
     const doc = fixture(`${accountSwitcher("Alpha")}
     <div id="layers"><div data-testid="HoverCard">
-      <div><div><span>Alpha</span><span>@Alpha</span></div></div>
-      <button data-testid="UserCell" aria-label="Switch to @Beta">
-        <div data-testid="User-Name"><span>Beta</span><span>@Beta</span></div>
+      <div>
+        <div data-testid="UserAvatar-Container-Alpha"><img src="https://pbs.twimg.com/profile_images/1/a_normal.jpg"></div>
+        <div><span>Alpha</span><svg data-testid="icon-verified"></svg><span>@Alpha</span></div>
+      </div>
+      <button data-testid="UserCell">
+        <div data-testid="UserAvatar-Container-Beta"><img src="https://pbs.twimg.com/profile_images/2/b_normal.jpg"></div>
+        <div><span>Beta</span><svg data-testid="icon-verified"></svg><span>@Beta</span></div>
+        <span>7</span>
       </button>
       <a href="/i/flow/login" data-testid="AccountSwitcher_AddAccount_Button">Add an existing account</a>
       <a href="/account/switch" data-testid="AccountSwitcher_ManageAccounts_Button">Manage accounts</a>
@@ -593,6 +600,20 @@ describe("scanXDocument", () => {
     expect(visibleHoverCards(doc).size).toBe(0);
     expect(scanXDocument(doc, "https://x.com/Someone/status/123", 100)).toEqual([]);
     expect(scanXDocument(doc, "https://x.com/home", 100)).toEqual([]);
+  });
+
+  it("recognizes the account switcher menu from any one of its markers", () => {
+    for (const marker of [
+      '<a href="/logout">Log out</a>',
+      '<a href="/account/switch">Manage accounts</a>',
+      '<a href="/i/flow/login">Add an existing account</a>',
+      '<div data-testid="AccountSwitcher_Logout_Button"></div>',
+      '<button data-testid="UserCell"><span>@Beta</span></button>',
+    ]) {
+      const doc = fixture(`<div data-testid="HoverCard"><span>@Alpha</span>${marker}</div>`);
+      expect(visibleHoverCards(doc).size, marker).toBe(0);
+      expect(scanXDocument(doc, "https://x.com/Someone/status/123", 100), marker).toEqual([]);
+    }
   });
 
   it("never reads app routes such as /logout as a handle", () => {

@@ -46,14 +46,23 @@
 
 ### 识别特征
 
-X 网页版的结构没有官方文档。下面的特征来自公开的开源项目和脚本，2026 年 8 至 9 月仍被引用：
+X 网页版的结构没有官方文档。下面的特征先从公开的开源项目和脚本里查到，2026-11-05 又在真实页面上核对过（Chrome，两个账号，中文界面）。
 
 | 特征 | 来源 |
 | --- | --- |
 | 菜单项 `data-testid` 为 `AccountSwitcher_AddAccount_Button`、`AccountSwitcher_ManageAccounts_Button`、`AccountSwitcher_Logout_Button` | X 自己的 SideNav 前端代码，以及 classic-twitter、Xtra 等扩展、多个 Selenium 脚本 |
 | 菜单项链接为 `/i/flow/login`、`/account/switch`、`/logout` | 同上；OldTwitter 用 `/account/switch?newtwitter=true` |
 | 菜单外层是 `[data-testid="HoverCard"]` | Control Panel for Twitter 的注释 "Account switcher accounts: `[data-testid="HoverCard"] button[data-testid="UserCell"]`" |
-| 其他账号行是 `button[data-testid="UserCell"]`；当前账号那一行没有任何 testid | 同上；一份 2026 年 8 月的 X 页面结构调研也是这么记录的 |
+| 其他账号行是 `button[data-testid="UserCell"]` | 同上；一份 2026 年 8 月的 X 页面结构调研也是这么记录的 |
+
+真实页面上，账号菜单这个 HoverCard 里只有下面这些：
+
+| 类型 | 值 |
+| --- | --- |
+| 链接 | `/i/flow/login`、`/account/switch`、`/logout`，没有任何资料页链接 |
+| `data-testid` | `UserCell`、`UserAvatar-Container-<当前账号>`、`icon-verified`、`UserAvatar-Container-<其他账号>`、`AccountSwitcher_AddAccount_Button`、`AccountSwitcher_ManageAccounts_Button`、`AccountSwitcher_Logout_Button` |
+
+这也证实了根因：菜单里唯一能读成 handle 的链接就是 `/logout`。账号行里没有 `User-Name`，handle 只出现在文字里。
 
 只要 HoverCard 里出现以下任一项，就把它当作账号菜单：
 
