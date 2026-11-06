@@ -19,11 +19,13 @@ import {
   type MessageKey,
 } from "../i18n";
 import {
+  LEGACY_VIEWER,
   acknowledgeRelationshipChange,
-  clearDatabase,
-  db,
+  clearArchive,
+  copyArchive,
   deleteUserRecord,
   exportDatabase,
+  getUserHistory,
   importDatabase,
 } from "../storage/database";
 import { Avatar } from "./components/Avatar";
@@ -39,7 +41,14 @@ import { InterceptStats } from "./components/InterceptStats";
 import { OptionsPanel } from "./components/OptionsPanel";
 import { RelationshipPill } from "./components/RelationshipPill";
 import { absoluteTime, downloadFile, relativeTime } from "./format";
-import { useFilterRuleStatus, useHideStats, useObserverSettings, useUsers } from "./hooks";
+import {
+  useArchiveScopes,
+  useFilterRuleStatus,
+  useHideStats,
+  useLegacyClaim,
+  useObserverSettings,
+  useUsers,
+} from "./hooks";
 import { CURRENT_CONSENT_VERSION } from "../storage/settings";
 
 type Filter = "all" | "changed" | Exclude<RelationshipKind, "unknown" | "none">;
@@ -93,17 +102,21 @@ function countFor(users: UserRecord[], filter: Filter): number {
   return users.filter((user) => user.currentRelationship === filter).length;
 }
 
-function UserHistory({ userKey, locale }: { userKey: string; locale: AppLocale }) {
+function UserHistory({
+  viewer,
+  userKey,
+  locale,
+}: {
+  viewer: string;
+  userKey: string;
+  locale: AppLocale;
+}) {
   const [items, setItems] = useState<ObservationRecord[] | null>(null);
 
   useEffect(() => {
     setItems(null);
-    void db.observations
-      .where("userKey")
-      .equals(userKey)
-      .toArray()
-      .then((records) => setItems(records.toSorted((a, b) => b.observedAt - a.observedAt)));
-  }, [userKey]);
+    void getUserHistory(viewer, userKey).then(setItems);
+  }, [viewer, userKey]);
 
   if (items === null) {
     return <p className="history-loading">{t(locale, "historyLoading")}</p>;
@@ -127,15 +140,42 @@ function UserHistory({ userKey, locale }: { userKey: string; locale: AppLocale }
 }
 
 function Dashboard() {
-  const { users: observedUsers, loading: usersLoading } = useUsers();
   const { settings, settingsReady, setSettings, setSetting } = useObserverSettings();
   const locale = resolveUiLocale(settings.uiLocale);
+  const scopes = useArchiveScopes();
+  const { claim: legacyClaim, dismiss: dismissLegacyClaim } = useLegacyClaim();
+  const [selectedOwner, setSelectedOwner] = useState<string | null>(null);
+  const currentViewer = settings.viewerHandle;
+  // The account whose archive is shown: a picked one, else the signed-in
+  // account, else a still-unassigned 0.5.x archive.
+  const owner = !settingsReady
+    ? null
+    : selectedOwner ??
+      currentViewer ??
+      (scopes.some((scope) => scope.viewer === LEGACY_VIEWER) ? LEGACY_VIEWER : null);
+  const ownAccounts = useMemo(
+    () => currentViewer
+      ? [...settings.knownViewerHandles, currentViewer]
+      : settings.knownViewerHandles,
+    [currentViewer, settings.knownViewerHandles],
+  );
+  const { users: observedUsers, loading: usersLoading } = useUsers(owner, ownAccounts);
   const users = settingsReady
     ? observedUsers.filter((user) =>
-      user.key !== settings.viewerHandle && isDisplayedUser(user),
-    )
+      user.key !== currentViewer &&
+      !settings.knownViewerHandles.includes(user.key) &&
+      isDisplayedUser(user))
     : [];
   const loading = usersLoading || !settingsReady;
+  const ownerOptions = useMemo(() => {
+    const options = scopes.map((scope) => ({ viewer: scope.viewer, count: scope.userCount }));
+    for (const viewer of [currentViewer, owner]) {
+      if (viewer !== null && !options.some((option) => option.viewer === viewer)) {
+        options.unshift({ viewer, count: 0 });
+      }
+    }
+    return options;
+  }, [scopes, currentViewer, owner]);
   const hasConsent = settings.consentVersion >= CURRENT_CONSENT_VERSION;
   const { status: filterStatus } = useFilterRuleStatus(
     settings.viewerHandle,
@@ -217,8 +257,32 @@ function Dashboard() {
     });
   }, [filter, query, sort, users]);
 
+  function ownerName(viewer: string): string {
+    return viewer === LEGACY_VIEWER ? t(locale, "archiveOwnerUnclaimed") : `@${viewer}`;
+  }
+
+  function ownerOptionLabel(viewer: string, count: number): string {
+    const formatted = count.toLocaleString(locale);
+    if (viewer === LEGACY_VIEWER) return t(locale, "archiveOptionUnclaimed", { count: formatted });
+    return t(locale, viewer === currentViewer ? "archiveOptionCurrent" : "archiveOptionOther", {
+      handle: viewer,
+      count: formatted,
+    });
+  }
+
+  async function mergeIntoCurrent(): Promise<void> {
+    if (owner === null || !currentViewer || owner === currentViewer) return;
+    const from = ownerName(owner);
+    if (!window.confirm(t(locale, "archiveMergeConfirm", { from, to: currentViewer }))) return;
+    const count = await copyArchive(owner, currentViewer, ownAccounts);
+    await notifyDataChanged();
+    setSelectedOwner(currentViewer);
+    setNotice(t(locale, "archiveMergeSuccess", { count, from, to: currentViewer }));
+  }
+
   async function exportJson(): Promise<void> {
-    const payload = await exportDatabase(settings.viewerHandle);
+    if (owner === null) return;
+    const payload = await exportDatabase(owner, ownAccounts);
     const stamp = new Date().toISOString().slice(0, 10);
     downloadFile(`not-brother-${stamp}.json`, JSON.stringify(payload, null, 2), "application/json");
     setNotice(t(locale, "exportJsonSuccess"));
@@ -234,10 +298,22 @@ function Dashboard() {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    if (owner === null) {
+      setNotice(t(locale, "archiveNoAccount"));
+      return;
+    }
     try {
       const payload = parseDatabaseExport(JSON.parse(await file.text()) as unknown);
-      await importDatabase(payload);
-      if (settings.viewerHandle) await deleteUserRecord(settings.viewerHandle);
+      if (
+        payload.schemaVersion === 2 &&
+        payload.viewerHandle &&
+        payload.viewerHandle !== owner &&
+        !window.confirm(t(locale, "importOtherAccountConfirm", {
+          from: payload.viewerHandle,
+          to: ownerName(owner),
+        }))
+      ) return;
+      await importDatabase(owner, payload, ownAccounts);
       await notifyDataChanged();
       setNotice(t(locale, "importSuccess", { count: payload.users.length }));
     } catch {
@@ -246,21 +322,25 @@ function Dashboard() {
   }
 
   async function clearEverything(): Promise<void> {
-    if (!window.confirm(t(locale, "clearConfirm"))) return;
-    await clearDatabase();
+    if (owner === null) return;
+    const name = ownerName(owner);
+    if (!window.confirm(t(locale, "clearConfirm", { owner: name }))) return;
+    await clearArchive(owner);
     await notifyDataChanged();
-    setNotice(t(locale, "clearSuccess"));
+    setNotice(t(locale, "clearSuccess", { owner: name }));
   }
 
   async function deleteOne(user: UserRecord): Promise<void> {
+    if (owner === null) return;
     if (!window.confirm(t(locale, "deleteConfirm", { handle: user.handle }))) return;
-    await deleteUserRecord(user.key);
+    await deleteUserRecord(owner, user.key);
     await notifyDataChanged();
     setNotice(t(locale, "deleteSuccess", { handle: user.handle }));
   }
 
   async function acknowledgeChange(userKey: string): Promise<void> {
-    await acknowledgeRelationshipChange(userKey);
+    if (owner === null) return;
+    await acknowledgeRelationshipChange(owner, userKey);
     await notifyDataChanged();
   }
 
@@ -352,6 +432,51 @@ function Dashboard() {
           </button>
         </section>
       ) : null}
+
+      <section className="archive-owner" aria-label={t(locale, "archiveOwnerLabel")}>
+        {owner === null ? (
+          <p className="archive-owner__empty">{t(locale, "archiveNoAccount")}</p>
+        ) : (
+          <>
+            <label className="sort-box archive-owner__select">
+              {t(locale, "archiveOwnerLabel")}
+              <select
+                translate="no"
+                value={owner}
+                onChange={(event) => {
+                  setSelectedOwner(event.target.value);
+                  setExpandedUser(null);
+                }}
+              >
+                {ownerOptions.map((option) => (
+                  <option key={option.viewer || "legacy"} value={option.viewer}>
+                    {ownerOptionLabel(option.viewer, option.count)}
+                  </option>
+                ))}
+              </select>
+              <Icon name="chevron" />
+            </label>
+            {currentViewer && owner !== currentViewer ? (
+              <button className="archive-owner__merge" type="button" onClick={() => void mergeIntoCurrent()}>
+                <Icon name="database" />
+                {t(locale, "archiveMergeInto", { handle: currentViewer })}
+              </button>
+            ) : null}
+            <p className="archive-owner__hint">{t(locale, "archiveScopeHint")}</p>
+          </>
+        )}
+        {legacyClaim && !legacyClaim.dismissed ? (
+          <div className="archive-owner__notice" role="status">
+            <p>{t(locale, "legacyClaimNotice", {
+              count: legacyClaim.userCount.toLocaleString(locale),
+              handle: legacyClaim.viewer,
+            })}</p>
+            <button type="button" onClick={() => void dismissLegacyClaim()}>
+              {t(locale, "legacyClaimDismiss")}
+            </button>
+          </div>
+        ) : null}
+      </section>
 
       <section className="stats-strip" aria-label={t(locale, "archiveStatsAria")}>
         <article><span>OBSERVED</span><strong>{loading ? "—" : users.length.toLocaleString(locale)}</strong><small>{t(locale, "statObserved")}</small></article>
@@ -446,7 +571,7 @@ function Dashboard() {
                     <button title={t(locale, "viewHistoryTitle")} aria-label={t(locale, "viewHistoryAria")} className={expanded ? "is-active" : ""} onClick={() => setExpandedUser(expanded ? null : user.key)}><Icon name="history" /></button>
                     <button title={t(locale, "deleteRecordTitle")} aria-label={t(locale, "deleteRecordAria")} onClick={() => void deleteOne(user)}><Icon name="trash" /></button>
                   </div>
-                  {expanded ? <div className="user-record__history"><UserHistory userKey={user.key} locale={locale} /></div> : null}
+                  {expanded && owner !== null ? <div className="user-record__history"><UserHistory viewer={owner} userKey={user.key} locale={locale} /></div> : null}
                 </article>
               );
             })}

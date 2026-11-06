@@ -28,7 +28,7 @@ For ordinary relationship enrichment, map each fully loaded, semantically visibl
 
 Keep the zero-record dock and side-panel guidance aligned across English, Japanese, and Simplified Chinese. Hover is a fallback when the page store has no complete facts, not a claim that Home requires opening every hover card.
 
-Known local relationships are returned to content scripts through bounded `users:lookup` batches. Clear both the record cache and requested-key cache on `data:changed` so deletion and import are reflected.
+Known local relationships are returned to content scripts through bounded `users:lookup` batches. Each lookup names the signed-in account. Clear both the record cache and requested-key cache on `data:changed` so deletion and import are reflected, and clear them plus the sent-signature tracker whenever the signed-in account changes.
 
 ## Pending real-page verification
 
@@ -40,9 +40,9 @@ Increment the Dexie schema version for structural changes. Add a migration that 
 
 Increment `CURRENT_CONSENT_VERSION` only when data types, purposes, recipients, or storage behavior change materially. Update the prominent disclosure and `terms/privacy.md` before collection resumes under the new consent version.
 
-Treat `viewerHandle` as exclusion-only data. Verify scan, database cleanup, summaries, and UI filtering together whenever viewer detection changes.
+Archives are per signed-in account: `accountUsers` / `accountObservations` keyed by `[viewer+key]` (Dexie version 3; version 2 copied the 0.5.x tables under the unassigned `""` owner, which the service worker hands to the last known account). `viewerHandle` picks the archive the Side Panel shows; `knownViewerHandles` lists own accounts to exclude everywhere, and an account seen for the first time is removed from every archive. Verify scan, database cleanup, summaries, and UI filtering together whenever viewer detection changes. X's account switcher popover is a `HoverCard` with `AccountSwitcher_*` testids, `/logout` / `/account/switch` / `/i/flow/login` links, and `button[data-testid="UserCell"]` rows; keep `isAccountSwitcherMenu` excluding it and add new X routes to `RESERVED_ROUTE_HANDLES`. Design and rollback: `docs/multi-account.md`.
 
-Keep `viewerHandle` in `chrome.storage.local`; it describes the X account on this device and must not sync into a different X session. Keep users and observations in IndexedDB.
+Keep `viewerHandle`, `knownViewerHandles`, and `dismissedArchivePrompts` in `chrome.storage.local`; it describes the X account on this device and must not sync into a different X session. Keep users and observations in IndexedDB.
 
 Treat `dockCollapsed` as a presentation-only `chrome.storage.sync` preference. Older partial settings must default to the expanded panel, and panel/bubble changes must retain keyboard access, status indication, X-theme parity, and narrow-screen safe margins. The collapsed NB ball stays in the bottom-right corner; while it is shown, shift X Chat/Grok drawers up with display CSS generated from `X_CORNER_FAB_SELECTOR` in `x-adapter.ts`. Before current consent, both the expanded dock and collapsed launcher must expose a visible native disclosure button without recording consent; keep the localized action context-menu entry in sync and hide it after consent.
 

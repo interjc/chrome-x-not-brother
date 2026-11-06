@@ -24,7 +24,15 @@ import { InterceptStats } from "./components/InterceptStats";
 import { OptionsPanel } from "./components/OptionsPanel";
 import { RelationshipPill } from "./components/RelationshipPill";
 import { relativeTime } from "./format";
-import { useFilterRuleStatus, useHideStats, useObserverSettings, useUsers } from "./hooks";
+import {
+  useArchiveScopes,
+  useFilterRuleStatus,
+  useHideStats,
+  useObserverSettings,
+  useUsers,
+} from "./hooks";
+import { ArchiveSwitchPrompt, archiveSwitchSources } from "./components/ArchiveSwitchPrompt";
+import { copyArchive } from "../storage/database";
 import {
   filterSidePanelUsers,
   SIDE_PANEL_SUMMARY_KINDS,
@@ -36,8 +44,13 @@ import type { SidePanelTab } from "../domain/types";
 
 export function SidePanel() {
   const [filter, setFilter] = useState<SidePanelFilter>("all");
-  const { users: observedUsers, loading: usersLoading } = useUsers();
   const { settings, settingsReady, setSettings, setSetting } = useObserverSettings();
+  const viewer = settingsReady ? settings.viewerHandle : null;
+  const { users: observedUsers, loading: usersLoading } = useUsers(
+    viewer,
+    settings.knownViewerHandles,
+  );
+  const scopes = useArchiveScopes();
   const locale = resolveUiLocale(settings.uiLocale);
   const t = (key: MessageKey, values?: Record<string, string | number>) =>
     translate(locale, key, values);
@@ -56,10 +69,32 @@ export function SidePanel() {
   }, [locale, tab]);
   const users = settingsReady
     ? observedUsers.filter((user) =>
-      user.key !== settings.viewerHandle && isDisplayedUser(user),
-    )
+      user.key !== viewer &&
+      !settings.knownViewerHandles.includes(user.key) &&
+      isDisplayedUser(user))
     : [];
   const loading = usersLoading || !settingsReady;
+  const switchSources = hasConsent && !loading
+    ? archiveSwitchSources(scopes, viewer, settings.dismissedArchivePrompts, observedUsers.length)
+    : [];
+
+  async function dismissSwitchPrompt(): Promise<void> {
+    if (!viewer || settings.dismissedArchivePrompts.includes(viewer)) return;
+    await setSettings({
+      dismissedArchivePrompts: [...settings.dismissedArchivePrompts, viewer],
+    });
+  }
+
+  async function copyFrom(from: string): Promise<void> {
+    if (!viewer) return;
+    await copyArchive(from, viewer, [...settings.knownViewerHandles, viewer]);
+    await dismissSwitchPrompt();
+    try {
+      await chrome.runtime.sendMessage({ type: "data:changed" });
+    } catch {
+      // Open X tabs pick the copied records up on their next lookup.
+    }
+  }
   const changed = users.filter((user) => user.hasChanged).length;
   const changedText = changed.toLocaleString(locale);
   const filteredUsers = filterSidePanelUsers(users, filter);
@@ -207,8 +242,21 @@ export function SidePanel() {
         </section>
       ) : null}
 
+      {viewer && switchSources.length > 0 ? (
+        <ArchiveSwitchPrompt
+          locale={locale}
+          onCopy={copyFrom}
+          onStartEmpty={dismissSwitchPrompt}
+          sources={switchSources}
+          viewer={viewer}
+        />
+      ) : null}
+
       <section className={`side-intro${settingsReady && !hasConsent ? " is-locked" : ""}`}>
         <p className="eyebrow">{t("sideIntroEyebrow")}</p>
+        {viewer ? (
+          <p className="side-intro__owner" translate="no">{t("archiveOfAccount", { handle: viewer })}</p>
+        ) : null}
         <div className="side-intro__count">
           <strong>{loading ? "—" : users.length.toLocaleString(locale)}</strong>
           <span>{t("observedAccountCount")}</span>

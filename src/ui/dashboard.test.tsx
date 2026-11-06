@@ -4,12 +4,15 @@ import type { ObserverSettings, UserRecord } from "../domain/types";
 
 const testState = vi.hoisted(() => ({
   users: [] as UserRecord[],
+  scopes: [] as { viewer: string; userCount: number }[],
   settings: {
     consentVersion: 3,
     observerEnabled: true,
     showBadges: true,
     dockCollapsed: false,
     viewerHandle: "viewer",
+    knownViewerHandles: [],
+    dismissedArchivePrompts: [],
     uiLocale: "zh-CN",
     hideMutedAccounts: false,
     hideBlockedByAccounts: false,
@@ -22,6 +25,8 @@ vi.mock("./hooks", async () => {
   const { useState } = await import("react");
   return {
     useUsers: () => ({ users: testState.users, loading: false }),
+    useArchiveScopes: () => testState.scopes,
+    useLegacyClaim: () => ({ claim: null, dismiss: async () => undefined }),
     useFilterRuleStatus: () => ({
       status: { applying: false, ruleCount: 0, activeRuleCount: 0 },
       ready: true,
@@ -50,17 +55,11 @@ vi.mock("./hooks", async () => {
 });
 
 vi.mock("../storage/database", () => ({
+  LEGACY_VIEWER: "",
   acknowledgeRelationshipChange: vi.fn(),
-  clearDatabase: vi.fn(),
-  db: {
-    observations: {
-      where: () => ({
-        equals: () => ({
-          toArray: async () => [],
-        }),
-      }),
-    },
-  },
+  clearArchive: vi.fn(),
+  copyArchive: vi.fn(),
+  getUserHistory: vi.fn(async () => []),
   deleteUserRecord: vi.fn(),
   exportDatabase: vi.fn(),
   importDatabase: vi.fn(),
@@ -99,6 +98,8 @@ describe("dashboard profile links", () => {
       showBadges: true,
       dockCollapsed: false,
       viewerHandle: "viewer",
+      knownViewerHandles: [],
+      dismissedArchivePrompts: [],
       uiLocale: "zh-CN",
       hideMutedAccounts: false,
       hideBlockedByAccounts: false,

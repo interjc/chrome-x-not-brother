@@ -36,6 +36,33 @@ describe("quick rule actions", () => {
     expect(onAddHandle).toHaveBeenCalledWith("Alice");
   });
 
+  it("never adds the action to the account switcher menu and removes one added before its items rendered", () => {
+    const state = {
+      locale: "zh-CN" as const,
+      // Before the viewer is known, nothing else stops a button on the first row.
+      viewerHandle: null,
+      enabled: true,
+      blockedHandles: new Set<string>(),
+      onAddHandle: vi.fn(),
+      onAddKeyword: vi.fn(),
+    };
+    // X can paint the account rows a moment before the menu items.
+    const doc = fixture(`<div data-testid="HoverCard">
+      <div><div data-testid="UserAvatar-Container-interjc"></div><span>Justin</span><span>@interjc</span></div>
+      <div class="later"></div>
+    </div>`);
+    refreshHoverQuickRules(doc, state);
+    expect(doc.querySelector("[data-xro-quick-rule='handle']")).not.toBeNull();
+    doc.querySelector(".later")!.outerHTML = `
+      <button data-testid="UserCell"><div data-testid="UserAvatar-Container-interjc_hq"></div><span>@interjc_hq</span></button>
+      <a href="/i/flow/login" data-testid="AccountSwitcher_AddAccount_Button">添加已有账号</a>
+      <a href="/account/switch" data-testid="AccountSwitcher_ManageAccounts_Button">管理账号</a>
+      <a href="/logout" data-testid="AccountSwitcher_Logout_Button">登出 @interjc</a>`;
+    refreshHoverQuickRules(doc, state);
+
+    expect(doc.querySelector("[data-xro-quick-rule]")).toBeNull();
+  });
+
   it("places a distinct action row at the HoverCard footer with a native title hint", () => {
     const doc = fixture(`<aside data-testid="HoverCard">
       <div data-testid="User-Name"><a href="/Alice"><span>Alice</span></a><span>@Alice</span></div>

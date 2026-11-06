@@ -82,9 +82,24 @@ Safari has no side panel: the toolbar icon opens the same three tabs as a popup 
 
 Extension pages follow the system light/dark preference. Badges and the dock on X follow the actual light/dark background of the X page.
 
+## Multiple X accounts
+
+Relationships are relative to the signed-in account, so each X account has its own archive, just like filter rules and intercept counts.
+
+- **Page badges** use only the signed-in account's archive. After you switch accounts, the previous account's badges no longer appear.
+- **Your own accounts**: the extension remembers every X account signed in on this device and never badges or records them in any archive, so your accounts never show relationships with each other.
+- **The account switcher menu** (from the account button at the bottom left) is never badged and never gets the "Add to Not Brother list" button.
+- **Switching to an account with no archive yet** shows a prompt on the Side Panel Status tab: copy another account's archive, or start empty. After **Start empty**, that account is not asked again.
+- **Upgrading from 0.5.x**: the old archive goes to the last signed-in account automatically, and the fieldbook shows a one-time notice. If part of it was recorded while signed in as another account, merge or clear it in the fieldbook.
+
+Copying between accounts is only for tidying data that was mixed before the upgrade. Copied records are overwritten by new page evidence as you browse.
+
 ## Full fieldbook
 
-Three top tabs, one page at a time: **Archive**, **Rules**, and **Options**. Rules are stored separately per signed-in X account. After you switch accounts, editing and filtering use only that account's rules.
+Three top tabs, one page at a time: **Archive**, **Rules**, and **Options**. Archives and rules are stored separately per signed-in X account. After you switch accounts, editing and filtering use only that account's rules.
+
+- **Archive account** at the top of the Archive tab switches to any account's archive and shows the signed-in account and each account's count.
+- While viewing another account, **Merge into @current** copies that archive into the current account; the original archive is kept.
 
 - Activate the avatar, display name, or @handle to open that standard X profile in a new tab. Avatars use the latest observed X CDN URL, then a handle-derived public image, then the handle initial.
 - The left index filters by relationship.
@@ -93,7 +108,7 @@ Three top tabs, one page at a time: **Archive**, **Rules**, and **Options**. Rul
 - The history button expands the 30 most recent local observations.
 - Page badges, Side Panel, and archive rows: a current mutual state shows Mutual. Following-only defaults to One-way; **They unfollowed** appears only when history shows they used to follow you and you still follow them. Your unfollow or their block still uses the matching short label. When neither side follows (including a previous follows-you-only), there is no badge. Simultaneous changes that cannot be attributed to one side still show **Changed**. The dock **Changed** count is the aggregate of those unreviewed events.
 - The check button marks a relationship change as reviewed and restores the current base-relationship label.
-- The delete button removes only that local record.
+- The delete button removes only that record from the selected account's archive.
 - Option switches control the observer, page badges, and optional timeline filters.
 - Footer **Send feedback** opens [GitHub Issues](https://github.com/interjc/chrome-x-not-brother/issues) in a new tab.
 
@@ -101,12 +116,12 @@ The Side Panel footer has the same feedback entry. Do not paste account password
 
 ## Backup and restore
 
-- JSON: users and observations, for a full backup and a merge restore.
+- JSON: the selected account's users and observations (schema v2, naming the account), for a full backup and a merge restore.
 - CSV: current user summary, for spreadsheets.
 - CSV machine field names stay English. `relationship_label` uses the extension UI language at export time.
-- Import: only a Not Brother schema v1 JSON, merged into existing local data.
-- Clear: a second confirmation deletes the entire local archive in this Chrome profile.
+- Import: a Not Brother schema v2 JSON or a 0.5.x v1 JSON, merged into the account being viewed. A backup from another account asks first.
+- Clear: a second confirmation deletes only the archive of the account being viewed; other accounts are kept.
 
 Filter rules use a separate `not-brother-filter-rules` JSON v1. Relationship-archive backups and rule imports do not overwrite each other. The rules area can download, upload, import from a public URL/Gist, or clear on its own.
 
-Export JSON before you clear data, switch Chrome profiles, or uninstall. Chrome does not sync IndexedDB across profiles.
+Export JSON, one file per account, before you clear data, switch Chrome profiles, or uninstall. Chrome does not sync IndexedDB across profiles.

@@ -63,9 +63,9 @@ content script 必须把这种情况视为生命周期结束：捕获 promise re
 
 如果读取的数据类型、用途、传输对象或保存位置发生实质变化，提高 `CURRENT_CONSENT_VERSION`，同步修改首次披露与隐私文档，并在新版本继续观察前重新取得用户同意。纯文案修正不得随意重置同意。
 
-`viewerHandle` 仅用于排除本人。修改账号识别逻辑时同时验证：扫描阶段不生成本人 observation、UI 过滤旧记录、service worker 删除已存本人数据。
+档案按登录账号分开（`[viewer+key]`），`viewerHandle` 决定侧栏显示哪个账号的档案，`knownViewerHandles` 是要排除的所有自己的账号。修改账号识别逻辑时同时验证：扫描阶段不生成任何自己账号的 observation、UI 过滤这些账号、service worker 第一次见到账号时从所有档案删除它、识别不到账号时不写入。X 的账号切换菜单与资料浮窗共用 `HoverCard`；改动浮窗逻辑时保留 `isAccountSwitcherMenu` 的排除和 `x-adapter.test.ts` 里的菜单夹具。新增 X 路由（例如新的 `/logout` 类链接）要加进 `RESERVED_ROUTE_HANDLES`，否则会被读成 handle。
 
-小型偏好属于 `chrome.storage.sync`，`viewerHandle` 属于 `chrome.storage.local`，users/observations 属于 IndexedDB。不要用切片方式把关系档案塞进 sync；保持单个设置项低于 8 KB、总量远低于 100 KB，并控制写入频率。未登录、关闭同步和离线不需要自建 fallback，Chrome 会让 sync 区域继续在本机工作。迁移旧 local 设置时，已有 sync 值优先，写入新区域成功后才能删除旧 key。
+小型偏好属于 `chrome.storage.sync`，`viewerHandle`、`knownViewerHandles`、`dismissedArchivePrompts` 属于 `chrome.storage.local`，accountUsers/accountObservations 属于 IndexedDB。不要用切片方式把关系档案塞进 sync；保持单个设置项低于 8 KB、总量远低于 100 KB，并控制写入频率。未登录、关闭同步和离线不需要自建 fallback，Chrome 会让 sync 区域继续在本机工作。迁移旧 local 设置时，已有 sync 值优先，写入新区域成功后才能删除旧 key。
 
 ## 依赖
 

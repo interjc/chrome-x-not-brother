@@ -3,6 +3,8 @@ import type { ObservationDraft, UserRecord } from "../domain/types";
 export interface ObservationSignatureTracker {
   filterUnsent(observations: ObservationDraft[]): ObservationDraft[];
   markPersisted(observations: ObservationDraft[], users: UserRecord[]): void;
+  /** Forget everything sent, e.g. after the signed-in account changes. */
+  reset(): void;
 }
 
 interface PersistedSignature {
@@ -46,6 +48,9 @@ export function createObservationSignatureTracker(): ObservationSignatureTracker
           avatarUrl: user.avatarUrl,
         });
       }
+    },
+    reset(): void {
+      persistedSignatures.clear();
     },
   };
 }

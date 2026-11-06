@@ -14,7 +14,7 @@ flowchart LR
     K -->|是| B["Content script<br/>徽标 + 观察 Dock + 批量消息"]
     K -->|否| J["移除旧徽标并丢弃"]
     B --> C["MV3 service worker"]
-    C --> D["IndexedDB<br/>users + observations"]
+    C --> D["IndexedDB<br/>按登录账号分开的<br/>accountUsers + accountObservations"]
     D --> E["Side Panel"]
     D --> F["Relationship Fieldbook"]
     D --> H["本地关系概览"]
@@ -22,7 +22,7 @@ flowchart LR
     G["chrome.storage.sync<br/>同意、观察器、dock 与时间线过滤"] --> B
     G --> E
     G --> F
-    V["chrome.storage.local<br/>当前 X viewerHandle"] --> B
+    V["chrome.storage.local<br/>当前账号与自己的所有账号"] --> B
     V --> E
     V --> F
     R["chrome.storage.local<br/>filter-rules JSON v1"] --> C
@@ -51,12 +51,12 @@ flowchart LR
 - 从首页时间线的 status permalink、作者头像和去掉格式字符的 `@handle` 识别作者身份；没有关注控件时仍输出内部 unknown，供本地档案回标，不把它当成未关注；帖子正文里的 @提及不是作者；
 - 通知页的点赞、转帖和关注活动行使用 `data-testid="notification"`。参与者只取该行头像（`UserAvatar-Container-<handle>` 或其资料链接），徽标放进同一 handle 的显示名链接，没有显示名链接时放进头像链接。活动句（“关注了你”“赞了你的帖子”）不是当前关系；该行上的关注/取关控件和 `userFollowIndicator` 仍有效。没有这些控件时保持 unknown，由当前页已载入的用户实体或本地档案回标。没有头像的预览链接、嵌套帖子里的 @提及不是参与者。同一条通知里的多名参与者不共享一枚关注按钮；
 - 头像只从同 handle 的资料链接或精确 `UserAvatar-Container-<handle>` 读取声明的 X CDN `src` / `srcset`；不读列表 DOM 复用时可能仍是上一账号的 `currentSrc`，不从复合卡片任取第一张图片；再次观察到不同非空 URL 时覆盖该账号的缓存头像；Side Panel 与档案库优先显示这个最近观察值，缺失或失败时按 handle 请求公开头像，再失败显示 handle 首字母；
-- 通过 `users:lookup` 批量读取可见 handle 的本地已知关系，使已确认账号在证据浮层关闭后继续回标；
+- 通过 `users:lookup` 批量读取可见 handle 在当前登录账号档案里的已知关系，使已确认账号在证据浮层关闭后继续回标；登录账号变化时清空本页的记录缓存、查询记录和上报签名；
 - 读取 X 已经为当前页面载入的 UI store、tweet fiber（含祖先组件）以及页面自己已经完成的 GraphQL 响应中的 `following`、`followed_by`、`blocked_by`、`muting`，以及已有的 `name` / `profile_image_url_https`，给首页、评论区和通知活动行没有关注控件的账号补全关系，并补全 DOM 抽坏的显示名和头像；不发起新的 GraphQL 或 REST 请求。补全按字段进行：DOM 已画出的关注控件或关注指示保留并优先于可能过期的实体字段，实体只填 DOM 未知的字段；tweet fiber 遍历有独立的数量预算，不因长会话 store 用户过多而提前停止；
 - 同意后若打开可选时间线过滤，用已载入的 `muting`、现场/本地 `blocked_by` 隐藏首页、搜索、通知和帖子详情/评论区里对应帖子单元格；页面 GraphQL 一返回静音/拉黑信号就立即隐藏。本地名单已有的账号立刻消失，第一次检测到的账号带短收起动画。不隐藏个人主页、浮窗或关注列表，也不把静音列表写入数据库；
 - `hideByFilterRules` 打开且同意版本有效时，通过 `filter-rules:get` 向 service worker 请求当前登录 X 账号命名空间下、已由 Zod 校验的规则快照，再用不依赖 Zod 的轻量匹配器预编译 handle 集合、contains 与正则。切换账号时丢弃上一账号的编译快照。候选帖正文选择器仍封装在 `x-adapter.ts`；正文只作为内存中的当前匹配输入，不写档案或消息。每次匹配重新检查到期时间，2 秒复扫负责在规则到期后恢复节点；规则存储变化通过 `chrome.storage.onChanged` 使快照失效并复扫。同意后可在 HoverCard 名字旁、帖子三个点菜单和帖子正文划词处用 `filter-rules:quick-add` 立即保存一条 handle 或 contains 规则；内容脚本不直接写规则文档，也不点击 X 的拉黑/静音；
 - 页面主世界 `page-bridge.js` 只把上述已载入字段回传给隔离世界的观察器；普通 DOM 证据优先，store / 已完成响应通常只填充内部 unknown，但明确 `blocked_by=true` 必须覆盖冲突的普通关注证据；
-- 识别当前登录 handle 并在扫描阶段排除本人；
+- 识别当前登录 handle，在扫描阶段排除本人和本机识别到过的所有自己的账号；X 把左下角账号切换菜单也渲染成 `HoverCard`，adapter 按 `AccountSwitcher_*` testid、`/logout` 等链接和 `button[data-testid="UserCell"]` 认出它并整块跳过，见 [多账号](multi-account.md#3-识别账号菜单)；
 - 插入观察状态/概览 dock；可同步的 `dockCollapsed` 设置控制完整面板或状态悬浮球，用户手势可恢复面板或通过 service worker 打开当前标签页的 Side Panel；悬浮球贴右下角，显示期间用 adapter 中的 Chat/Grok 抽屉选择器把原生按钮上移，不向内侧挡住时间线；同意后展开 dock 显示当前命名空间拦截规则的应用状态和条数，编辑入口打开侧栏规则页（失败时回退档案库 `#filter-rules`），不把规则正文放进 dock；
 - 对已确认持久化的关系与身份发送签名去重；消息失败或 service worker 未返回对应用户时不提交签名，后续复扫会重试；新出现的非空头像/显示名与已持久化值不同则重新发送，暂时缺失不会反复写入；
 - 所有扫描经过 180ms 合并与 single-flight 串行门控：扫描期间的新触发只排队一次补扫，定期复扫不会并发执行或重复追加相同历史；每次扫描都会把 2 秒兜底计时重新起算，所以兜底只在 2 秒内没有扫描时触发；隐藏标签页暂停定期复扫；扩展上下文终止时移除 DOM Observer、计时器及页面/Chrome 事件监听；
@@ -71,7 +71,7 @@ flowchart LR
 - 设置工具栏按钮打开 Side Panel；
 - 用 action badge 同步显示 `ON` 或需要注意的 `!` 状态；
 - 首次安装打开本地 dashboard 引导页；
-- 清理 viewer 本人记录并向 content script 返回本地概览；
+- 用消息里的登录账号（缺省用本地设置里最后一个）决定读写哪个账号的档案；第一次见到的账号记入 `knownViewerHandles` 并从所有档案删除，同时认领 0.5.x 未归属的旧档案；识别不到账号时不写入；向 content script 返回当前账号的本地概览；
 - 把新观察以及档案页的确认、删除、导入、清空广播给所有已注入的 X content script，使其清除关系查询缓存并合并复扫；广播使用现有 `chrome.tabs` 消息能力，不申请 `tabs` 权限也不读取标签页内容；
 - 仅向 `x.com` content script 返回其请求 handle 的已知本地用户记录；
 - 仅在同意版本有效且 `hideByFilterRules` 已打开时，读取并 Zod 校验 local 规则文档，再向请求的 `x.com` content script 返回规则快照；另提供 `filter-rules:status`，只返回是否正在应用和规则条数，不含规则正文，供 dock 状态使用；`filter-rules:quick-add` 在同意后把一条 handle 或 contains 规则写入当前账号命名空间并立即保存，必要时打开总开关；校验库与 unsafe-regex 检查不进入每个 X 页面的 content bundle；
@@ -82,7 +82,7 @@ flowchart LR
 
 - 与 service worker 同属扩展 origin，可以安全访问扩展 IndexedDB；
 - Dexie `liveQuery` 驱动 UI 数据更新；
-- Side Panel 用状态/规则/选项三个标签分页：状态页是概览、分类筛选和用户列表；规则页是拦截概览和当前账号的拦截规则编辑器；选项页是界面语言、页面徽标和时间线过滤。筛选不写数据库也不预取资料。Chrome 工具栏右键「选项」通过 `options_ui` 把 `sidePanelTab` 设为 options 并打开侧栏。dashboard 仍提供完整本地数据管理。扩展页通过共享 hook 同时订阅 sync 偏好、local viewer 和拦截计数的 `chrome.storage.onChanged`。
+- Side Panel 用状态/规则/选项三个标签分页：状态页是概览、分类筛选和用户列表；规则页是拦截概览和当前账号的拦截规则编辑器；选项页是界面语言、页面徽标和时间线过滤。筛选不写数据库也不预取资料。Chrome 工具栏右键「选项」通过 `options_ui` 把 `sidePanelTab` 设为 options 并打开侧栏。侧栏状态页显示当前登录账号的档案；当前账号还没有记录而其他账号有时，提示复制其他账号的档案或从空白开始。dashboard 仍提供完整本地数据管理，顶部可切换查看任一账号的档案，并合并到当前账号或只清空所选账号。扩展页通过共享 hook 同时订阅 sync 偏好、local viewer 和拦截计数的 `chrome.storage.onChanged`。
 - dashboard 的规则编辑器直接读写扩展 local storage；保存、文件导入和远程导入都先通过共享 Zod schema。远程 URL 仅在表单提交的用户手势内申请来源 host permission 并 fetch 一次；Gist 页面先读公开 Gist API，必要时只跟进 GitHub 返回的 Raw host。请求不带凭据、不跟随重定向、有超时与流式 1 MiB 上限。规则 URL 不持久化，因此没有后台订阅或自动刷新。
 
 ### Internationalization

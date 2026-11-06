@@ -11,6 +11,8 @@ const initialSettings: ObserverSettings = {
   showBadges: true,
   dockCollapsed: false,
   viewerHandle: null,
+  knownViewerHandles: [],
+  dismissedArchivePrompts: [],
   uiLocale: "auto",
   hideMutedAccounts: false,
   hideBlockedByAccounts: false,

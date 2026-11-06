@@ -3,7 +3,13 @@ import { useCallback, useEffect, useState } from "react";
 import { filterRuleSetStatus, type FilterRuleSetStatus } from "../domain/filter-rule-matching";
 import { emptyHideStats, type HideStats } from "../domain/hide-stats";
 import type { ObserverSettings, UserRecord } from "../domain/types";
-import { db } from "../storage/database";
+import { getArchiveUsers, listArchiveScopes, type ArchiveScope } from "../storage/database";
+import {
+  LEGACY_CLAIM_KEY,
+  dismissLegacyClaim,
+  getLegacyClaim,
+  type LegacyArchiveClaim,
+} from "../storage/account-archive";
 import { getFilterRuleSet, isFilterRulesStorageChange } from "../storage/filter-rules";
 import { getHideStats, isHideStatsStorageChange } from "../storage/hide-stats";
 import {
@@ -13,12 +19,23 @@ import {
   updateSettings,
 } from "../storage/settings";
 
-export function useUsers(): { users: UserRecord[]; loading: boolean } {
+export function useUsers(
+  viewer: string | null,
+  excluded: readonly string[] = [],
+): { users: UserRecord[]; loading: boolean } {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const excludedKey = excluded.join(",");
 
   useEffect(() => {
-    const subscription = liveQuery(() => db.users.orderBy("lastSeenAt").reverse().toArray()).subscribe({
+    if (viewer === null) {
+      setUsers([]);
+      setLoading(false);
+      return undefined;
+    }
+    setLoading(true);
+    const skip = excludedKey ? excludedKey.split(",") : [];
+    const subscription = liveQuery(() => getArchiveUsers(viewer, skip)).subscribe({
       next: (records) => {
         setUsers(records);
         setLoading(false);
@@ -29,9 +46,64 @@ export function useUsers(): { users: UserRecord[]; loading: boolean } {
       },
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [viewer, excludedKey]);
 
   return { users, loading };
+}
+
+/** Every account that has an archive, largest first. */
+export function useArchiveScopes(): ArchiveScope[] {
+  const [scopes, setScopes] = useState<ArchiveScope[]>([]);
+
+  useEffect(() => {
+    const subscription = liveQuery(() => listArchiveScopes()).subscribe({
+      next: setScopes,
+      error: (error) => console.error("Could not list Not Brother archives", error),
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  return scopes;
+}
+
+export function useLegacyClaim(): {
+  claim: LegacyArchiveClaim | null;
+  dismiss: () => Promise<void>;
+} {
+  const [claim, setClaim] = useState<LegacyArchiveClaim | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const load = (): void => {
+      void getLegacyClaim().then(
+        (next) => {
+          if (active) setClaim(next);
+        },
+        () => undefined,
+      );
+    };
+    const handleStorageChanged = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string,
+    ): void => {
+      if (areaName === "local" && Object.prototype.hasOwnProperty.call(changes, LEGACY_CLAIM_KEY)) {
+        load();
+      }
+    };
+    chrome.storage.onChanged.addListener(handleStorageChanged);
+    load();
+    return () => {
+      active = false;
+      chrome.storage.onChanged.removeListener(handleStorageChanged);
+    };
+  }, []);
+
+  const dismiss = useCallback(async () => {
+    await dismissLegacyClaim();
+    setClaim((current) => current && { ...current, dismissed: true });
+  }, []);
+
+  return { claim, dismiss };
 }
 
 export function useObserverSettings(): {

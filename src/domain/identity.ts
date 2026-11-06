@@ -53,3 +53,31 @@ export function handleAvatarUrl(handle: string): string {
 export function profileUrlForHandle(handle: string): string {
   return `https://x.com/${encodeURIComponent(handle.trim())}`;
 }
+
+/**
+ * First path segments on x.com that are app routes, never accounts. X's
+ * account switcher menu links to /logout; reading it as a handle once produced
+ * a bogus "@logout" record, so stored records under these keys are discarded.
+ */
+export const RESERVED_ROUTE_HANDLES: readonly string[] = [
+  "home",
+  "explore",
+  "notifications",
+  "messages",
+  "i",
+  "settings",
+  "compose",
+  "search",
+  "jobs",
+  "communities",
+  "tos",
+  "privacy",
+  "logout",
+  "login",
+  "signup",
+  "account",
+  "intent",
+  "share",
+  "hashtag",
+  "oauth",
+];

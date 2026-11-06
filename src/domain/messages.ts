@@ -25,6 +25,7 @@ export interface DataChangedMessage {
 
 export interface GetSummaryMessage {
   type: "summary:get";
+  viewerHandle?: string | null;
 }
 
 export interface GetSummaryResponse {
@@ -35,6 +36,7 @@ export interface GetSummaryResponse {
 export interface LookupUsersMessage {
   type: "users:lookup";
   userKeys: string[];
+  viewerHandle?: string | null;
 }
 
 export interface LookupUsersResponse {

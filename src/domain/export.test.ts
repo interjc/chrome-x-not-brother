@@ -35,9 +35,29 @@ const observation: ObservationRecord = {
 };
 
 describe("database export", () => {
-  it("round-trips a valid schema v1 payload", () => {
-    const payload = createDatabaseExport([user], [observation], new Date("2026-08-17T00:00:00Z"));
+  it("round-trips a schema v2 payload that names its account", () => {
+    const payload = createDatabaseExport([user], [observation], "viewer", new Date("2026-08-17T00:00:00Z"));
+    expect(payload).toMatchObject({ schemaVersion: 2, viewerHandle: "viewer" });
     expect(parseDatabaseExport(JSON.parse(JSON.stringify(payload)))).toEqual(payload);
+  });
+
+  it("still accepts a 0.5.x schema v1 backup without an account", () => {
+    const legacy = {
+      format: "not-brother",
+      schemaVersion: 1,
+      exportedAt: "2026-08-17T00:00:00.000Z",
+      users: [user],
+      observations: [observation],
+    };
+    expect(parseDatabaseExport(legacy)).toEqual(legacy);
+  });
+
+  it("rejects a schema v2 payload with an invalid account handle", () => {
+    const payload = createDatabaseExport([user], [observation], "viewer");
+    expect(() => parseDatabaseExport({ ...payload, viewerHandle: "<script>" }))
+      .toThrow("Invalid Not Brother export: viewerHandle");
+    expect(() => parseDatabaseExport({ ...payload, schemaVersion: 3 }))
+      .toThrow("unsupported schema");
   });
 
   it("rejects unknown relationship values", () => {

@@ -8,6 +8,8 @@ const defaultSettings: ObserverSettings = {
   showBadges: true,
   dockCollapsed: false,
   viewerHandle: "viewer",
+  knownViewerHandles: [],
+  dismissedArchivePrompts: [],
   uiLocale: "auto",
   hideMutedAccounts: false,
   hideBlockedByAccounts: false,
@@ -17,6 +19,8 @@ const defaultSettings: ObserverSettings = {
 
 const testState = vi.hoisted(() => ({
   users: [] as UserRecord[],
+  scopes: [] as { viewer: string; userCount: number }[],
+  copyArchive: vi.fn(async () => 1),
   sendMessage: vi.fn(),
   settings: {
     consentVersion: 3,
@@ -32,10 +36,17 @@ const testState = vi.hoisted(() => ({
   } as ObserverSettings,
 }));
 
+vi.mock("../storage/database", () => ({
+  LEGACY_VIEWER: "",
+  copyArchive: testState.copyArchive,
+}));
+
 vi.mock("./hooks", async () => {
   const { useState } = await import("react");
   return {
     useUsers: () => ({ users: testState.users, loading: false }),
+    useArchiveScopes: () => testState.scopes,
+    useLegacyClaim: () => ({ claim: null, dismiss: async () => undefined }),
     useFilterRuleStatus: () => ({
       status: { applying: false, ruleCount: 2, activeRuleCount: 1 },
       ready: true,
@@ -224,5 +235,65 @@ describe("SidePanel interactions", () => {
     expect(select?.selectedOptions[0]?.textContent).toBe("简体中文");
     await act(async () => document.getElementById("side-tab-status")?.click());
     expect(document.querySelector(".section-heading h1")?.textContent).toBe("最近观察");
+  });
+});
+
+describe("SidePanel archive switch prompt", () => {
+  async function render(): Promise<void> {
+    vi.stubGlobal("chrome", {
+      i18n: { getUILanguage: () => "en" },
+      runtime: { sendMessage: testState.sendMessage },
+      storage: {
+        local: { get: vi.fn(async () => ({})), set: vi.fn(), remove: vi.fn() },
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+      permissions: { request: vi.fn(async () => true) },
+    });
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    document.body.innerHTML = '<div id="root"></div>';
+    vi.resetModules();
+    await act(async () => {
+      await import("./sidepanel");
+    });
+  }
+
+  beforeEach(() => {
+    testState.users = [];
+    testState.scopes = [
+      { viewer: "older", userCount: 120 },
+      { viewer: "", userCount: 4 },
+    ];
+    testState.copyArchive.mockClear();
+    testState.sendMessage.mockReset();
+    testState.settings = { ...defaultSettings, viewerHandle: "fresh" };
+  });
+
+  it("offers to copy another account's archive when the current account has none", async () => {
+    await render();
+    const prompt = document.querySelector(".archive-switch");
+    expect(prompt?.textContent).toContain("@fresh has no archive yet");
+    expect(document.querySelector(".side-intro__owner")?.textContent).toBe("@fresh's archive");
+    const buttons = [...prompt!.querySelectorAll("button")];
+    expect(buttons.map((button) => button.textContent)).toEqual([
+      "Copy @older's archive (120)",
+      "Start empty",
+    ]);
+
+    await act(async () => buttons[0]?.click());
+    expect(testState.copyArchive).toHaveBeenCalledWith("older", "fresh", ["fresh"]);
+    expect(testState.sendMessage).toHaveBeenCalledWith({ type: "data:changed" });
+    expect(document.querySelector(".archive-switch")).toBeNull();
+  });
+
+  it("closes for good when the user starts empty, and stays away for dismissed accounts", async () => {
+    await render();
+    const fresh = [...document.querySelectorAll(".archive-switch button")].at(-1) as HTMLButtonElement;
+    await act(async () => fresh.click());
+    expect(document.querySelector(".archive-switch")).toBeNull();
+    expect(testState.copyArchive).not.toHaveBeenCalled();
+
+    testState.settings = { ...defaultSettings, viewerHandle: "fresh", dismissedArchivePrompts: ["fresh"] };
+    await render();
+    expect(document.querySelector(".archive-switch")).toBeNull();
   });
 });

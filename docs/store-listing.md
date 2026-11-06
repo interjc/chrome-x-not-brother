@@ -36,6 +36,13 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 - Adds local Zod-validated blacklist rules for handles, display names, and post content, with expiration, JSON file import/export, and one-time public HTTPS/Gist import behind optional per-site permission.
 - Makes first-run consent easier to find with a prominent entry beside the minimized NB button and an action-icon context-menu shortcut; both open the full disclosure before consent.
 
+### Version 0.6.0 release notes
+
+- Each signed-in X account now has its own relationship archive, so relationships recorded with one account no longer appear while you use another. Your existing archive moves to the last signed-in account automatically.
+- Switching to an account with no archive yet offers to copy another account's archive or start empty. The fieldbook can switch between accounts' archives, merge one into the current account, or clear one account.
+- Fixes your own accounts being marked "Blocked you" in X's account switcher menu. Accounts you have signed in with on this device are never badged or recorded.
+- JSON backups now name their account (schema v2); older backups still import.
+
 ### Version 0.5.15 release notes
 
 - More accurate relationship badges. Text in link previews, polls, and Community Notes, and display names that merely contain "follows you", no longer produce false "Follows you" or "Blocked you" labels. Posts and suggested accounts on a profile page are no longer marked as not following you, and a badge is never placed on a profile header that still shows the previous account.
@@ -180,6 +187,13 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 - 小型偏好可通过用户启用的 Chrome Sync 同步，关系档案和当前 X handle 仍只保存在本机。旧 local 偏好迁移时不会覆盖 Chrome Sync 已有设置。
 - 未同意时，收起后的 NB 悬浮球旁会显示醒目入口，工具栏图标右键菜单也能打开完整隐私说明；入口不会直接代替用户同意。
+
+### 0.6.0 更新说明
+
+- 每个登录的 X 账号现在各有一份关系档案，用一个账号记录的关系不会再在另一个账号下显示。现有档案会自动归到最后登录的账号。
+- 切换到还没有档案的账号时，可以复制另一个账号的档案或从空白开始。档案库可以切换查看各账号的档案、合并到当前账号，或只清空一个账号。
+- 修复 X 账号切换菜单里自己的账号被标成「拉黑了你」。在这台设备登录过的账号都不会被标注或记录。
+- JSON 备份会写明所属账号（schema v2），旧备份仍可导入。
 
 ### 0.5.15 更新说明
 
@@ -326,6 +340,13 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 
 - 小さな設定をユーザーが有効にした Chrome Sync で同期し、関係アーカイブと現在の X ハンドルはローカルに保ちます。旧 local 設定の移行時も、Chrome Sync に既存の設定があれば上書きしません。
 - 未同意の場合、収納した NB ボタンの横に目立つ入口を表示し、ツールバーアイコンの右クリックメニューからも完全なプライバシー説明を開けます。入口だけで同意が確定することはありません。
+
+### 0.6.0 更新内容
+
+- ログイン中の X アカウントごとに関係アーカイブが分かれました。あるアカウントで記録した関係は、別のアカウントの利用中には表示されません。既存のアーカイブは最後にログインしたアカウントに自動で割り当てられます。
+- アーカイブのないアカウントに切り替えると、別のアカウントのアーカイブをコピーするか、空のまま始めるかを選べます。フィールドブックではアカウントごとのアーカイブの切り替え、現在のアカウントへの統合、1 アカウントだけの消去ができます。
+- X のアカウント切り替えメニューで自分のアカウントに「ブロックされています」と表示される問題を修正しました。この端末でログインしたことのあるアカウントは、表示も記録もされません。
+- JSON バックアップにアカウントが記録されるようになりました（schema v2）。以前のバックアップも読み込めます。
 
 ### 0.5.15 更新内容
 

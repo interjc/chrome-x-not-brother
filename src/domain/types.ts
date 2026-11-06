@@ -99,6 +99,10 @@ export interface ObserverSettings {
   showBadges: boolean;
   dockCollapsed: boolean;
   viewerHandle: string | null;
+  /** Every X account seen signed in on this device; never badged or archived. */
+  knownViewerHandles: string[];
+  /** Accounts whose "start from another archive?" prompt was dismissed. */
+  dismissedArchivePrompts: string[];
   uiLocale: UiLocalePreference;
   hideMutedAccounts: boolean;
   hideBlockedByAccounts: boolean;
@@ -115,8 +119,11 @@ export interface ObservationSummary {
 
 export interface DatabaseExport {
   format: "not-brother";
-  schemaVersion: 1;
+  /** 1: 0.5.x and earlier, one unscoped archive. 2: one signed-in account's archive. */
+  schemaVersion: 1 | 2;
   exportedAt: string;
+  /** Signed-in X account the archive belongs to (schema 2 only). */
+  viewerHandle?: string | null;
   users: UserRecord[];
   observations: ObservationRecord[];
 }

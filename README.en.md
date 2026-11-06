@@ -236,9 +236,25 @@ Full fields, size limits, and validation are in [Custom filter rules v1](docs/en
 
 ### Relationship fieldbook
 
-The bottom of the side panel opens the full archive: search, filter, sort, review changes, inspect history, export JSON/CSV, import a JSON backup, delete one record, or clear all local data.
+The bottom of the side panel opens the full archive: search, filter, sort, review changes, inspect history, export JSON/CSV, import a JSON backup, delete one record, or clear the selected account's archive.
 
-Export JSON before you switch computers or clear data. Chrome does not sync this archive across profiles.
+Export JSON, one file per X account, before you switch computers or clear data. Chrome does not sync this archive across profiles.
+
+### Multiple X accounts
+
+Follow relationships are relative to the signed-in account, so **each X account has its own archive**. Filter rules and intercept counts are kept per account too.
+
+| What happens | What the extension does |
+| --- | --- |
+| You switch accounts on X | Page badges and the side panel switch to that account's archive; the previous account's badges no longer appear |
+| The new account has no archive yet | The side panel Status tab offers **Copy @other's archive** or **Start empty** |
+| Your own accounts | Every account signed in on this device is remembered and never badged or recorded in any archive |
+| You open the account menu at the bottom left | The menu is never badged and never gets "Add to Not Brother list" |
+| You upgrade from 0.5.x | The old archive goes to the last signed-in account, and the fieldbook shows a one-time notice |
+
+**Archive account** at the top of the fieldbook switches to any account's archive. While viewing another account, **Merge into @current** copies it over and keeps the original; the clear button clears only the account being viewed.
+
+An archive from before the upgrade may mix several accounts' data; that is what copying and merging are for. Copied records are overwritten by new page evidence as you browse.
 
 Options, rules, and the archive are separate: language, the observer switch, page badges, dock/side-panel state, and the three timeline-filter master switches go into `chrome.storage.sync`. The custom rule document, intercept counts, the current X handle, and the full relationship archive stay on this device. When Chrome is signed out, sync is off, or the browser is briefly offline, small options still work on this device and Chrome restores sync later when it can.
 

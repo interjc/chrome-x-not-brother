@@ -2,6 +2,7 @@ import {
   isUsableDisplayName,
   normalizeProfileImageUrl,
 } from "../domain/identity";
+import { RESERVED_ROUTE_HANDLES } from "../domain/identity";
 import { resolveRelationship } from "../domain/relationships";
 import type {
   EvidenceType,
@@ -29,6 +30,13 @@ export const TWEET_CARET_SELECTOR = '[data-testid="caret"]';
 export const DROPDOWN_SELECTOR = '[data-testid="Dropdown"]';
 const TWEET_SURFACE_SELECTOR = `${TWEET_SELECTOR}, [data-testid="UserCell"]`;
 export const HOVER_CARD_SELECTOR = '[data-testid="HoverCard"]';
+// X renders the side-nav account switcher popover inside a HoverCard too. Its
+// menu items (AccountSwitcher_AddAccount/ManageAccounts/Logout_Button), their
+// /i/flow/login, /account/switch and /logout links, and the inactive accounts
+// drawn as button[data-testid="UserCell"] never appear in a profile hover card.
+const ACCOUNT_SWITCHER_MENU_MARKERS =
+  '[data-testid^="AccountSwitcher_"], a[href="/logout"], a[href^="/account/switch"], ' +
+  'a[href^="/i/flow/login"], button[data-testid="UserCell"]';
 export const TWEET_TEXT_SELECTOR = '[data-testid="tweetText"]';
 export const USER_CONTENT_SELECTOR =
   `${TWEET_TEXT_SELECTOR}, [data-testid="card.layoutLarge.media"]`;
@@ -53,20 +61,7 @@ const AVATAR_LINK_SELECTOR =
   '[data-testid="Tweet-User-Avatar"] a[href], [data-testid="UserAvatar-Container"] a[href], [data-testid^="UserAvatar-Container-"] a[href]';
 const AVATAR_CONTAINER_SELECTOR =
   '[data-testid="Tweet-User-Avatar"], [data-testid="UserAvatar-Container"], [data-testid^="UserAvatar-Container-"]';
-const RESERVED_PATHS = new Set([
-  "home",
-  "explore",
-  "notifications",
-  "messages",
-  "i",
-  "settings",
-  "compose",
-  "search",
-  "jobs",
-  "communities",
-  "tos",
-  "privacy",
-]);
+const RESERVED_PATHS = new Set<string>(RESERVED_ROUTE_HANDLES);
 const PROFILE_SUBPATHS = new Set([
   "status",
   "with_replies",
@@ -328,9 +323,21 @@ function isSemanticallyVisible(element: HTMLElement): boolean {
   return true;
 }
 
+/** True for the account switcher popover, which reuses the HoverCard testid. */
+export function isAccountSwitcherMenu(card: Element): boolean {
+  return card.querySelector(ACCOUNT_SWITCHER_MENU_MARKERS) !== null;
+}
+
+/** True inside the account switcher popover: the viewer's own accounts, not evidence. */
+export function isInsideAccountSwitcherMenu(element: Element): boolean {
+  const card = element.closest(HOVER_CARD_SELECTOR);
+  return card !== null && isAccountSwitcherMenu(card);
+}
+
 function visibleHoverCardsByHandle(doc: Document): Map<string, HTMLElement> {
   const cards = new Map<string, HTMLElement>();
   for (const card of doc.querySelectorAll<HTMLElement>(HOVER_CARD_SELECTOR)) {
+    if (isAccountSwitcherMenu(card)) continue;
     if (!isSemanticallyVisible(card)) continue;
     if (card.querySelector('[role="progressbar"], [data-testid="loadingSpinner"]')) continue;
     const handle = findHandle(card);
@@ -1069,7 +1076,9 @@ export function scanXDocument(
     if (
       area.closest("[data-xro-badge]") ||
       seenAnchors.has(area) ||
-      (viewerHandle && handle.toLowerCase() === viewerHandle.toLowerCase())
+      (viewerHandle && handle.toLowerCase() === viewerHandle.toLowerCase()) ||
+      isInsideAccountSwitcherMenu(surface) ||
+      isInsideAccountSwitcherMenu(area)
     ) return;
     seenAnchors.add(area);
     const hoverCard =
