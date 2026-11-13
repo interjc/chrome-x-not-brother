@@ -7,7 +7,7 @@ import {
   resolveRelationship,
 } from "../domain/relationships";
 import type { ObservationDraft } from "../domain/types";
-import type { ExtractedCandidate } from "./x-adapter";
+import { PAGE_USER_SURFACE_SELECTOR, type ExtractedCandidate } from "./x-adapter";
 
 export const PAGE_STORE_MESSAGE_SOURCE = "not-brother-page-store";
 export const PAGE_STORE_BRIDGE_TIMEOUT_MS = 350;
@@ -316,7 +316,7 @@ function usersFromFibers(doc: Document, users: Map<string, PageUserRelationship>
   const starts: Element[] = [];
   const root = reactRoot(doc);
   if (root) starts.push(root);
-  for (const node of doc.querySelectorAll("article, [data-testid='tweet'], [data-testid='cellInnerDiv']")) {
+  for (const node of doc.querySelectorAll(PAGE_USER_SURFACE_SELECTOR)) {
     starts.push(node);
     if (starts.length >= 80) break;
   }

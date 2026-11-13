@@ -23,13 +23,23 @@ const HANDLE_PATTERN = /^@?([A-Za-z0-9_]{1,15})$/;
 export const USER_NAME_SELECTOR =
   '[data-testid="UserName"], [data-testid="User-Name"], [data-testid="User-Names"]';
 export const X_CORNER_FAB_SELECTOR =
-  'div[data-testid="GrokDrawer"], div[data-testid="DMDrawer"], div[data-testid="chat-drawer-root"]';
-export const TWEET_SELECTOR = 'article[data-testid="tweet"]';
-const NOTIFICATION_SELECTOR = '[data-testid="notification"]';
-export const TWEET_CARET_SELECTOR = '[data-testid="caret"]';
-export const DROPDOWN_SELECTOR = '[data-testid="Dropdown"]';
-const TWEET_SURFACE_SELECTOR = `${TWEET_SELECTOR}, [data-testid="UserCell"]`;
-export const HOVER_CARD_SELECTOR = '[data-testid="HoverCard"]';
+  'div[data-testid="GrokDrawer"], div[data-testid="DMDrawer"], div[data-testid="chat-drawer-root"], [data-slot="xds-dock-window"]';
+// Both X frontends are in use. The newer one has no data-testid attributes;
+// use its semantic post/avatar/action markers, never generated Base UI ids.
+export const TWEET_SELECTOR = 'article:is([data-testid="tweet"], :not([data-testid]))';
+const SEMANTIC_USER_CELL_SELECTOR = '[role="link"][data-href]:not([data-href*="/status/"])';
+export const USER_CELL_SELECTOR = `[data-testid="UserCell"], ${SEMANTIC_USER_CELL_SELECTOR}`;
+const NOTIFICATION_SELECTOR = '[data-testid="notification"], [id^="urt:notifications:"] [role="link"][data-href]:not([data-href*="/status/"])';
+export const TWEET_CARET_SELECTOR = '[data-testid="caret"], article button[data-slot="xds-menu-trigger"]:is([aria-label="More"], [aria-label="更多"], [aria-label="もっと見る"])';
+export const DROPDOWN_SELECTOR = '[data-testid="Dropdown"], [role="menu"][data-slot="xds-menu-content"]';
+const TWEET_SURFACE_SELECTOR = `${TWEET_SELECTOR}, ${USER_CELL_SELECTOR}`;
+const SEMANTIC_NAME_SELECTOR = 'div:has(> span > a[href])';
+const SEMANTIC_PROFILE_NAME_SELECTOR = 'div:has(> span > h1)';
+export const USER_IDENTITY_SELECTOR = `${USER_NAME_SELECTOR}, ${SEMANTIC_NAME_SELECTOR}, ${SEMANTIC_PROFILE_NAME_SELECTOR}`;
+const PROFILE_ROOT_SELECTOR = '[data-testid="primaryColumn"], main';
+export const HOVER_CARD_SELECTOR = '[data-testid="HoverCard"], [data-base-ui-portal] [role="presentation"] > [data-base-ui-focusable][data-open]:not([role]):has(.x-avatar):has(a[href])';
+export const USER_CARD_SELECTOR = `${HOVER_CARD_SELECTOR}, :is(${USER_CELL_SELECTOR}):not(:is(${NOTIFICATION_SELECTOR}))`;
+export const PAGE_USER_SURFACE_SELECTOR = `article, [data-testid="tweet"], [data-testid="cellInnerDiv"], [role="link"][data-href], ${HOVER_CARD_SELECTOR}`;
 // X renders the side-nav account switcher popover inside a HoverCard too. Its
 // menu items (AccountSwitcher_AddAccount/ManageAccounts/Logout_Button), their
 // /i/flow/login, /account/switch and /logout links, and the inactive accounts
@@ -37,7 +47,7 @@ export const HOVER_CARD_SELECTOR = '[data-testid="HoverCard"]';
 const ACCOUNT_SWITCHER_MENU_MARKERS =
   '[data-testid^="AccountSwitcher_"], a[href="/logout"], a[href^="/account/switch"], ' +
   'a[href^="/i/flow/login"], button[data-testid="UserCell"]';
-export const TWEET_TEXT_SELECTOR = '[data-testid="tweetText"]';
+export const TWEET_TEXT_SELECTOR = '[data-testid="tweetText"], [dir="auto"].whitespace-pre-wrap';
 export const USER_CONTENT_SELECTOR =
   `${TWEET_TEXT_SELECTOR}, [data-testid="card.layoutLarge.media"]`;
 // Link previews, polls, and Community Notes carry site- or user-authored text
@@ -49,18 +59,18 @@ export const OBSERVATION_SKIP_SELECTOR =
   `${USER_CONTENT_SELECTOR}, ${EMBEDDED_CONTENT_SELECTOR}, ` +
   '[data-testid="UserDescription"], [data-xro-badge]';
 export const BLOCKED_NOTICE_SKIP_SELECTOR =
-  `${OBSERVATION_SKIP_SELECTOR}, ${USER_NAME_SELECTOR}`;
+  `${OBSERVATION_SKIP_SELECTOR}, ${USER_NAME_SELECTOR}, ${SEMANTIC_NAME_SELECTOR}, ${SEMANTIC_PROFILE_NAME_SELECTOR}`;
 export const PROFILE_BLOCKED_NOTICE_SKIP_SELECTOR =
   `${BLOCKED_NOTICE_SKIP_SELECTOR}, ${TWEET_SELECTOR}, ` +
-  `[data-testid="UserCell"], [data-testid="cellInnerDiv"]:has(${TWEET_SELECTOR})`;
+  `${USER_CELL_SELECTOR}, [data-testid="cellInnerDiv"]:has(${TWEET_SELECTOR})`;
 const SUGGESTION_DIRECTORY_LINK_SELECTOR =
   'a[href*="/i/connect_people"], a[href*="/i/related_users"]';
 const SUGGESTION_CHROME_SKIP_SELECTOR =
   '[data-testid="UserCell"], article, [data-testid="tweet"]';
 const AVATAR_LINK_SELECTOR =
-  '[data-testid="Tweet-User-Avatar"] a[href], [data-testid="UserAvatar-Container"] a[href], [data-testid^="UserAvatar-Container-"] a[href]';
-const AVATAR_CONTAINER_SELECTOR =
-  '[data-testid="Tweet-User-Avatar"], [data-testid="UserAvatar-Container"], [data-testid^="UserAvatar-Container-"]';
+  '[data-testid="Tweet-User-Avatar"] a[href], [data-testid="UserAvatar-Container"] a[href], [data-testid^="UserAvatar-Container-"] a[href], [data-post-avatar] a[href]';
+export const AVATAR_CONTAINER_SELECTOR =
+  '[data-testid="Tweet-User-Avatar"], [data-testid="UserAvatar-Container"], [data-testid^="UserAvatar-Container-"], [data-post-avatar], .x-avatar';
 const RESERVED_PATHS = new Set<string>(RESERVED_ROUTE_HANDLES);
 const PROFILE_SUBPATHS = new Set([
   "status",
@@ -181,16 +191,26 @@ export function isInsideXMediaPlayer(node: Node): boolean {
   return Boolean(element?.closest(MEDIA_PLAYER_SELECTOR));
 }
 
-/**
- * Every alternative in the observation/blocked-notice skip selectors needs a
- * data-testid or data-xro-badge on the matched element itself, so an element
- * with neither can skip the costly matches() call. Only valid for those skip
- * selectors (a unit test pins the invariant), never for arbitrary selectors.
- */
 function maySkip(element: Element, skipSelector: string): boolean {
-  return (element.hasAttribute("data-testid") ||
-    element.hasAttribute("data-xro-badge")) &&
-    element.matches(skipSelector);
+  // Cheap marker prefilter includes both frontends. In particular, never walk
+  // a mention-heavy body merely because it lacks a legacy testid.
+  const marked = element.hasAttribute("data-testid") ||
+    element.hasAttribute("data-xro-badge") || element.hasAttribute("dir") ||
+    element.hasAttribute("data-href");
+  return (marked || (skipSelector !== OBSERVATION_SKIP_SELECTOR &&
+    (element.tagName === "ARTICLE" || isIdentityName(element)))) && element.matches(skipSelector);
+}
+
+function isIdentityName(element: Element): boolean {
+  if (element.hasAttribute("data-testid") && element.matches(USER_NAME_SELECTOR)) return true;
+  if (element.tagName !== "DIV") return false;
+  for (const child of element.children) {
+    if (child.tagName !== "SPAN") continue;
+    for (const item of child.children) {
+      if (item.tagName === "H1" || (item.tagName === "A" && item.hasAttribute("href"))) return true;
+    }
+  }
+  return false;
 }
 
 function* elementsMatching<T extends Element>(
@@ -281,12 +301,8 @@ export function observationAndBlockText(
     if (!(node instanceof Element)) return;
     let nested = inUserName;
     if (node !== element) {
-      const hasMark = node.hasAttribute("data-testid") ||
-        node.hasAttribute("data-xro-badge");
-      if (hasMark) {
-        if (node.matches(OBSERVATION_SKIP_SELECTOR)) return;
-        if (!nested && node.matches(USER_NAME_SELECTOR)) nested = true;
-      }
+      if (maySkip(node, OBSERVATION_SKIP_SELECTOR)) return;
+      if (!nested && isIdentityName(node)) nested = true;
     }
     const children = node.childNodes;
     for (let index = 0; index < children.length; index += 1) {
@@ -356,9 +372,9 @@ function hoverCardOmitsRelationshipCounts(card: Element, handle: string): boolea
 }
 
 const ENGAGEMENT_SELECTORS = [
-  '[data-testid="reply"]',
-  '[data-testid="retweet"], [data-testid="unretweet"]',
-  '[data-testid="like"], [data-testid="unlike"]',
+  '[data-testid="reply"], [data-engagement-action="reply"]',
+  '[data-testid="retweet"], [data-testid="unretweet"], [data-engagement-action="retweet"]',
+  '[data-testid="like"], [data-testid="unlike"], [data-engagement-action="like"]',
 ] as const;
 const DISABLED_ENGAGEMENT_SELECTOR = ':disabled, [aria-disabled="true"], [inert]';
 
@@ -503,17 +519,25 @@ function cleanedText(text: string): string {
 }
 
 export function postTextForCandidate(anchor: HTMLElement): string | null {
-  const article = anchor.closest<HTMLElement>('article[data-testid="tweet"]');
+  const article = anchor.closest<HTMLElement>(TWEET_SELECTOR);
   if (!article) return null;
   const parts = [...article.querySelectorAll<HTMLElement>(USER_CONTENT_SELECTOR)]
     .filter((element) =>
-      element.closest('article[data-testid="tweet"]') === article &&
-      !element.closest('[data-testid="HoverCard"]'),
+      element.closest(TWEET_SELECTOR) === article &&
+      !element.closest(HOVER_CARD_SELECTOR),
     )
     .map((element) => cleanedText(element.textContent ?? ""))
     .filter(Boolean);
   const text = cleanedText(parts.join("\n"));
   return text || null;
+}
+
+export function tweetCellForCandidate(anchor: HTMLElement): HTMLElement | null {
+  if (anchor.closest(HOVER_CARD_SELECTOR)) return null;
+  if (anchor.closest('[data-testid="UserCell"]')) return null;
+  const article = anchor.closest<HTMLElement>(TWEET_SELECTOR);
+  if (!article) return null;
+  return article.closest<HTMLElement>('[data-testid="cellInnerDiv"], [role="link"][data-href*="/status/"]') ?? article;
 }
 
 function handleFromText(text: string, allowBare = false): string | null {
@@ -540,7 +564,7 @@ function handleFromHref(href: string | null): string | null {
 }
 
 function isInsideNestedSurface(element: Element, surface: Element): boolean {
-  const nested = element.closest("article, [data-testid='UserCell']");
+  const nested = element.closest(`article, ${USER_CELL_SELECTOR}`);
   return Boolean(nested && nested !== surface && surface.contains(nested));
 }
 
@@ -604,6 +628,14 @@ function authorHandleFromSurface(surface: Element): string | null {
   const avatar = firstDirect<HTMLAnchorElement>(surface, AVATAR_LINK_SELECTOR);
   const fromAvatar = handleFromHref(avatar?.getAttribute("href") ?? null);
   if (fromAvatar) return fromAvatar;
+  // Avoid a[href]:has(.x-avatar): it examines every @mention link in a post.
+  // Walk only platform chrome and resolve the avatar's own enclosing link.
+  for (const image of iterateOutsideUserContent<HTMLElement>(surface, ".x-avatar")) {
+    if (isInsideNestedSurface(image, surface)) continue;
+    const link = image.closest("a[href]");
+    const handle = handleFromHref(link?.getAttribute("href") ?? null);
+    if (handle) return handle;
+  }
   const time = firstDirect<HTMLTimeElement>(surface, "time");
   const timeLink = time?.closest("a[href]") ?? null;
   return handleFromHref(timeLink?.getAttribute("href") ?? null);
@@ -640,6 +672,10 @@ function identityAnchorFromSurface(surface: HTMLElement, handle: string): HTMLEl
   const name = firstDirect<HTMLElement>(surface, USER_NAME_SELECTOR);
   if (name) return name;
   const normalized = handle.toLowerCase();
+  for (const named of iterateOutsideUserContent<HTMLElement>(surface, SEMANTIC_NAME_SELECTOR)) {
+    if (isInsideNestedSurface(named, surface)) continue;
+    if (findHandle(named)?.toLowerCase() === normalized) return named;
+  }
   for (const link of iterateOutsideUserContent<HTMLAnchorElement>(surface, "a[href]")) {
     if (isInsideNestedSurface(link, surface)) continue;
     if (handleFromHref(link.getAttribute("href"))?.toLowerCase() !== normalized) continue;
@@ -720,7 +756,17 @@ export function viewerHandleFromDocument(doc: Document): string | null {
   const fromSwitcher = accountSwitcher ? findHandle(accountSwitcher) : null;
   if (fromSwitcher) return fromSwitcher;
   const profileLink = doc.querySelector<HTMLAnchorElement>('[data-testid="AppTabBar_Profile_Link"]');
-  return handleFromHref(profileLink?.getAttribute("href") ?? null);
+  const fromProfile = handleFromHref(profileLink?.getAttribute("href") ?? null);
+  if (fromProfile) return fromProfile;
+  // Only the signed-in account's primary navigation supplies this fallback.
+  // A profile link in a post, suggestion, menu or footer is never the viewer.
+  for (const link of doc.querySelectorAll<HTMLAnchorElement>('nav[aria-label] a[href][aria-label]')) {
+    if (!/^(?:Profile|プロフィール|个人资料|個人資料)$/iu.test(link.getAttribute("aria-label") ?? "")) continue;
+    if (!isSemanticallyVisible(link)) continue;
+    const handle = handleFromHref(link.getAttribute("href"));
+    if (handle) return handle;
+  }
+  return null;
 }
 
 export function sourceTypeFromUrl(url: URL, viewerHandle: string | null): SourceType {
@@ -752,6 +798,7 @@ function relationshipFacts(
   blockedByProfileSummaryRestriction = false,
   supplementalSurface: Element | null = null,
   suggestionSurface = false,
+  handle = "",
 ): { facts: RelationshipFacts; evidence: EvidenceType[] } {
   const relationshipSurfaces = supplementalSurface
     ? [surface, supplementalSurface]
@@ -761,7 +808,7 @@ function relationshipFacts(
     ? relationshipSurfaces.filter((area) => area !== surface)
     : relationshipSurfaces;
   const isProfileRoot = sourceType === "profile" &&
-    surface.matches('[data-testid="primaryColumn"]');
+    surface.matches(PROFILE_ROOT_SELECTOR);
   const blockSurfaces = controlsOnly ? textSurfaces : relationshipSurfaces;
   let blockText: string;
   let ordinaryText: string;
@@ -769,7 +816,8 @@ function relationshipFacts(
     blockText = blockSurfaces.map((area) =>
       blockedNoticeText(area, area === surface)).join(" ");
     // A profile root is the whole primary column; only its name block is read.
-    ordinaryText = platformText(firstDirect(surface, USER_NAME_SELECTOR) ?? surface);
+    ordinaryText = platformText(firstDirect(surface, USER_NAME_SELECTOR) ??
+      firstDirect(surface, SEMANTIC_PROFILE_NAME_SELECTOR) ?? surface);
   } else {
     // blockSurfaces and textSurfaces hold the same elements here: walk once.
     const texts = textSurfaces.map(observationAndBlockText);
@@ -795,11 +843,25 @@ function relationshipFacts(
   };
   const controlIn = (area: Element, selector: string): boolean =>
     controlElementIn(area, selector) !== null;
+  const semanticControls = relationshipSurfaces.flatMap((area) =>
+    [...iterateOutsideUserContent<HTMLElement>(area, 'button[data-slot="xds-button"][aria-label]')]
+      .filter((control) => !isInsideNestedSurface(control, area)),
+  );
+  const controlLabel = (control: Element): string => {
+    const label = cleanedText(control.getAttribute("aria-label") ?? "");
+    const mentioned = label.match(/@([A-Za-z0-9_]{1,15})$/)?.[1];
+    if (mentioned && mentioned.toLowerCase() !== handle.toLowerCase()) return "";
+    return label.replace(/\s+@[A-Za-z0-9_]{1,15}$/, "");
+  };
   const unfollowControl = relationshipSurfaces.some((area) =>
-    controlIn(area, '[data-testid$="-unfollow"]'));
+    controlIn(area, '[data-testid$="-unfollow"]')) ||
+    semanticControls.some((control) =>
+      /^(?:Following|Unfollow|フォロー中|フォロー解除|已关注|正在关注|取消关注|跟隨中|正在跟隨|取消跟隨)$/iu.test(controlLabel(control)));
   const followControls = relationshipSurfaces
     .map((area) => controlElementIn(area, '[data-testid$="-follow"]'))
     .filter((control): control is Element => control !== null);
+  followControls.push(...semanticControls.filter((control) =>
+    /^(?:Follow|Follow back|フォロー|フォローバック(?:する)?|关注|回关|跟隨|回跟)$/iu.test(controlLabel(control))));
   const followControl = followControls.length > 0;
   let following: boolean | null = null;
   if (unfollowControl) {
@@ -838,6 +900,10 @@ function relationshipFacts(
 }
 
 function displayNameFromArea(area: Element, handle: string): string | null {
+  if (area.matches(SEMANTIC_PROFILE_NAME_SELECTOR)) {
+    const name = cleanedText(area.querySelector("h1")?.textContent ?? "");
+    if (isUsableDisplayName(name, handle)) return name;
+  }
   const fromLink = displayNameFromProfileLink(area, handle);
   if (fromLink) return fromLink;
   const leaves: string[] = [];
@@ -939,6 +1005,7 @@ function observationFor(
     blockedByProfileSummaryRestriction,
     supplementalSurface,
     suggestionSurface,
+    handle,
   );
   const observation: ObservationDraft = {
     userKey: handle.toLowerCase(),
@@ -1035,14 +1102,17 @@ function profileCandidate(
     true,
   );
   if (viewerHandle && handle?.toLowerCase() === viewerHandle.toLowerCase()) return null;
-  const area = doc.querySelector<HTMLElement>(
+  let area = doc.querySelector<HTMLElement>(
     `[data-testid="primaryColumn"] ${USER_NAME_SELECTOR}`,
   );
-  const surface = doc.querySelector<HTMLElement>('[data-testid="primaryColumn"]');
+  const surface = doc.querySelector<HTMLElement>(PROFILE_ROOT_SELECTOR);
+  const semantic = !area;
+  area ??= surface ? firstDirect<HTMLElement>(surface, SEMANTIC_PROFILE_NAME_SELECTOR) : null;
   if (!handle || !area || !surface) return null;
   // During SPA navigation the header can still belong to the previous profile.
   // Never pair the new URL's handle with another account's painted facts.
   const painted = findHandle(area);
+  if (semantic && !painted) return null;
   if (painted && painted.toLowerCase() !== handle.toLowerCase()) return null;
   const { observation, facts } =
     observationFor(handle, area, surface, url, sourceType, observedAt);
@@ -1085,7 +1155,10 @@ export function scanXDocument(
       supplementalSurface ??
       visibleHoverCards.get(handle.toLowerCase()) ??
       null;
-    const suggestionSurface = isSuggestionSurface(surface, suggestionCells);
+    const suggestionSurface = isSuggestionSurface(surface, suggestionCells) ||
+      (surface.matches(SEMANTIC_USER_CELL_SELECTOR) &&
+        !surface.matches(NOTIFICATION_SELECTOR) &&
+        sourceType !== "following" && sourceType !== "followers");
     const blockedByInteractionRestriction =
       sourceType === "thread" &&
       engagementIsUnavailable(surface, styleCache) &&
@@ -1139,6 +1212,14 @@ export function scanXDocument(
   }
 
   for (const surface of doc.querySelectorAll<HTMLElement>(TWEET_SURFACE_SELECTOR)) {
+    if (surface.matches(NOTIFICATION_SELECTOR) || isInsideXUserAuthoredContent(surface)) continue;
+    if (surface.matches(SEMANTIC_USER_CELL_SELECTOR) && !surface.matches('[data-testid="UserCell"]')) {
+      // Generic link rows also represent trends and post previews. Only a
+      // same-handle profile row with an avatar can be a user cell.
+      const rowHandle = handleFromHref(surface.getAttribute("data-href"));
+      const avatarHandle = authorHandleFromSurface(surface);
+      if (!rowHandle || rowHandle.toLowerCase() !== avatarHandle?.toLowerCase()) continue;
+    }
     const named = firstDirect<HTMLElement>(surface, USER_NAME_SELECTOR);
     const handle = authorHandleFromSurface(surface) ??
       (named ? findHandle(named) : findHandle(surface));

@@ -18,7 +18,7 @@
 | [自定义拦截规则](filter-rules.md) · [EN](en/filter-rules.md) | filter-rules JSON v1、匹配语义、限制与导入权限 |
 | [开发指南](development.md) · [EN](en/development.md) | nvm、安装、构建、目录与日常流程 |
 | [测试指南](testing.md) · [EN](en/testing.md) | 自动检查，Chrome、Chrome 离线安装与 Safari 的手工验收清单 |
-| [维护指南](maintenance.md) · [EN](en/maintenance.md) | X DOM 漂移、数据迁移与故障处置 |
+| [维护指南](maintenance.md) · [EN](en/maintenance.md) | X 新旧界面兼容、DOM 漂移、数据迁移与故障处置 |
 | [X 扩展实时观察调研](x-extension-resilience-research.md) | 其他开源 X 扩展的 DOM 策略与本项目混合复扫设计 |
 | [内容脚本性能改造](performance.md) | CPU 占用问题点、扫描成本、缓存与节流方案、行为差异与测量方法 |
 | [使用指南](usage.md) · [EN](en/usage.md) | 安装方式概览、加载、标注、档案库、导入导出、清空与反馈 |

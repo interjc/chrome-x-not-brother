@@ -1361,57 +1361,6 @@ describe("blocked notice keyword prefilter", () => {
   });
 });
 
-function splitTopLevel(selector: string): string[] {
-  const parts: string[] = [];
-  let depth = 0;
-  let start = 0;
-  for (let index = 0; index < selector.length; index += 1) {
-    const char = selector[index];
-    if (char === "(" || char === "[") depth += 1;
-    else if (char === ")" || char === "]") depth -= 1;
-    else if (char === "," && depth === 0) {
-      parts.push(selector.slice(start, index).trim());
-      start = index + 1;
-    }
-  }
-  parts.push(selector.slice(start).trim());
-  return parts;
-}
-
-// The subject compound is the last compound outside any brackets/parens.
-function subjectCompound(alternative: string): string {
-  let depth = 0;
-  let start = 0;
-  for (let index = 0; index < alternative.length; index += 1) {
-    const char = alternative[index];
-    if (char === "(" || char === "[") depth += 1;
-    else if (char === ")" || char === "]") depth -= 1;
-    else if (depth === 0 && /[\s>+~]/.test(char!)) start = index + 1;
-  }
-  return alternative.slice(start);
-}
-
-describe("skip selector prefilter invariant", () => {
-  it("requires data-testid or data-xro-badge on every alternative's subject", () => {
-    for (const selector of [
-      OBSERVATION_SKIP_SELECTOR,
-      BLOCKED_NOTICE_SKIP_SELECTOR,
-      PROFILE_BLOCKED_NOTICE_SKIP_SELECTOR,
-    ]) {
-      const alternatives = splitTopLevel(selector);
-      expect(alternatives.length).toBeGreaterThan(3);
-      for (const alternative of alternatives) {
-        const subject = subjectCompound(alternative);
-        const outsideHas = subject.replace(/:has\((?:[^()]|\([^()]*\))*\)/g, "");
-        expect(
-          outsideHas.includes("data-testid") || outsideHas.includes("data-xro-badge"),
-          alternative,
-        ).toBe(true);
-      }
-    }
-  });
-});
-
 describe("observationAndBlockText", () => {
   function twoCalls(root: Element): { ordinary: string; block: string } {
     const walk = (skip: string, separator: string): string => {

@@ -2,6 +2,8 @@
 
 ## Selector drift
 
+Support both X frontends. The no-testid frontend observed on 2026-11-13 uses `article` / `data-post-avatar`, `.x-avatar`, `data-engagement-action`, profile `main` / `h1`, `role="link"` / `data-href` user rows, `urt:notifications:` containers, and Base UI hover/menu structure. Keep every fallback in `x-adapter.ts`, share selectors with badge/hiding/page-store consumers, and retain legacy fixtures. Do not target generated `base-ui-*` IDs. The navigation Profile link is the viewer fallback; require a URL-matching painted profile handle. Skip `[dir="auto"].whitespace-pre-wrap` bodies and bios during observation and mutations. Match localized follow-button accessible names to the same handle, keep notification action history non-evidence, and never fill suggestions as none. Bounded fiber starts include new user rows and visible hover cards even without `#react-root`. See `src/content/x-adapter-modern.test.ts` and both maintenance documents for synthetic fixtures and live acceptance.
+
 When X markup changes, capture the smallest redacted DOM fixture that demonstrates the failure. Update only `src/content/x-adapter.ts` and its tests. Prefer stable semantic surfaces such as `data-testid`, profile links, and localized visible relationship labels. Do not use minified React internals or private network responses.
 
 Treat a missing element as internal unknown. A broken selector must reduce confidence, not generate a false one-way relationship. Unknown must not be shown, persisted, imported, exported, or counted.
