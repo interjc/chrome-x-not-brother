@@ -4,6 +4,12 @@
 
 ## X DOM 漂移
 
+2026-11-13 在真实 Chrome 中确认，部分账号的新界面完全没有 `data-testid`。适配器同时保留旧版路径，新增使用 `article` / `data-post-avatar`、`.x-avatar`、`data-engagement-action`、`role="link"` / `data-href`、通知容器 `urt:notifications:`、资料页 `main` / `h1`，以及 Base UI 的浮窗和菜单结构。不要依赖生成的 `base-ui-*` ID 或猜测负关系。
+
+新版登录账号只从主导航的 Profile / プロフィール / 个人资料链接恢复；资料头部必须有与地址匹配的可见 handle。`[dir="auto"].whitespace-pre-wrap` 正文和简介在关系、作者与变更监测中排除，只有启用自定义过滤时才可瞬时读取帖子正文。新版关注按钮按同 handle 的无障碍名称匹配；通知历史句和推荐卡仍不得补成负关系。页内关系读取也从新版用户行和可见浮窗启动有界 fiber 遍历，兼容没有 `#react-root` 的页面。
+
+新版回归样本在 `src/content/x-adapter-modern.test.ts`，使用合成账号和正文。修改后同时运行旧版 adapter、badge、page-store、timeline-hide 和 quick-rules 测试。真实页面验收需重新加载 `dist/` 并刷新 X，确认作者徽章、通知、资料头部、悬浮卡和更多菜单；不得把旧内容脚本显示的“观察中”当作成功依据。
+
 页面标注最可能因 X 的 DOM 和本地化文案变化失效。发现问题时：
 
 1. 在 Side Panel 暂停观察器，避免继续生成错误数据。
@@ -17,7 +23,7 @@
 
 实时识别采用事件与轮询混合机制。MutationObserver 负责新增/移除节点、关系文案和关键可访问性属性变化；`tweetText` 与卡片媒体内部、视频播放器内部（计时与控件每秒变化）以及只插入扩展自身徽标/控件的变更忽略，因为它们是用户正文而不是作者身份或平台关系 chrome，避免主贴/跟帖堆满 @提及时把标签页扫卡。可见且已启用的页面在 2 秒内没有任何扫描时兜底复扫一次（每次扫描都会重新起算），页面恢复可见或重新获得焦点时立即复扫，可选规则匹配也靠这次复扫看到已渲染完的正文。轮询只查询当前 DOM，不滚动、不打开页面、不触发 X 控件。扫描必须保持 single-flight，MutationObserver、轮询、设置变化和 SPA URL 变化同时触发时只排队一次补扫；签名去重必须阻止相同结果重复写历史，但只能在 service worker 确认对应用户已持久化后提交，瞬时发送失败要留给后续复扫重试。
 
-注入 dock 的 `data-xro-version` 是只读诊断标记。重新加载 unpacked 扩展后必须刷新已有 X 标签页；维护者可用该标记确认页面已经替换旧 content script，再进行真实页面验收。收起悬浮球时用 `GrokDrawer` / `DMDrawer` / `chat-drawer-root` 把 X 右下角按钮上移；这些选择器只放在 `x-adapter.ts`，漂移时只改 adapter 与 dock fixture。
+注入 dock 的 `data-xro-version` 是只读诊断标记。重新加载 unpacked 扩展后必须刷新已有 X 标签页；维护者可用该标记确认页面已经替换旧 content script，再进行真实页面验收。收起悬浮球时用旧版 `GrokDrawer` / `DMDrawer` / `chat-drawer-root` 和新版 `data-slot="xds-dock-window"` 把 X 右下角按钮上移；这些选择器只放在 `x-adapter.ts`，漂移时只改 adapter 与 dock fixture。
 
 扫描成本、缓存与节流的设计取舍见 [内容脚本性能改造](performance.md)。调整轮询时先测量可见 `User-Name` 数量、单次扫描耗时和一分钟内 observation 写入次数。不得在隐藏标签页维持兜底复扫；扩展上下文失效时必须移除 visibility/focus 监听并停止定时器。`style` 与 `class` 变化频率很高，不加入全局 attributeFilter，依靠 2 秒兜底覆盖。
 

@@ -4,6 +4,9 @@ import {
   iterateOutsideUserContent,
   mediaLightboxTweetFrom,
   USER_NAME_SELECTOR,
+  USER_IDENTITY_SELECTOR,
+  USER_CARD_SELECTOR,
+  AVATAR_CONTAINER_SELECTOR,
 } from "./x-adapter";
 
 const BADGE_ATTRIBUTE = "data-xro-badge";
@@ -17,9 +20,7 @@ const IDENTITY_CLASSES = [
   "xro-identity-mark--following_only",
   "xro-identity-mark--blocked_by",
 ];
-const USER_CARD_SELECTOR = '[data-testid="UserCell"], [data-testid="HoverCard"]';
-const AVATAR_IDENTITY_SELECTOR =
-  '[data-testid="Tweet-User-Avatar"], [data-testid="UserAvatar-Container"], [data-testid^="UserAvatar-Container-"]';
+const AVATAR_IDENTITY_SELECTOR = AVATAR_CONTAINER_SELECTOR;
 const FORMAT_CHARS = /[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g;
 
 type BadgePosition = "beforebegin" | "afterend" | "beforeend";
@@ -200,7 +201,7 @@ function identityElement(anchor: HTMLElement, handle: string): HTMLElement | nul
   if (inAnchor && !isAvatarIdentity(inAnchor)) return inAnchor;
   const card = userCardFrom(anchor);
   if (!card || card === anchor) return inAnchor && !isAvatarIdentity(inAnchor) ? inAnchor : null;
-  const name = card.querySelector<HTMLElement>(USER_NAME_SELECTOR);
+  const name = card.querySelector<HTMLElement>(USER_IDENTITY_SELECTOR);
   if (name) {
     const inName = identityInRoot(name, handle);
     if (inName && !isAvatarIdentity(inName)) return inName;
@@ -226,7 +227,7 @@ function placeUserCardBadge(card: HTMLElement, badge: HTMLElement, handle: strin
   const avatar = userCardAvatar(card, handle);
   if (!avatar) return false;
   const parent = avatar.parentElement;
-  const stackOnParent = parent !== null && parent.querySelector(USER_NAME_SELECTOR) === null;
+  const stackOnParent = parent !== null && parent.querySelector(USER_IDENTITY_SELECTOR) === null;
   const stack = stackOnParent ? parent : avatar;
   stack.classList.add("xro-user-card-avatar-stack");
   if (stackOnParent) avatar.insertAdjacentElement("afterend", badge);

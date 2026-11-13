@@ -50,6 +50,21 @@ function attachStore(
 }
 
 describe("page store relationships", () => {
+  it("reads already-loaded users from modern rows without a legacy React root", () => {
+    const doc = fixture('<div role="link" data-href="/Alice"><a href="/Alice">Alice</a></div>');
+    Object.defineProperty(doc.querySelector('[data-href]'), "__reactFiber$test", {
+      value: {
+        memoizedProps: {},
+        return: { memoizedProps: {
+          user: { screen_name: "Alice", following: true, followed_by: false },
+        } },
+      },
+    });
+    expect(readPageUserRelationships(doc).get("alice")).toMatchObject({
+      following: true, followsYou: false,
+    });
+  });
+
   it("reads following and followed_by from the already-loaded UI store", () => {
     const doc = fixture(`<article data-testid="tweet">
       <div data-testid="User-Name"><a href="/Alice/status/1"><span>Alice Example</span></a></div>

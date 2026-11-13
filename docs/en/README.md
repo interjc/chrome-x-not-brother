@@ -17,7 +17,7 @@ Agent entry points are [AGENTS.md](../../AGENTS.md) and the [project skill](../.
 | [Custom filter rules](filter-rules.md) | filter-rules JSON v1, matching, limits, and import permissions |
 | [Architecture](architecture.md) | Runtime data flow, module boundaries, and safety constraints |
 | [Testing](testing.md) | Automated checks and the Chrome manual acceptance list |
-| [Maintenance](maintenance.md) | X DOM drift, data migration, and incident handling |
+| [Maintenance](maintenance.md) | Compatibility with both X frontends, DOM drift, data migration, and incident handling |
 | [Release](release.md) | Versioning, checks, packaging, Store prep, and rollback |
 | [Privacy](privacy.md) | Pointer to the bilingual public privacy policy and terms |
 

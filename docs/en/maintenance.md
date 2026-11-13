@@ -4,6 +4,12 @@
 
 ## X DOM drift
 
+On 2026-11-13, live Chrome inspection confirmed a new X frontend with no `data-testid` attributes. Keep the legacy path alongside semantic fallbacks for `article` / `data-post-avatar`, `.x-avatar`, `data-engagement-action`, `role="link"` / `data-href`, `urt:notifications:` containers, profile `main` / `h1`, and the observed Base UI hover/menu structure. Never depend on generated `base-ui-*` IDs or infer missing negative facts.
+
+The signed-in account fallback reads only the primary navigation's localized Profile link. A profile header must paint the handle matching its URL. Exclude `[dir="auto"].whitespace-pre-wrap` bodies and bios from author/relationship extraction and mutation signals; post bodies may only be read transiently for enabled custom filtering. Match follow-button accessible names to the same handle. Notification history and suggestions remain insufficient negative evidence. Bounded fiber reads also start at new user rows and visible hover cards so they work without `#react-root`.
+
+Synthetic new-frontend fixtures live in `src/content/x-adapter-modern.test.ts`. Run them together with legacy adapter, badge, page-store, timeline-hide and quick-rules tests. Live acceptance requires reloading `dist/` and refreshing X, then checking post badges, notifications, profile headers, hover cards and more menus. An old content script saying “Observing” is not proof of success.
+
 Page annotation is most likely to break when X changes DOM or localized evidence copy. When that happens:
 
 1. Pause the observer in the Side Panel so bad data stops being written.
@@ -17,7 +23,7 @@ Prefer semantic `data-testid`, standard profile hrefs, and explicitly visible te
 
 Live recognition is a hybrid of events and polling. MutationObserver handles added/removed nodes, relationship text, and key accessibility-attribute changes. Changes inside `tweetText` and card media are ignored because they are user-authored content, not author identity or platform relationship chrome. Changes inside a video player (its clock and controls change every second) and changes that only insert the extension's own badge or control are ignored too. That avoids locking a tab when a post or reply is packed with @mentions. A visible enabled page falls back to a rescan after 2 seconds without any scan (every scan restarts that timer); restoring visibility or focus triggers an immediate pass. Optional rule matching also relies on that rescan to see post text that has finished rendering. Polling only queries the current DOM. It does not scroll, open pages, or click X controls. Scans stay single-flight: overlapping MutationObserver, poll, settings, and SPA URL triggers queue one follow-up. Signature deduplication must stop identical results from appending history, but a signature may be committed only after the service worker confirms the matching user persisted. Transient send failures must remain retryable on a later rescan.
 
-Injected dock `data-xro-version` is a read-only diagnostic. After reloading an unpacked extension you must refresh already-open X tabs. Maintainers can use that attribute to confirm the page replaced the old content script before live acceptance. While the floating ball is shown, `GrokDrawer` / `DMDrawer` / `chat-drawer-root` shift X's bottom-right buttons up. Those selectors live only in `x-adapter.ts`; when they drift, change only the adapter and dock fixtures.
+Injected dock `data-xro-version` is a read-only diagnostic. After reloading an unpacked extension you must refresh already-open X tabs. Maintainers can use that attribute to confirm the page replaced the old content script before live acceptance. While the floating ball is shown, legacy `GrokDrawer` / `DMDrawer` / `chat-drawer-root` and modern `data-slot="xds-dock-window"` shift X's bottom-right buttons up. Those selectors live only in `x-adapter.ts`; when they drift, change only the adapter and dock fixtures.
 
 When adjusting polling, first measure visible `User-Name` count, single-scan duration, and observation writes per minute. Do not keep the fallback rescan on a hidden tab. On extension-context invalidation, remove visibility/focus listeners and stop timers. `style` and `class` change too often to join the global attributeFilter; the 2-second fallback covers them.
 

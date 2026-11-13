@@ -1,7 +1,7 @@
 import type { RelationshipKind, SourceType, UserRecord } from "../domain/types";
 import type { CompiledFilterRuleSet } from "../domain/filter-rule-matching";
 import type { PageUserRelationship } from "./page-store";
-import { postTextForCandidate, type ExtractedCandidate } from "./x-adapter";
+import { TWEET_SELECTOR, postTextForCandidate, tweetCellForCandidate, type ExtractedCandidate } from "./x-adapter";
 
 export const HIDDEN_TWEET_ATTRIBUTE = "data-xro-hidden-tweet";
 export const HIDING_TWEET_ATTRIBUTE = "data-xro-hiding-tweet";
@@ -62,17 +62,13 @@ export function shouldHideTimelineAuthor(input: {
 }
 
 export function hidableTweetCell(anchor: HTMLElement): HTMLElement | null {
-  if (anchor.closest('[data-testid="HoverCard"]')) return null;
-  if (anchor.closest('[data-testid="UserCell"]')) return null;
-  const article = anchor.closest<HTMLElement>('article[data-testid="tweet"]');
-  if (!article) return null;
-  return article.closest<HTMLElement>('[data-testid="cellInnerDiv"]') ?? article;
+  return tweetCellForCandidate(anchor);
 }
 
 function orphanSocialContext(cell: HTMLElement): HTMLElement | null {
   const previous = cell.previousElementSibling;
   if (!(previous instanceof HTMLElement)) return null;
-  if (previous.querySelector("article[data-testid='tweet']")) return null;
+  if (previous.querySelector(TWEET_SELECTOR)) return null;
   if (!previous.querySelector('[data-testid="socialContext"]')) return null;
   return previous;
 }
@@ -204,8 +200,7 @@ export function tweetStatusId(cell: HTMLElement): string | null {
 }
 
 function isTweetArticleCell(cell: HTMLElement): boolean {
-  return cell.matches('article[data-testid="tweet"]') ||
-    Boolean(cell.querySelector('article[data-testid="tweet"]'));
+  return cell.matches(TWEET_SELECTOR) || Boolean(cell.querySelector(TWEET_SELECTOR));
 }
 
 export function applyTimelineHiding(input: {
