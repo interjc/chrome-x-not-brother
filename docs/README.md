@@ -29,7 +29,7 @@
 | [发布指南](release.md) · [EN](en/release.md) | 版本、检查、打包、商店准备、GitHub Release 的三个附件和回滚 |
 | [Chrome Web Store 上架](chrome-web-store.md) | 开发者账号、文案、素材、隐私披露、审核、更新与回滚 |
 | [Chrome Web Store 三语文案](store-listing.md) | 可粘贴的中英日名称、简介、详细说明、更新说明、权限理由与审核备注 |
-| [Safari 支持](safari.md) | 一套代码同时出 Chrome 与 Safari 包：能力检测、manifest 改写、GitHub Release 自动构建与签名、首次发布踩过的坑、兼容性对照 |
+| [Safari 支持](safari.md) | 一套代码同时出 Chrome 与 Safari 包：能力检测、manifest 改写、GitHub Release 自动构建与签名、本地加载与 Web Inspector 调试、兼容性对照 |
 | [Apple 签名与公证密钥配置](apple-signing.md) | 逐步手册：CSR、Developer ID 证书、`.p12`、Team ID、App Store Connect API Key（`.p8`、Key ID、Issuer ID）的生成，base64 转换，GitHub Secrets / Variables，自检、排错与续期 |
 
 公开隐私政策和条款的 HTML 在 [pages/](../pages/)，由 GitHub Pages 发布：

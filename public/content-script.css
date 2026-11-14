@@ -69,6 +69,22 @@ a > .xro-badge:not(.xro-badge--user-card) {
   vertical-align: text-bottom;
 }
 
+a.xro-name-badge-inline {
+  align-items: center !important;
+  display: inline-flex !important;
+  flex-flow: row nowrap !important;
+  gap: 4px;
+  vertical-align: bottom;
+}
+
+a.xro-name-badge-inline > :not([data-xro-badge]) {
+  min-inline-size: 0;
+}
+
+a.xro-name-badge-inline > .xro-badge {
+  margin-inline: 0;
+}
+
 .xro-badge--user-card {
   margin: 0;
   max-width: 64px;

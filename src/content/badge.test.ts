@@ -192,7 +192,7 @@ describe("relationship badge", () => {
   it("places a notification label inside the display-name link", () => {
     const row = document.createElement("div");
     row.innerHTML = `
-      <a href="/Alice"><span>Alice Example</span></a>
+      <a href="/Alice"><span class="line-clamp-1" style="display: -webkit-box">Alice Example</span></a>
       <span> liked your post</span>
     `;
     const link = row.querySelector<HTMLElement>("a");
@@ -203,12 +203,15 @@ describe("relationship badge", () => {
     expect(link.querySelectorAll("[data-xro-badge]")).toHaveLength(1);
     expect(link.lastElementChild?.getAttribute("data-xro-badge")).toBe("mutual");
     expect(link.classList.contains("xro-name-badge-row")).toBe(false);
+    expect(link.classList.contains("xro-name-badge-inline")).toBe(true);
     expect(row.querySelector(":scope > [data-xro-badge]")).toBeNull();
     expect(row.textContent).toContain("liked your post");
 
     removeRelationshipBadge(link);
     expect(row.querySelector("[data-xro-badge]")).toBeNull();
     expect(link.textContent).toBe("Alice Example");
+    expect(link.hasAttribute("data-xro-badge-inline")).toBe(false);
+    expect(link.classList.contains("xro-name-badge-inline")).toBe(false);
   });
 
   it("places an avatar-only notification label inside the avatar link", () => {
@@ -222,6 +225,7 @@ describe("relationship badge", () => {
     expect(badge?.classList.contains("xro-badge--user-card")).toBe(true);
     expect(link.querySelectorAll("[data-xro-badge]")).toHaveLength(1);
     expect(link.classList.contains("xro-name-badge-row")).toBe(false);
+    expect(link.classList.contains("xro-name-badge-inline")).toBe(false);
   });
 
   it("adds and removes a strong identity mark for blocked-by", () => {
