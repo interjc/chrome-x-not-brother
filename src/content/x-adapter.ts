@@ -55,6 +55,12 @@ export const USER_CONTENT_SELECTOR =
 // chrome. They stay out of observation text without changing post-text matching.
 const EMBEDDED_CONTENT_SELECTOR =
   '[data-testid^="card."], [data-testid="cardPoll"], [data-testid="birdwatch-pivot"]';
+// Notification action copy uses the same whitespace class as post bodies, but
+// is explicitly inline and contains the actor's name cluster. Only allow that
+// wrapper for name placement; post text, previews, and nested posts stay out.
+const NOTIFICATION_NAME_SKIP_SELECTOR =
+  '[data-testid="tweetText"], [dir="auto"].whitespace-pre-wrap:not(.inline), ' +
+  `${EMBEDDED_CONTENT_SELECTOR}, article, [data-testid="UserDescription"], [data-xro-badge]`;
 export const OBSERVATION_SKIP_SELECTOR =
   `${USER_CONTENT_SELECTOR}, ${EMBEDDED_CONTENT_SELECTOR}, ` +
   '[data-testid="UserDescription"], [data-xro-badge]';
@@ -1044,7 +1050,7 @@ function notificationNameAnchor(
 ): HTMLAnchorElement | null {
   const normalized = handle.toLowerCase();
   const matches: HTMLAnchorElement[] = [];
-  for (const link of iterateOutsideUserContent<HTMLAnchorElement>(notification, "a[href]")) {
+  for (const link of elementsMatching<HTMLAnchorElement>(notification, "a[href]", NOTIFICATION_NAME_SKIP_SELECTOR)) {
     if (isInsideNestedSurface(link, notification) || isAvatarLink(link)) continue;
     if (handleFromHref(link.getAttribute("href"))?.toLowerCase() !== normalized) continue;
     let segments: string[] = [];
@@ -1056,6 +1062,10 @@ function notificationNameAnchor(
     }
     if (segments[1]?.toLowerCase() === "status") continue;
     if (link.querySelector("a[href]")) continue;
+    // Modern notifications start with an aria-hidden, full-row navigation
+    // overlay. It is not the actor's name, even if an old badge is inside it.
+    if (!cleanedText(textExcluding(link, OBSERVATION_SKIP_SELECTOR, true))) continue;
+    if (!isSemanticallyVisible(link)) continue;
     matches.push(link);
   }
   return matches.find((link) =>

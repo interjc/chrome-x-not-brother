@@ -134,6 +134,37 @@ pluginkit -mAvvv -p com.apple.Safari.web-extension | grep -i -A3 notbrother
 应能看到 `io.github.interjc.notbrother.Extension`；没有输出说明系统没有登记这个扩展。
 - **约定**：新代码用到 Safari 不支持的 API 时，必须经 `src/platform/` 做能力检测并提供兜底；产品边界与 Chrome 版完全一致。
 
+### 6.1 Safari 调试与本地验证
+
+1. Safari →「设置 → 高级」开启 **Show features for web developers**（显示网页开发者功能）。在 X 通知页按 `⌥⌘I` 打开 Web Inspector，或右键徽标 →「检查元素」。在 Elements 中搜索 `data-xro-badge`，核对父节点及 Computed 中的定位；Sources 可给 `content-script.js` 设置断点。
+2. 后台消息、存储错误在「开发 → Web Extension Background Content → Not Brother」对应的后台检查器查看。页面注入脚本与后台脚本属于不同上下文。
+3. 通知徽标应在同一账号的显示名链接里；没有名称链接时才回退到头像链接。新版 X 行首的 `<a aria-hidden="true" class="absolute inset-0 pointer-events-none" …>` 是覆盖整行的导航辅助链接，不能用作名称锚点。即使里面残留旧徽标，也必须跳过。需要提交样本时只保留相关结构，删除真实账号、头像 URL 和正文。
+
+本地验证修改时，Safari 26+ 可临时加载源码构建，无需重新签名 App。先在仓库根目录生成独立目录；Safari manifest 仍只由现有 `toSafariManifest()` 派生，Chrome 的 `dist/manifest.json` 保持原样：
+
+```bash
+source "$HOME/.nvm/nvm.sh"
+nvm use
+npm run build
+node --input-type=module <<'NODE'
+import { cp, readFile, rm, writeFile } from 'node:fs/promises';
+import { toSafariManifest } from './scripts/safari-manifest.mjs';
+const target = 'output/safari-dev';
+await rm(target, { recursive: true, force: true });
+await cp('dist', target, { recursive: true });
+const manifest = JSON.parse(await readFile('dist/manifest.json', 'utf8'));
+await writeFile(`${target}/manifest.json`, `${JSON.stringify(toSafariManifest(manifest), null, 2)}\n`);
+NODE
+```
+
+Safari →「设置 → 开发者」启用 **Allow unsigned extensions**，点 **Add Temporary Extension…** 选择 `output/safari-dev/`。测试时先停用已安装的正式版，避免两个内容脚本同时注入；启用临时版并授权 x.com，完成其同意流程后刷新 X。临时版使用独立存储，不会自动继承正式版档案。每次修改后重新运行上面的命令，在开发者设置里重新加载该扩展，再刷新 X；退出 Safari 会移除临时扩展。需要源码映射时可用 `npm run dev` 替代一次性 build，等待首次构建完成后在另一终端执行复制步骤，后续重建也需重新复制和加载。不要直接修改已签名的 `.app`，否则会破坏签名。
+
+检查器入口见 [Apple 排障文档](https://developer.apple.com/documentation/safariservices/troubleshooting-your-safari-web-extension)；临时加载见 [Apple WWDC26 Session 216](https://developer.apple.com/videos/play/wwdc2026/216/)。
+
+**切换测试版后没有徽标时**：先看页面 dock 是否仍在、是否显示“观察中”、已观察是否为 0。临时版不会继承正式版的已知关系，因此需要单独验证新档案能否收集。2026-11-14 排查发现新版 X 的帖子 props 可能只有 Relay 引用；当前读取器已补充已有 hook 快照的本地 environment，从规范化 User 记录关联用户名、头像与关系布尔值，不触发任何请求。页面未加载某账号的完整关系时仍保持 unknown，用户正常悬停后可补充；不得从通知“关注了你”的历史句推断当前关系。正式版与临时版都保留，不卸载或清空原档案。Safari 若提示检测到干扰点击的应用而拒绝启用，需用户亲自勾选，不绕过保护。
+
+**位置验收**：通知名称行本身也有 `whitespace-pre-wrap`，名称选择器只允许其平台 `inline` 包装，继续排除帖子正文。名字中的截断 span 是块级布局，名称链接须使用可清理的 inline-flex 标记，避免把徽标挤到下一行。当前修复已在 Safari 临时版和 Chrome 本地版实页确认：徽标紧邻名字、同一行，隐藏整行链接与头像中没有误放的徽标；正常页面作者也能读取关系并显示徽标。每次验证先重新加载扩展并刷新 X；单元测试通过、旧版回标或只看到“观察中”都不能代替这一步。
+
 ## 7. 首次发布踩过的坑
 
 v0.5.14 是第一次自动发布 Safari 包，从 Release 建好到 Safari 能识别扩展，一共修了下面这些问题。workflow 里对应的检查都会在出错时给出明确报错，这里记录原因，以后遇到类似现象可以直接对照。

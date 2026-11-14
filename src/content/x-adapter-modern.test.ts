@@ -123,6 +123,59 @@ describe("X frontend without data-testid", () => {
     expect(candidates.every(c => c.observation.relationship === "unknown")).toBe(true);
   });
 
+  it.each([
+    ['aria-hidden="true"', '<span data-xro-badge="mutual">Mutual</span>'],
+    ['aria-hidden="true"', 'Alice Example'],
+    ['hidden', 'Alice Example'],
+    ['inert', 'Alice Example'],
+    ['', ''],
+  ])("skips a notification navigation overlay (%s) when placing the actor badge", (attributes, content) => {
+    const doc = fixture(`<div id="urt:notifications:All"><div role="link" data-href="/Alice">
+      <a ${attributes} class="absolute inset-0 pointer-events-none" href="/Alice" tabindex="-1">${content}</a>
+      <div>${avatar("Alice")}<div dir="auto" class="whitespace-pre-wrap inline">
+        <div class="inline-flex"><span><a href="/Alice"><span>Alice Example</span></a></span></div>
+        <span>关注了你 · 4小时</span></div></div>
+      </div></div>`);
+    const [candidate] = scanXDocument(doc, "https://x.com/notifications");
+    const nameLink = doc.querySelector<HTMLElement>('a:has(> span:not([data-xro-badge]))')!;
+    expect(candidate?.anchor).toBe(nameLink);
+    expect(candidate?.observation.displayName).toBe("Alice Example");
+    expect(candidate?.observation.relationship).toBe("unknown");
+
+    applyPageStoreRelationships([candidate!], new Map([["alice", entity("Alice")]]));
+    setRelationshipBadge(candidate!.anchor, "mutual", "Alice", "zh-CN");
+    const [again] = scanXDocument(doc, "https://x.com/notifications");
+    expect(again?.anchor).toBe(nameLink);
+    setRelationshipBadge(again!.anchor, "mutual", "Alice", "zh-CN");
+    expect(nameLink.querySelectorAll('[data-xro-badge="mutual"]')).toHaveLength(1);
+    expect(nameLink.textContent).toBe("Alice Example互关");
+  });
+
+  it("uses the notification avatar when its only other profile link is a hidden overlay", () => {
+    const doc = fixture(`<div id="urt:notifications:All"><div role="link" data-href="/Alice">
+      <a aria-hidden="true" class="absolute inset-0 pointer-events-none" href="/Alice" tabindex="-1"></a>
+      ${avatar("Alice")}<span>and 2 others liked your post</span>
+      </div></div>`);
+    const [candidate] = scanXDocument(doc, "https://x.com/notifications");
+    expect(candidate?.anchor.querySelector(".x-avatar")).not.toBeNull();
+    setRelationshipBadge(candidate!.anchor, "mutual", "Alice", "en");
+    expect(doc.querySelector('a[aria-hidden] [data-xro-badge]')).toBeNull();
+    expect(candidate!.anchor.querySelector('[data-xro-badge]')).not.toBeNull();
+  });
+
+  it.each([
+    'dir="auto" class="whitespace-pre-wrap"',
+    'data-testid="tweetText" dir="auto" class="whitespace-pre-wrap inline"',
+  ])("never uses a notification post-preview mention as the actor name (%s)", attributes => {
+    const doc = fixture(`<div id="urt:notifications:All"><div role="link" data-href="/Alice">
+      ${avatar("Alice")}<div ${attributes}><a href="/Alice"><span>@Alice</span></a>
+      <a href="/Mention">@Mention</a></div></div></div>`);
+    const candidates = scanXDocument(doc, "https://x.com/notifications");
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.observation.handle).toBe("Alice");
+    expect(candidates[0]?.anchor.querySelector(".x-avatar")).not.toBeNull();
+  });
+
   it("requires all three real disabled controls and a same-layer actionable baseline", () => {
     const doc = fixture(post("Alice", "", true) + post("Bob"));
     const candidates = scanXDocument(doc, "https://x.com/Bob/status/123");

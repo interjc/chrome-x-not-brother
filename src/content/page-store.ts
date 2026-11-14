@@ -108,6 +108,8 @@ function mergePageUsers(
 function pageUserFromUnknown(value: unknown): PageUserRelationship | null {
   if (!isRecord(value)) return null;
   const legacy = isRecord(value.legacy) ? value.legacy : {};
+  const core = isRecord(value.core) ? value.core : {};
+  const avatar = isRecord(value.avatar) ? value.avatar : {};
   const perspectives = isRecord(value.relationship_perspectives)
     ? value.relationship_perspectives
     : {};
@@ -115,6 +117,7 @@ function pageUserFromUnknown(value: unknown): PageUserRelationship | null {
     value.screen_name ??
       value.screenName ??
       legacy.screen_name ??
+      core.screen_name ??
       value.username,
   );
   if (!handle) return null;
@@ -144,13 +147,14 @@ function pageUserFromUnknown(value: unknown): PageUserRelationship | null {
     blockedBy === null &&
     muting === null
   ) return null;
-  const displayName = stringField(value.name, legacy.name);
+  const displayName = stringField(value.name, legacy.name, core.name);
   const avatarUrl = normalizeProfileImageUrl(
     stringField(
       value.profile_image_url_https,
       legacy.profile_image_url_https,
       value.profile_image_url,
       legacy.profile_image_url,
+      avatar.image_url,
     ),
   );
   return {
@@ -286,28 +290,97 @@ function collectUserPaths(value: unknown, users: Map<string, PageUserRelationshi
   }
 }
 
+interface FiberReadContext {
+  hookFibers: Set<object>;
+  relaySources: Set<object>;
+}
+
+function usersFromRelayEnvironment(
+  environment: unknown,
+  users: Map<string, PageUserRelationship>,
+  sources: Set<object>,
+): void {
+  if (!isRecord(environment) || typeof environment.getStore !== "function") return;
+  try {
+    const store: unknown = environment.getStore();
+    if (!isRecord(store) || typeof store.getSource !== "function") return;
+    const source: unknown = store.getSource();
+    if (!isRecord(source) || sources.has(source) ||
+      typeof source.getRecordIDs !== "function" || typeof source.get !== "function") return;
+    sources.add(source);
+    const ids: unknown = source.getRecordIDs();
+    if (!Array.isArray(ids)) return;
+    const getRecord = source.get.bind(source) as (id: string) => unknown;
+    const linked = (value: unknown): unknown => {
+      if (!isRecord(value) || typeof value.__ref !== "string") return value;
+      return getRecord(value.__ref);
+    };
+    // Read only normalized user identity/relationship records. Never expand
+    // tweet records, execute a query/fragment, subscribe, or copy the store.
+    for (const id of ids.slice(0, 18_000)) {
+      if (typeof id !== "string") continue;
+      const user = getRecord(id);
+      if (!isRecord(user) || user.__typename !== "User") continue;
+      rememberUser(users, pageUserFromUnknown({
+        core: linked(user.core),
+        legacy: linked(user.legacy),
+        avatar: linked(user.avatar),
+        relationship_perspectives: linked(user.relationship_perspectives),
+      }));
+    }
+  } catch {
+    // An unavailable Relay cache must not stop legacy/DOM observation.
+  }
+}
+
+function usersFromFiberHooks(
+  fiber: Record<string, unknown>,
+  users: Map<string, PageUserRelationship>,
+  context: FiberReadContext,
+): void {
+  if (context.hookFibers.has(fiber)) return;
+  context.hookFibers.add(fiber);
+  let hook = fiber.memoizedState;
+  const seen = new Set<object>();
+  for (let count = 0; count < 40 && isRecord(hook) && !seen.has(hook); count += 1) {
+    seen.add(hook);
+    const state = hook.memoizedState;
+    if (isRecord(state) && isRecord(state.snapshot) && isRecord(state.environment)) {
+      // Relay useFragment exposes the already-rendered snapshot and its local
+      // environment here, while memoizedProps may contain only a fragment ref.
+      collectUserPaths(state.snapshot.data, users);
+      usersFromRelayEnvironment(state.environment, users, context.relaySources);
+    }
+    hook = hook.next;
+  }
+}
+
 function walkFiber(
   fiber: unknown,
   depth: number,
   seen: Set<object>,
   users: Map<string, PageUserRelationship>,
+  context: FiberReadContext,
 ): void {
   if (depth > 28 || users.size >= 500 || !isRecord(fiber) || seen.has(fiber)) return;
   seen.add(fiber);
   collectUserPaths(fiber.memoizedProps, users);
   collectUserPaths(fiber.pendingProps, users);
-  walkFiber(fiber.child, depth + 1, seen, users);
-  walkFiber(fiber.sibling, depth + 1, seen, users);
+  usersFromFiberHooks(fiber, users, context);
+  walkFiber(fiber.child, depth + 1, seen, users, context);
+  walkFiber(fiber.sibling, depth + 1, seen, users, context);
 }
 
 function walkFiberAncestors(
   fiber: unknown,
   users: Map<string, PageUserRelationship>,
+  context: FiberReadContext,
 ): void {
   let current = fiber;
   for (let depth = 0; depth < 24 && isRecord(current); depth += 1) {
     collectUserPaths(current.memoizedProps, users);
     collectUserPaths(current.pendingProps, users);
+    usersFromFiberHooks(current, users, context);
     current = current.return;
   }
 }
@@ -321,11 +394,12 @@ function usersFromFibers(doc: Document, users: Map<string, PageUserRelationship>
     if (starts.length >= 80) break;
   }
   const seen = new Set<object>();
+  const context: FiberReadContext = { hookFibers: new Set(), relaySources: new Set() };
   for (const node of starts) {
     const fiber = propertyStartingWith(node, "__reactFiber$") ??
       propertyStartingWith(node, "__reactInternalInstance$");
-    walkFiberAncestors(fiber, users);
-    walkFiber(fiber, 0, seen, users);
+    walkFiberAncestors(fiber, users, context);
+    walkFiber(fiber, 0, seen, users, context);
   }
 }
 

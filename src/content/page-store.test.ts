@@ -640,6 +640,80 @@ describe("page store relationships", () => {
   });
 });
 
+describe("already-loaded Relay relationships", () => {
+  function relayFixture() {
+    const doc = fixture(`<nav aria-label="Primary"><a href="/Viewer" aria-label="Profile">Profile</a></nav>
+      <div id="urt:notifications:All"><div role="link" data-href="/Alice">
+        <a aria-hidden="true" href="/Alice" tabindex="-1"></a>
+        <a href="/Alice"><div class="x-avatar"><img alt="@Alice"></div></a>
+        <a href="/Alice"><span>Alice Example</span></a><span>followed you</span>
+      </div></div>`);
+    const records = new Map<string, unknown>([
+      ["user:1", { __typename: "User", core: { __ref: "core:1" },
+        relationship_perspectives: { __ref: "rel:1" }, avatar: { __ref: "avatar:1" } }],
+      ["core:1", { screen_name: "Alice", name: "Alice Example" }],
+      ["rel:1", { following: true, followed_by: true, blocked_by: false, muting: false }],
+      ["avatar:1", { image_url: "https://pbs.twimg.com/profile_images/1/alice_normal.jpg" }],
+      ["tweet:1", { __typename: "Tweet", get full_text() { throw new Error("must not read post text"); } }],
+    ]);
+    let reads = 0;
+    const source = {
+      getRecordIDs: () => { reads += 1; return [...records.keys()]; },
+      get: (id: string) => records.get(id),
+    };
+    const environment = { getStore: () => ({ getSource: () => source }) };
+    const hook = { memoizedState: { environment, snapshot: { data: { __id: "tweet:1" } } }, next: null };
+    const fiber = { memoizedProps: { tweet: { __id: "tweet:1", __fragments: {} } }, memoizedState: hook };
+    Object.defineProperty(doc.querySelector('[role="link"]'), "__reactFiber$test", { value: fiber });
+    return { doc, records, environment, source, fiber, reads: () => reads };
+  }
+
+  it("annotates a fresh notification from normalized core and relationship records", () => {
+    const { doc, reads } = relayFixture();
+    const candidates = scanXDocument(doc, "https://x.com/notifications");
+    expect(candidates[0]?.observation.relationship).toBe("unknown");
+    const users = readPageUserRelationships(doc);
+    expect(users.get("alice")).toMatchObject({
+      handle: "Alice", displayName: "Alice Example", following: true, followsYou: true,
+      blockedBy: false, muting: false, avatarUrl: "https://pbs.twimg.com/profile_images/1/alice_x96.jpg",
+    });
+    applyPageStoreRelationships(candidates, users);
+    expect(candidates[0]?.observation.relationship).toBe("mutual");
+    expect(candidates[0]?.anchor.querySelector("span")?.textContent).toBe("Alice Example");
+    expect(reads()).toBe(1);
+  });
+
+  it("does not invent facts from a missing or incomplete linked relationship record", () => {
+    const { doc, records } = relayFixture();
+    records.delete("rel:1");
+    expect(readPageUserRelationships(doc).has("alice")).toBe(false);
+    records.set("rel:1", { following: true });
+    const users = readPageUserRelationships(doc);
+    expect(users.get("alice")?.followsYou).toBeNull();
+    const candidates = scanXDocument(doc, "https://x.com/notifications");
+    applyPageStoreRelationships(candidates, users);
+    expect(candidates[0]?.observation.relationship).toBe("unknown");
+  });
+
+  it("reads current Relay facts on each pass, once per source, without following hook cycles", () => {
+    const { doc, records, fiber, reads } = relayFixture();
+    Object.assign(fiber.memoizedState, { next: fiber.memoizedState });
+    Object.assign(fiber, { return: { memoizedState: fiber.memoizedState } });
+    expect(readPageUserRelationships(doc).get("alice")?.followsYou).toBe(true);
+    expect(reads()).toBe(1);
+    records.set("rel:1", { following: true, followed_by: false, blocked_by: false });
+    expect(readPageUserRelationships(doc).get("alice")?.followsYou).toBe(false);
+    expect(reads()).toBe(2);
+  });
+
+  it("keeps DOM scanning alive when a Relay environment is unavailable", () => {
+    const { doc, environment } = relayFixture();
+    environment.getStore = () => { throw new Error("unavailable"); };
+    expect(() => readPageUserRelationships(doc)).not.toThrow();
+    expect(scanXDocument(doc, "https://x.com/notifications")).toHaveLength(1);
+  });
+});
+
 describe("mergeSelectedPageUsers", () => {
   const u = (
     handle: string,

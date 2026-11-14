@@ -10,6 +10,12 @@
 
 新版回归样本在 `src/content/x-adapter-modern.test.ts`，使用合成账号和正文。修改后同时运行旧版 adapter、badge、page-store、timeline-hide 和 quick-rules 测试。真实页面验收需重新加载 `dist/` 并刷新 X，确认作者徽章、通知、资料头部、悬浮卡和更多菜单；不得把旧内容脚本显示的“观察中”当作成功依据。
 
+通知行可能先放一个 `aria-hidden="true"`、`absolute inset-0` 的整行导航链接，再放头像和真正的显示名链接。选择名称锚点时跳过语义隐藏（含 hidden / inert 祖先）和排除扩展徽标后没有文字的链接，避免徽标落在通知左上角。不要靠覆盖 X 的定位 CSS 修补。Safari 检查元素、后台日志与本地临时加载步骤见 [Safari 调试](safari.md#61-safari-调试与本地验证)。
+
+2026-11-14 Safari / Chrome 实页确认了新版 Relay 路径：帖子 props 可能只有 fragment 引用。`page-store.ts` 从已有 fiber 的 Relay hook 快照发现 environment，只调用本地 `getStore().getSource()`，在有界记录中读取 `User` 的 `core`、`avatar`、`relationship_perspectives` 引用，恢复用户名与已有关系布尔值。每轮每个 source 只读取一次，hook 链最多 40 项、source 最多 18,000 条记录；不复制 store、不读取帖子正文、不执行 Relay 查询或订阅。缺失关系保持 unknown，普通通知历史句不能补齐它。临时版不继承正式版档案，因此位置回归与新档案收集必须分别确认；本次已在两种浏览器实页验证徽标和收集恢复。
+
+新版通知名称所在的平台活动句使用 `[dir="auto"].whitespace-pre-wrap.inline`，不能被通用正文排除规则一起跳过。仅通知名称锚点遍历允许这一层；仍跳过 `tweetText`、非 inline 的正文、嵌套 article 与卡片预览，不把正文提及当名称。名称文本可能带 `line-clamp-1` 的块级布局；徽标放在名称链接内时用可清理的 `xro-name-badge-inline` 标记建立 inline-flex，让名字与徽标同一行。删除徽标时同步清理该标记，头像回退不加此标记。Safari / Chrome 均已确认不再落入隐藏整行链接、头像下方或名字下一行。
+
 页面标注最可能因 X 的 DOM 和本地化文案变化失效。发现问题时：
 
 1. 在 Side Panel 暂停观察器，避免继续生成错误数据。

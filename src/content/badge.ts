@@ -14,6 +14,8 @@ const BADGE_ROW_ATTRIBUTE = "data-xro-badge-row";
 const BADGE_ROW_CLASS = "xro-name-badge-row";
 const BADGE_STACK_ATTRIBUTE = "data-xro-badge-stack";
 const BADGE_STACK_CLASS = "xro-name-badge-stack";
+const BADGE_INLINE_ATTRIBUTE = "data-xro-badge-inline";
+const BADGE_INLINE_CLASS = "xro-name-badge-inline";
 const IDENTITY_ATTRIBUTE = "data-xro-relationship";
 const IDENTITY_CLASSES = [
   "xro-identity-mark",
@@ -283,7 +285,12 @@ function markOverlayIdentity(named: HTMLElement, handle: string): void {
 }
 
 function markIdentityLayout(parent: HTMLElement | null, handle: string): void {
-  if (!parent || parent instanceof HTMLAnchorElement || isAvatarIdentity(parent)) return;
+  if (!parent || isAvatarIdentity(parent)) return;
+  if (parent instanceof HTMLAnchorElement) {
+    parent.setAttribute(BADGE_INLINE_ATTRIBUTE, "");
+    parent.classList.add(BADGE_INLINE_CLASS);
+    return;
+  }
   const overlay = overlayNameCluster(parent, handle);
   if (overlay) {
     markOverlayIdentity(overlay, handle);
@@ -310,6 +317,7 @@ function clearMarked(
 function clearBadgeRows(anchor: ParentNode): void {
   clearMarked(anchor, BADGE_ROW_ATTRIBUTE, BADGE_ROW_CLASS);
   clearMarked(anchor, BADGE_STACK_ATTRIBUTE, BADGE_STACK_CLASS);
+  clearMarked(anchor, BADGE_INLINE_ATTRIBUTE, BADGE_INLINE_CLASS);
 }
 
 function clearIdentityMark(anchor: HTMLElement): void {
