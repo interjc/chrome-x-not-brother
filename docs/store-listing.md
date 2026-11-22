@@ -36,6 +36,12 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 - Adds local Zod-validated blacklist rules for handles, display names, and post content, with expiration, JSON file import/export, and one-time public HTTPS/Gist import behind optional per-site permission.
 - Makes first-run consent easier to find with a prominent entry beside the minimized NB button and an action-icon context-menu shortcut; both open the full disclosure before consent.
 
+### Version 0.7.0 release notes
+
+- Badges, Side Panel rows, and archive entries now show only the current relationship: Mutual, One-way, Follows you, or Blocked you. Relationship changes are recorded in the fieldbook instead of replacing the badge, and reviewing a change keeps its record.
+- Redesigns the relationship fieldbook: combinable current-relationship and change filters with live counts, clickable overview cards, a Recently changed sort, removable filter chips, a dedicated change column showing previous → current and when it was seen, and history markers where the relationship changed.
+- Badge colors follow one scale from mutual green, follows-you light blue, and one-way amber to blocked-by red. Fixes the dark-theme Follows you badge showing the blocked-by red.
+
 ### Version 0.6.3 release notes
 
 - Fixes misplaced relationship badges in follow notifications on Safari and Chrome. Badges stay beside the account name on the same line without moving notification icons or text.
@@ -201,6 +207,12 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 - 小型偏好可通过用户启用的 Chrome Sync 同步，关系档案和当前 X handle 仍只保存在本机。旧 local 偏好迁移时不会覆盖 Chrome Sync 已有设置。
 - 未同意时，收起后的 NB 悬浮球旁会显示醒目入口，工具栏图标右键菜单也能打开完整隐私说明；入口不会直接代替用户同意。
+
+### 0.7.0 更新说明
+
+- 页面徽标、Side Panel 和档案条目只显示现在的关系：互关、单向关注、关注了你、拉黑了你。关系变化记在档案库里，不再替换徽标；确认变化后，变化记录仍会保留。
+- 重新设计关系档案库：「当前关系」和「关系变化」两组筛选可以组合并显示实时数量，顶部概览卡片可点击筛选，新增「最近变化」排序、可单独移除的筛选标签、显示「之前 → 现在 · 发现时间」的变化列，历史里关系发生变化的观察会特别标出。
+- 徽标颜色统一为一套从好到坏的色阶：互关绿色、关注了你浅蓝、单向关注琥珀色、拉黑了你红色；修复深色主题下「关注了你」徽标误用拉黑红色的问题。
 
 ### 0.6.3 更新说明
 
@@ -368,6 +380,12 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 
 - 小さな設定をユーザーが有効にした Chrome Sync で同期し、関係アーカイブと現在の X ハンドルはローカルに保ちます。旧 local 設定の移行時も、Chrome Sync に既存の設定があれば上書きしません。
 - 未同意の場合、収納した NB ボタンの横に目立つ入口を表示し、ツールバーアイコンの右クリックメニューからも完全なプライバシー説明を開けます。入口だけで同意が確定することはありません。
+
+### 0.7.0 更新内容
+
+- ページのバッジ、サイドパネル、アーカイブの項目は現在の関係（相互フォロー・片方向フォロー・フォローされています・ブロックされています）だけを表示します。関係の変化はバッジを置き換えず関係アーカイブに記録し、確認後も変化の記録は残ります。
+- 関係アーカイブを再設計しました。「現在の関係」と「関係の変化」の絞り込みを組み合わせて件数を確認でき、概要カードからも絞り込めます。「最近の変化」の並べ替え、個別に外せるフィルター表示、「以前 → 現在 · 検出時刻」を示す変化列を追加し、履歴では関係が変化した観察を強調します。
+- バッジの色を、相互フォローの緑、フォローされているの水色、片方向フォローの琥珀色、ブロックの赤という一つの段階に統一しました。ダークテーマで「フォローされています」バッジがブロックの赤になる不具合を修正しました。
 
 ### 0.6.3 更新内容
 
