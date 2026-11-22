@@ -85,13 +85,9 @@ function user(handle: string, displayName: string): UserRecord {
   };
 }
 
-describe("dashboard profile links", () => {
-  beforeEach(async () => {
+async function mountDashboard(users: UserRecord[]): Promise<void> {
     window.location.hash = "";
-    testState.users = [{
-      ...user("thsottiaux", "Tibo"),
-      avatarUrl: "https://pbs.twimg.com/profile_images/1/tibo_x96.jpg",
-    }];
+    testState.users = users;
     testState.settings = {
       consentVersion: 3,
       observerEnabled: true,
@@ -132,6 +128,14 @@ describe("dashboard profile links", () => {
     await act(async () => {
       await import("./dashboard");
     });
+}
+
+describe("dashboard profile links", () => {
+  beforeEach(async () => {
+    await mountDashboard([{
+      ...user("thsottiaux", "Tibo"),
+      avatarUrl: "https://pbs.twimg.com/profile_images/1/tibo_x96.jpg",
+    }]);
   });
 
   it("opens the X profile from the avatar, display name, and handle", () => {
@@ -219,5 +223,75 @@ describe("dashboard profile links", () => {
     expect(confirm).toHaveBeenCalledOnce();
     expect(document.querySelector("#filter-rules")).toBeTruthy();
     expect(document.querySelector("#dashboard-panel-archive")).toBeNull();
+  });
+});
+
+describe("relationship archive filters", () => {
+  beforeEach(async () => {
+    await mountDashboard([
+      {
+        ...user("alice", "Alice"),
+        previousRelationship: "mutual",
+        hasChanged: true,
+        changeDetectedAt: 10,
+        lastSeenAt: 10,
+      },
+      { ...user("bob", "Bob"), currentRelationship: "mutual", lastSeenAt: 9 },
+      {
+        ...user("carol", "Carol"),
+        currentRelationship: "blocked_by",
+        previousRelationship: "follows_you_only",
+        changeDetectedAt: 5,
+        lastSeenAt: 8,
+      },
+    ]);
+  });
+
+  function rows(): string[] {
+    return [...document.querySelectorAll(".user-record__identity strong")]
+      .map((node) => node.textContent ?? "");
+  }
+
+  function railButton(label: string): HTMLButtonElement {
+    const button = [...document.querySelectorAll<HTMLButtonElement>(".filter-rail button")]
+      .find((item) => item.querySelector("strong")?.textContent === label);
+    if (!button) throw new Error(`missing filter ${label}`);
+    return button;
+  }
+
+  it("labels rows by current state and shows the change separately", () => {
+    const alice = document.querySelector(".user-record");
+    expect(alice?.querySelector(".relationship-pill")?.textContent).toBe("我单向关注");
+    expect(alice?.querySelector(".change-tag")?.textContent).toContain("对方取关");
+    expect(alice?.querySelector(".change-tag")?.textContent).toContain("待确认");
+    expect(alice?.querySelector(".user-record__change small")?.textContent).toContain("互关 → 单向关注");
+    expect(document.body.textContent).not.toContain("关系发生变化");
+  });
+
+  it("combines current-state and change filters with faceted counts", async () => {
+    expect(rows()).toEqual(["Alice", "Bob", "Carol"]);
+    expect(railButton("有变化记录").querySelector("em")?.textContent).toBe("2");
+
+    await act(async () => railButton("有变化记录").click());
+    expect(rows()).toEqual(["Alice", "Carol"]);
+    expect(railButton("互相关注").querySelector("em")?.textContent).toBe("0");
+    expect(railButton("TA 拉黑了我").querySelector("em")?.textContent).toBe("1");
+
+    await act(async () => railButton("TA 拉黑了我").click());
+    expect(rows()).toEqual(["Carol"]);
+    expect(document.querySelectorAll(".records-meta .filter-chip")).toHaveLength(2);
+
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>(".records-meta__clear")?.click();
+    });
+    expect(rows()).toEqual(["Alice", "Bob", "Carol"]);
+  });
+
+  it("opens pending changes from the overview shortcut", async () => {
+    const shortcut = document.querySelector<HTMLButtonElement>(".stats-strip .tone-changed");
+    expect(shortcut?.querySelector("strong")?.textContent).toBe("1");
+    await act(async () => shortcut?.click());
+    expect(shortcut?.getAttribute("aria-pressed")).toBe("true");
+    expect(rows()).toEqual(["Alice"]);
   });
 });

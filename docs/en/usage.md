@@ -101,13 +101,16 @@ Three top tabs, one page at a time: **Archive**, **Rules**, and **Options**. Arc
 - **Archive account** at the top of the Archive tab switches to any account's archive and shows the signed-in account and each account's count.
 - While viewing another account, **Merge into @current** copies that archive into the current account; the original archive is kept.
 
+- The four overview cards at the top (Accounts observed, You follow only, Blocked you, Changes to review) are also shortcuts: show everything (clearing filters), only following-only, only blocked-by, or only changes still to review (also sorted by recent change). The active card is highlighted.
 - Activate the avatar, display name, or @handle to open that standard X profile in a new tab. Avatars use the latest observed X CDN URL, then a handle-derived public image, then the handle initial.
-- The left index filters by relationship.
-- Search handle or display name at the top.
-- Sort by recency, handle, or observation count.
-- The history button expands the 30 most recent local observations.
-- Page badges, Side Panel, and archive rows: a current mutual state shows Mutual. Following-only defaults to One-way; **They unfollowed** appears only when history shows they used to follow you and you still follow them. Your unfollow or their block still uses the matching short label. When neither side follows (including a previous follows-you-only), there is no badge. Simultaneous changes that cannot be attributed to one side still show **Changed**. The dock **Changed** count is the aggregate of those unreviewed events.
-- The check button marks a relationship change as reviewed and restores the current base-relationship label.
+- The left **Relationship index** has two filter groups you can combine: **Current relationship** (all observed, mutual, you follow only, follows you, blocked you) and **Relationship changes** (Any, Has a recorded change, To review, then They unfollowed, You unfollowed, They blocked you, Other changes; a specific kind appears only when some row has it). Each count is how many rows that option would show given the other group's choice and the search text.
+- The toolbar searches handle or display name (a leading @ is ignored, Esc clears, ⌘K / Ctrl+K focuses the search box).
+- Sort by Recently observed, Recently changed (newest change first, rows without a change last), Handle, or Observation count. The toolbar also has CSV / JSON export and clear.
+- Under the toolbar you see the match count and a removable chip for each active filter (relationship, change, search text), plus **Clear filters**. An empty filtered result also offers **Clear filters**.
+- Columns are Account, Current relationship, Relationship changes, and Last seen. **Current relationship** shows only the relationship right now (Mutual, One-way, Follows you, Blocked you) with a description; page badges and the Side Panel do the same and never use a badge to show a change. When neither side follows (including a previous follows-you-only), there is no badge and it does not count as a change.
+- **Relationship changes** shows the change kind: Mutual → One-way or Follows you → One-way is **They unfollowed**, Mutual → Follows you is **You unfollowed**, any known relationship becoming blocked is **They blocked you**, and everything else (for example becoming mutual, or both sides changing at once) reads **Relationship changed**, so your own action is never described as theirs. Below it is "previous → current · seen <time>". A change you have not reviewed carries a **To review** marker and the row gets a soft rose tint; a row that never changed shows **No change recorded**. The dock **Changed** count is the total of changes still to review.
+- The history button expands the 30 most recent local observations; the observations where the relationship changed are marked with a rose dot, a bold time, and "previous →" before the pill.
+- The check button appears only when a change is waiting for review. Reviewing removes the **To review** marker; the change record stays, so you can still filter by **Has a recorded change** or a specific kind.
 - The delete button removes only that record from the selected account's archive.
 - Option switches control the observer, page badges, and optional timeline filters.
 - Footer **Send feedback** opens [GitHub Issues](https://github.com/interjc/chrome-x-not-brother/issues) in a new tab.

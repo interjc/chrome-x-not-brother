@@ -45,7 +45,7 @@ For local acceptance, open the Side Panel from the extension icon, review the fi
 - X-page observer dock: `src/content/observer-panel.ts`, `public/content-script.css`. The collapsed ball stays in the bottom-right corner; Chat/Grok shift selectors live in `x-adapter.ts`. After consent, expanded-dock filter-rule status uses `filter-rules:status`, intercept totals use `hide-stats:increment`, and Edit rules opens the side panel Rules tab.
 - Toolbar state and install guidance: `src/background/action-state.ts`, `src/background/service-worker.ts`.
 - Side Panel: `src/ui/sidepanel.tsx`.
-- Fieldbook: `src/ui/dashboard.tsx`.
+- Fieldbook: `src/ui/dashboard.tsx`. Its pure filter, faceted-count, and sort model is `src/ui/archive-model.ts`.
 - Chrome Options page: `src/ui/options.tsx`, `src/ui/open-options-tab.ts`, `public/options.html`. Right-click **Options** should open the side panel Options tab.
 - Optional timeline hiding: `src/content/timeline-hide.ts`, `public/content-script.css`.
 - Timeline quick-add rules: `src/content/quick-rules.ts`. The HoverCard entry sits next to the name; the tweet `caret` menu can also add a handle rule. Saves go through service worker `filter-rules:quick-add`.

@@ -71,7 +71,7 @@ content script 必须把这种情况视为生命周期结束：捕获 promise re
 
 任何 schema 变化都必须使用新的 Dexie version 和迁移。不得在升级时静默清空数据库。破坏性迁移需要明确发布说明和用户备份步骤。
 
-“对方取关”“你已取关”“对方拉黑”是从前后基础关系动态推导的展示事件，不是新的数据库关系值。当前已是互关时直接显示“互关”。当前是我单向关注时默认显示“单向关注”；只有 `mutual → following_only` 与 `follows_you_only → following_only` 才显示对方取关。`follows_you_only → none` 与其他双方无关一样撤标且不进入概览。修改推导规则时覆盖这些转换、互关覆盖显示，以及互关双方同时取消关注（`none`）撤标且不进入概览的反例；保持 dock 只按 `hasChanged` 汇总，不要为展示标签增加 schema 字段。
+页面徽标、Side Panel 行和档案库关系标签只显示当前关系（`displayRelationship`），不要再把变化标签放到徽标上。“对方取关”“你已取关”“对方把我拉黑”和通用“其他变化”是 `recordedRelationshipChange` 从前后基础关系为档案库推导的变化类型，不是新的数据库关系值：只有 `mutual → following_only` 与 `follows_you_only → following_only` 是对方取关，`mutual → follows_you_only` 是你已取关，已知非拉黑状态 `→ blocked_by` 是对方把我拉黑，其余一律通用，不得把用户自己的操作说成对方行为。`follows_you_only → none` 与其他双方无关一样撤标、不进入概览，也不形成变化。确认只清除 `hasChanged`，`previousRelationship` 与 `changeDetectedAt` 保留，档案库仍可按变化筛选。修改推导规则时覆盖这些转换、徽标只显示当前状态，以及互关双方同时取消关注（`none`）撤标且不进入概览的反例；保持 dock 只按 `hasChanged` 汇总，不要为变化标签增加 schema 字段。
 
 如果读取的数据类型、用途、传输对象或保存位置发生实质变化，提高 `CURRENT_CONSENT_VERSION`，同步修改首次披露与隐私文档，并在新版本继续观察前重新取得用户同意。纯文案修正不得随意重置同意。
 

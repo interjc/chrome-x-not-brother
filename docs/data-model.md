@@ -35,7 +35,7 @@
 | `profileUrl` | 标准 `https://x.com/<handle>` |
 | `currentRelationship` | 最近可信基础关系 |
 | `previousRelationship` | 最近一次已知变化前的关系 |
-| `hasChanged` | 是否等待用户确认关系变化 |
+| `hasChanged` | 变化是否仍等待用户确认；确认后清除，变化记录保留 |
 | `changeDetectedAt` | 最近变化时间 |
 | `firstSeenAt` / `lastSeenAt` | 生命周期时间戳 |
 | `observationCount` | 收到的观察次数 |
@@ -60,7 +60,7 @@ handle 更名会在 0.1 中形成新记录，因为扩展不读取 X 私有 user
 8. service worker 第一次识别到一个登录账号时，把它加入 `knownViewerHandles`，并从所有账号的档案里删除这个 handle；之后写入、查询、概览、导入、导出和复制都排除当前账号和所有 `knownViewerHandles`。
 9. 识别不到登录账号时不写入。所有读写都只针对一个 `viewer`；清空、删除和确认变化也只影响那个账号的档案。
 
-变化事件不新增数据库字段，也不改变导出 schema。展示层在 `hasChanged=true` 时根据 `previousRelationship → currentRelationship` 动态推导：当前已是 `mutual` 一律显示互关；当前 `following_only` 默认显示单向关注，仅当上一状态是 `mutual` 或 `follows_you_only` 时才覆盖为 `unfollowed_you`。`mutual → follows_you_only` 为 `you_unfollowed`，任意已知非 blocked 状态变为 `blocked_by` 为 `blocked_you`；其他双方同时变化的转换使用通用 `changed`。`none` 可写入 users 以撤掉过期徽标；`follows_you_only → none` 只撤标，不显示对方取关。因此旧档案无需迁移即可获得细分展示，dock 仍按 `hasChanged` 汇总一个变化总数。
+变化事件不新增数据库字段，也不改变导出 schema。页面徽标、Side Panel 和档案库关系标签只显示 `currentRelationship`，不显示变化。`recordedRelationshipChange` 只为档案库推导变化记录：`previousRelationship` 为已知状态、与当前不同、当前为可见关系，并且 `hasChanged=true` 或 `changeDetectedAt` 不为空时，记录为 `previousRelationship → currentRelationship`、发现时间和是否待确认。变化类型：`mutual → following_only` 或 `follows_you_only → following_only` 为 `unfollowed_you`，`mutual → follows_you_only` 为 `you_unfollowed`，任意已知非 blocked 状态变为 `blocked_by` 为 `blocked_you`；其余转换（变为互关、双方同时变化、`blocked_by → following_only` 等）使用通用 `changed`。`none` 可写入 users 以撤掉过期徽标；`follows_you_only → none` 只撤标，不形成变化。因此旧档案无需迁移即可在档案库按变化记录与类型筛选，dock 仍按 `hasChanged` 汇总一个待确认变化总数。
 
 blocked-by 可保存 `blocked-notice`、`blocked-interaction-restriction` 或 `blocked-profile-summary-restriction`。后两者分别表示评论区三项互动均已明确禁用并已通过同一浮层或页面层的正常帖子对照，或已完整加载的作者浮窗缺少所有 following/follower 链接。首页等没有画出关注控件的卡片，可用 `page-user-entity` 表示关系来自当前页已经载入的 UI store 用户实体。
 

@@ -1,11 +1,11 @@
 import { preferAvatarUrl, preferDisplayName } from "./identity";
 import type {
-  DisplayRelationship,
   ObservationDraft,
   RelationshipFacts,
   RelationshipChangeKind,
   RelationshipKind,
   UserRecord,
+  VisibleRelationship,
 } from "./types";
 
 export function resolveRelationship(facts: RelationshipFacts): RelationshipKind {
@@ -17,29 +17,58 @@ export function resolveRelationship(facts: RelationshipFacts): RelationshipKind 
   return "unknown";
 }
 
-export function relationshipChangeKind(
+export interface RecordedRelationshipChange {
+  kind: RelationshipChangeKind;
+  previous: RelationshipKind;
+  current: VisibleRelationship;
+  detectedAt: number | null;
+  /** Not yet marked as reviewed in the archive. */
+  pending: boolean;
+}
+
+/**
+ * The last recorded known-to-known change for an archive row. Change is
+ * archive data only: page badges always show the current state.
+ */
+export function recordedRelationshipChange(
   user: UserRecord,
-): RelationshipChangeKind | null {
-  if (!user.hasChanged || !user.previousRelationship) return null;
+): RecordedRelationshipChange | null {
   const previous = user.previousRelationship;
   const current = user.currentRelationship;
-  if (current === "blocked_by" && previous !== "blocked_by") return "blocked_you";
+  if (!previous || previous === "unknown" || previous === current) return null;
+  if (!isVisibleRelationship(current)) return null;
+  if (!user.hasChanged && user.changeDetectedAt === null) return null;
+  return {
+    kind: changeKindFor(previous, current),
+    previous,
+    current,
+    detectedAt: user.changeDetectedAt,
+    pending: user.hasChanged,
+  };
+}
+
+function changeKindFor(
+  previous: RelationshipKind,
+  current: VisibleRelationship,
+): RelationshipChangeKind {
+  if (current === "blocked_by") return "blocked_you";
   if (previous === "mutual" && current === "following_only") return "unfollowed_you";
   if (previous === "follows_you_only" && current === "following_only") return "unfollowed_you";
   if (previous === "mutual" && current === "follows_you_only") return "you_unfollowed";
-  return null;
+  return "changed";
 }
 
-export function displayRelationship(user: UserRecord): DisplayRelationship {
-  if (user.currentRelationship === "mutual") return "mutual";
-  if (user.hasChanged) {
-    const event = relationshipChangeKind(user);
-    if (event) return event;
-    if (user.currentRelationship === "following_only") return "following_only";
-    if (isVisibleRelationship(user.currentRelationship)) return "changed";
-  }
-  if (!isVisibleRelationship(user.currentRelationship)) return "unknown";
-  return user.currentRelationship;
+export function relationshipChangeKind(
+  user: UserRecord,
+): RelationshipChangeKind | null {
+  return recordedRelationshipChange(user)?.kind ?? null;
+}
+
+/** The label a user carries anywhere: the current known state, never a change. */
+export function displayRelationship(user: UserRecord): VisibleRelationship | "unknown" {
+  return isVisibleRelationship(user.currentRelationship)
+    ? user.currentRelationship
+    : "unknown";
 }
 
 export function isCollectableRelationship(
@@ -72,27 +101,12 @@ export function shouldPersistObservation(
 export function candidateDisplayRelationship(
   relationship: RelationshipKind,
   stored?: UserRecord,
-): DisplayRelationship | null {
-  if (isVisibleRelationship(relationship)) {
-    if (stored && stored.currentRelationship === relationship) {
-      const display = displayRelationship(stored);
-      return display === "unknown" ? null : display;
-    }
-    if (
-      relationship === "following_only" &&
-      (stored?.currentRelationship === "mutual" ||
-        stored?.currentRelationship === "follows_you_only")
-    ) {
-      return "unfollowed_you";
-    }
-    return relationship;
-  }
-  if (relationship === "none") return null;
-  if (stored) {
-    const display = displayRelationship(stored);
-    return display === "unknown" ? null : display;
-  }
-  return null;
+): VisibleRelationship | null {
+  if (isVisibleRelationship(relationship)) return relationship;
+  if (relationship === "none" || !stored) return null;
+  return isVisibleRelationship(stored.currentRelationship)
+    ? stored.currentRelationship
+    : null;
 }
 
 export interface MergeResult {

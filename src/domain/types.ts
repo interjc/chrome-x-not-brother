@@ -9,14 +9,14 @@ export const RELATIONSHIP_KINDS = [
 
 export type RelationshipKind = (typeof RELATIONSHIP_KINDS)[number];
 export type VisibleRelationship = Exclude<RelationshipKind, "unknown" | "none">;
+/** How a recorded relationship change reads in the archive; never a page badge. */
 export type RelationshipChangeKind =
   | "unfollowed_you"
   | "you_unfollowed"
-  | "blocked_you";
-export type DisplayRelationship =
-  | RelationshipKind
-  | RelationshipChangeKind
+  | "blocked_you"
   | "changed";
+/** Anything with a label: current states plus archive-only change kinds. */
+export type DisplayRelationship = RelationshipKind | RelationshipChangeKind;
 
 export const SOURCE_TYPES = [
   "profile",

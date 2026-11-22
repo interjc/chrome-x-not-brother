@@ -7,9 +7,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { PROJECT_FEEDBACK_URL } from "../domain/project";
 import { profileUrlForHandle, visibleDisplayName } from "../domain/identity";
-import { displayRelationship, isDisplayedUser } from "../domain/relationships";
+import { isDisplayedUser, recordedRelationshipChange } from "../domain/relationships";
 import { parseDatabaseExport, usersToCsv } from "../domain/export";
-import type { ObservationRecord, RelationshipKind, UserRecord } from "../domain/types";
+import type { ObservationRecord, UserRecord } from "../domain/types";
 import {
   resolveUiLocale,
   relationshipPresentation,
@@ -40,6 +40,19 @@ import {
 import { InterceptStats } from "./components/InterceptStats";
 import { OptionsPanel } from "./components/OptionsPanel";
 import { RelationshipPill } from "./components/RelationshipPill";
+import {
+  ARCHIVE_CHANGE_FILTERS,
+  ARCHIVE_RELATIONSHIP_FILTERS,
+  DEFAULT_ARCHIVE_QUERY,
+  archiveFacetCounts,
+  filterArchiveUsers,
+  hasActiveArchiveFilters,
+  matchesChange,
+  type ArchiveChangeFilter,
+  type ArchiveQuery,
+  type ArchiveRelationshipFilter,
+  type ArchiveSort,
+} from "./archive-model";
 import { absoluteTime, downloadFile, relativeTime } from "./format";
 import {
   useArchiveScopes,
@@ -51,8 +64,6 @@ import {
 } from "./hooks";
 import { CURRENT_CONSENT_VERSION } from "../storage/settings";
 
-type Filter = "all" | "changed" | Exclude<RelationshipKind, "unknown" | "none">;
-type Sort = "recent" | "handle" | "observations";
 type DashboardSection = "archive" | "filter-rules" | "settings";
 
 const DASHBOARD_SECTIONS = [
@@ -71,15 +82,23 @@ function t(
   return translate(locale, key, values);
 }
 
-function filterOptions(locale: AppLocale): { key: Filter; label: string }[] {
-  return [
-    { key: "all", label: t(locale, "filterAll") },
-    { key: "changed", label: relationshipPresentation(locale, "changed").label },
-    { key: "mutual", label: relationshipPresentation(locale, "mutual").label },
-    { key: "following_only", label: relationshipPresentation(locale, "following_only").label },
-    { key: "follows_you_only", label: relationshipPresentation(locale, "follows_you_only").label },
-    { key: "blocked_by", label: relationshipPresentation(locale, "blocked_by").label },
-  ];
+function relationshipFilterLabel(locale: AppLocale, filter: ArchiveRelationshipFilter): string {
+  return filter === "all"
+    ? t(locale, "filterAll")
+    : relationshipPresentation(locale, filter).label;
+}
+
+function changeFilterLabel(locale: AppLocale, filter: ArchiveChangeFilter): string {
+  if (filter === "all") return t(locale, "changeFilterAll");
+  if (filter === "any") return t(locale, "changeFilterAny");
+  if (filter === "pending") return t(locale, "changeFilterPending");
+  if (filter === "changed") return t(locale, "changeFilterOther");
+  return relationshipPresentation(locale, filter).label;
+}
+
+/** Change kinds that only appear once some row has them. */
+function isChangeKindFilter(filter: ArchiveChangeFilter): boolean {
+  return filter !== "all" && filter !== "any" && filter !== "pending";
 }
 
 function dashboardSectionFromHash(hash: string): DashboardSection {
@@ -94,12 +113,6 @@ async function notifyDataChanged(): Promise<void> {
   } catch {
     // The local mutation already succeeded; open X tabs can recover on reload.
   }
-}
-
-function countFor(users: UserRecord[], filter: Filter): number {
-  if (filter === "all") return users.length;
-  if (filter === "changed") return users.filter((user) => user.hasChanged).length;
-  return users.filter((user) => user.currentRelationship === filter).length;
 }
 
 function UserHistory({
@@ -125,16 +138,29 @@ function UserHistory({
   return (
     <div className="history-list">
       {items.length === 0 ? <p>{t(locale, "historyEmpty")}</p> : null}
-      {items.slice(0, 30).map((item) => (
-        <div className="history-item" key={item.id ?? `${item.userKey}-${item.observedAt}`}>
+      {items.slice(0, 30).map((item, index) => {
+        const older = items[index + 1];
+        const transition = older !== undefined && older.relationship !== item.relationship;
+        return (
+        <div
+          className={`history-item${transition ? " history-item--transition" : ""}`}
+          key={item.id ?? `${item.userKey}-${item.observedAt}`}
+          title={transition ? t(locale, "historyTransitionTitle") : undefined}
+        >
           <time>{absoluteTime(item.observedAt, locale)}</time>
-          <RelationshipPill relationship={item.relationship} locale={locale} />
+          <span className="history-item__state">
+            {transition ? (
+              <small>{relationshipPresentation(locale, older.relationship).shortLabel} →</small>
+            ) : null}
+            <RelationshipPill relationship={item.relationship} locale={locale} />
+          </span>
           <span>{sourceTypeLabel(locale, item.sourceType)}</span>
           <a href={item.sourceUrl} target="_blank" rel="noreferrer" title={t(locale, "openObservationSource")}>
             <Icon name="external" />
           </a>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -182,12 +208,9 @@ function Dashboard() {
     hasConsent && settings.hideByFilterRules,
   );
   const { stats: hideStats } = useHideStats(settings.viewerHandle);
-  const filters = filterOptions(locale);
   const [section, setSection] = useState<DashboardSection>(() =>
     dashboardSectionFromHash(window.location.hash));
-  const [filter, setFilter] = useState<Filter>("all");
-  const [sort, setSort] = useState<Sort>("recent");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState<ArchiveQuery>(DEFAULT_ARCHIVE_QUERY);
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const importInput = useRef<HTMLInputElement>(null);
@@ -238,24 +261,27 @@ function Dashboard() {
     return () => window.removeEventListener("keydown", focusSearch);
   }, []);
 
-  const visibleUsers = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    const result = users.filter((user) => {
-      const filterMatches =
-        filter === "all" ||
-        (filter === "changed" ? user.hasChanged : user.currentRelationship === filter);
-      const queryMatches =
-        !normalizedQuery ||
-        user.handle.toLowerCase().includes(normalizedQuery) ||
-        user.displayName?.toLowerCase().includes(normalizedQuery);
-      return filterMatches && queryMatches;
-    });
-    return result.toSorted((a, b) => {
-      if (sort === "handle") return a.handle.localeCompare(b.handle);
-      if (sort === "observations") return b.observationCount - a.observationCount;
-      return b.lastSeenAt - a.lastSeenAt;
-    });
-  }, [filter, query, sort, users]);
+  const visibleUsers = useMemo(() => filterArchiveUsers(users, query), [query, users]);
+  const facets = useMemo(() => archiveFacetCounts(users, query), [query, users]);
+  const filtersActive = hasActiveArchiveFilters(query);
+  const totals = useMemo(() => ({
+    followingOnly: users.filter((user) => user.currentRelationship === "following_only").length,
+    blockedBy: users.filter((user) => user.currentRelationship === "blocked_by").length,
+    pending: users.filter((user) => matchesChange(user, "pending")).length,
+  }), [users]);
+  const lastSeenAt = users.reduce((latest, user) => Math.max(latest, user.lastSeenAt), 0);
+
+  function updateQuery(patch: Partial<ArchiveQuery>): void {
+    setQuery((current) => ({ ...current, ...patch }));
+  }
+
+  function showOnly(patch: Partial<ArchiveQuery>): void {
+    setQuery((current) => ({ ...current, relationship: "all", change: "all", ...patch }));
+  }
+
+  function clearFilters(): void {
+    setQuery((current) => ({ ...DEFAULT_ARCHIVE_QUERY, sort: current.sort }));
+  }
 
   function ownerName(viewer: string): string {
     return viewer === LEGACY_VIEWER ? t(locale, "archiveOwnerUnclaimed") : `@${viewer}`;
@@ -478,27 +504,86 @@ function Dashboard() {
         ) : null}
       </section>
 
-      <section className="stats-strip" aria-label={t(locale, "archiveStatsAria")}>
-        <article><span>OBSERVED</span><strong>{loading ? "—" : users.length.toLocaleString(locale)}</strong><small>{t(locale, "statObserved")}</small></article>
-        <article className="tone-following"><span>ONE-WAY</span><strong>{countFor(users, "following_only")}</strong><small>{t(locale, "statFollowingOnly")}</small></article>
-        <article className="tone-blocked"><span>BLOCKED BY</span><strong>{countFor(users, "blocked_by")}</strong><small>{t(locale, "statBlockedBy")}</small></article>
-        <article className="tone-changed"><span>CHANGED</span><strong>{countFor(users, "changed")}</strong><small>{t(locale, "statChanged")}</small></article>
+      <section className="stats-strip stats-strip--shortcuts" aria-label={t(locale, "archiveStatsAria")}>
+        <button
+          aria-label={t(locale, "statShortcutAria", { label: t(locale, "filterAll") })}
+          aria-pressed={!filtersActive}
+          type="button"
+          onClick={clearFilters}
+        >
+          <span>OBSERVED</span><strong>{loading ? "—" : users.length.toLocaleString(locale)}</strong><small>{t(locale, "statObserved")}</small>
+        </button>
+        <button
+          aria-label={t(locale, "statShortcutAria", { label: relationshipFilterLabel(locale, "following_only") })}
+          aria-pressed={query.relationship === "following_only" && query.change === "all"}
+          className="tone-following"
+          type="button"
+          onClick={() => showOnly({ relationship: "following_only" })}
+        >
+          <span>ONE-WAY</span><strong>{totals.followingOnly.toLocaleString(locale)}</strong><small>{t(locale, "statFollowingOnly")}</small>
+        </button>
+        <button
+          aria-label={t(locale, "statShortcutAria", { label: relationshipFilterLabel(locale, "blocked_by") })}
+          aria-pressed={query.relationship === "blocked_by" && query.change === "all"}
+          className="tone-blocked"
+          type="button"
+          onClick={() => showOnly({ relationship: "blocked_by" })}
+        >
+          <span>BLOCKED BY</span><strong>{totals.blockedBy.toLocaleString(locale)}</strong><small>{t(locale, "statBlockedBy")}</small>
+        </button>
+        <button
+          aria-label={t(locale, "statShortcutAria", { label: changeFilterLabel(locale, "pending") })}
+          aria-pressed={query.change === "pending" && query.relationship === "all"}
+          className="tone-changed"
+          type="button"
+          onClick={() => showOnly({ change: "pending", sort: "changed" })}
+        >
+          <span>CHANGED</span><strong>{totals.pending.toLocaleString(locale)}</strong><small>{t(locale, "statChanged")}</small>
+        </button>
       </section>
       {hasConsent ? (
         <InterceptStats locale={locale} stats={hideStats} status={filterStatus} />
       ) : null}
 
       <div className="fieldbook-layout">
-        <aside className="filter-rail">
+        <aside className="filter-rail" aria-label={t(locale, "relationshipFilterAria")}>
           <div className="filter-rail__heading"><span>INDEX</span><strong>{t(locale, "relationshipIndex")}</strong></div>
-          <nav aria-label={t(locale, "relationshipFilterAria")}>
-            {filters.map((item, index) => (
-              <button className={filter === item.key ? "is-active" : ""} key={item.key} onClick={() => setFilter(item.key)}>
+          <nav aria-labelledby="filter-group-current">
+            <p className="filter-rail__group" id="filter-group-current"><span>A</span>{t(locale, "filterGroupCurrent")}</p>
+            {ARCHIVE_RELATIONSHIP_FILTERS.map((filter, index) => (
+              <button
+                aria-pressed={query.relationship === filter}
+                className={`filter-rail__option filter-rail__option--${filter}${query.relationship === filter ? " is-active" : ""}`}
+                key={filter}
+                type="button"
+                onClick={() => updateQuery({ relationship: filter })}
+              >
                 <span>{String(index + 1).padStart(2, "0")}</span>
-                <strong>{item.label}</strong>
-                <em>{countFor(users, item.key)}</em>
+                <strong>{relationshipFilterLabel(locale, filter)}</strong>
+                <em>{facets.relationship[filter]}</em>
               </button>
             ))}
+          </nav>
+          <nav aria-labelledby="filter-group-change">
+            <p className="filter-rail__group" id="filter-group-change"><span>B</span>{t(locale, "filterGroupChange")}</p>
+            {ARCHIVE_CHANGE_FILTERS.map((filter, index) => {
+              const count = facets.change[filter];
+              const active = query.change === filter;
+              if (isChangeKindFilter(filter) && count === 0 && !active) return null;
+              return (
+                <button
+                  aria-pressed={active}
+                  className={`filter-rail__option filter-rail__option--change-${filter}${isChangeKindFilter(filter) ? " is-nested" : ""}${active ? " is-active" : ""}`}
+                  key={filter}
+                  type="button"
+                  onClick={() => updateQuery({ change: filter })}
+                >
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                  <strong>{changeFilterLabel(locale, filter)}</strong>
+                  <em>{count}</em>
+                </button>
+              );
+            })}
           </nav>
         </aside>
 
@@ -506,12 +591,25 @@ function Dashboard() {
           <div className="records-toolbar">
             <label className="search-box">
               <Icon name="search" />
-              <input ref={searchInput} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t(locale, "searchPlaceholder")} />
+              <input
+                ref={searchInput}
+                type="search"
+                value={query.text}
+                onChange={(event) => updateQuery({ text: event.target.value })}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape" && query.text) {
+                    event.preventDefault();
+                    updateQuery({ text: "" });
+                  }
+                }}
+                placeholder={t(locale, "searchPlaceholder")}
+              />
               <kbd>⌘ K</kbd>
             </label>
             <label className="sort-box">{t(locale, "sortLabel")}
-              <select value={sort} onChange={(event) => setSort(event.target.value as Sort)}>
+              <select value={query.sort} onChange={(event) => updateQuery({ sort: event.target.value as ArchiveSort })}>
                 <option value="recent">{t(locale, "sortRecent")}</option>
+                <option value="changed">{t(locale, "sortRecentChange")}</option>
                 <option value="handle">{t(locale, "sortHandle")}</option>
                 <option value="observations">{t(locale, "sortObservations")}</option>
               </select>
@@ -525,20 +623,77 @@ function Dashboard() {
           </div>
 
           <div className="records-meta">
-            <p>{t(locale, "matchingRecords", { count: visibleUsers.length })}</p>
-            <p>{t(locale, "recentlyRefreshed")} <span>{users[0] ? relativeTime(users[0].lastSeenAt, locale) : t(locale, "neverObserved")}</span></p>
+            <div className="records-meta__filters">
+              <p aria-live="polite">{t(locale, "matchingRecords", { count: visibleUsers.length.toLocaleString(locale) })}</p>
+              {query.relationship !== "all" ? (
+                <button
+                  aria-label={t(locale, "removeFilterAria", { label: relationshipFilterLabel(locale, query.relationship) })}
+                  className={`filter-chip filter-chip--${query.relationship}`}
+                  type="button"
+                  onClick={() => updateQuery({ relationship: "all" })}
+                >
+                  <i aria-hidden="true" />{relationshipFilterLabel(locale, query.relationship)}<span aria-hidden="true">×</span>
+                </button>
+              ) : null}
+              {query.change !== "all" ? (
+                <button
+                  aria-label={t(locale, "removeFilterAria", { label: changeFilterLabel(locale, query.change) })}
+                  className="filter-chip filter-chip--change"
+                  type="button"
+                  onClick={() => updateQuery({ change: "all" })}
+                >
+                  <i aria-hidden="true" />{changeFilterLabel(locale, query.change)}<span aria-hidden="true">×</span>
+                </button>
+              ) : null}
+              {query.text.trim() ? (
+                <button
+                  aria-label={t(locale, "removeFilterAria", { label: query.text.trim() })}
+                  className="filter-chip filter-chip--text"
+                  type="button"
+                  onClick={() => updateQuery({ text: "" })}
+                >
+                  <Icon name="search" />“{query.text.trim()}”<span aria-hidden="true">×</span>
+                </button>
+              ) : null}
+              {filtersActive ? (
+                <button className="records-meta__clear" type="button" onClick={clearFilters}>
+                  {t(locale, "clearFilters")}
+                </button>
+              ) : null}
+            </div>
+            <p>{t(locale, "recentlyRefreshed")} <span>{lastSeenAt ? relativeTime(lastSeenAt, locale) : t(locale, "neverObserved")}</span></p>
           </div>
 
           <div className="record-list">
+            {visibleUsers.length > 0 ? (
+              <div className="record-columns" aria-hidden="true">
+                <span />
+                <span>{t(locale, "columnAccount")}</span>
+                <span>{t(locale, "filterGroupCurrent")}</span>
+                <span>{t(locale, "filterGroupChange")}</span>
+                <span>{t(locale, "columnLastSeen")}</span>
+                <span />
+              </div>
+            ) : null}
             {!loading && visibleUsers.length === 0 ? (
-              <div className="dashboard-empty"><Icon name="eye" /><h2>{t(locale, "emptyDashboardTitle")}</h2><p>{t(locale, "emptyDashboardBody")}</p></div>
+              <div className="dashboard-empty">
+                <Icon name="eye" />
+                <h2>{t(locale, "emptyDashboardTitle")}</h2>
+                <p>{t(locale, "emptyDashboardBody")}</p>
+                {filtersActive ? (
+                  <button type="button" onClick={clearFilters}>{t(locale, "clearFilters")}</button>
+                ) : null}
+              </div>
             ) : null}
             {visibleUsers.map((user, index) => {
-              const display = displayRelationship(user);
+              const change = recordedRelationshipChange(user);
+              const current = user.currentRelationship === "none" || user.currentRelationship === "unknown"
+                ? null
+                : user.currentRelationship;
               const expanded = expandedUser === user.key;
               return (
                 <article
-                  className={`user-record user-record--${display}`}
+                  className={`user-record user-record--${current ?? "unknown"}${change?.pending ? " is-pending" : ""}`}
                   key={user.key}
                   style={{ "--row-index": Math.min(index, 12) } as CSSProperties}
                 >
@@ -557,18 +712,32 @@ function Dashboard() {
                     </span>
                   </a>
                   <div className="user-record__relationship">
-                    <RelationshipPill relationship={display} locale={locale} />
-                    {user.hasChanged && user.previousRelationship ? (
-                      <small>{relationshipPresentation(locale, user.previousRelationship).shortLabel} → {relationshipPresentation(locale, user.currentRelationship).shortLabel}</small>
-                    ) : <small>{relationshipPresentation(locale, user.currentRelationship).description}</small>}
+                    {current ? <RelationshipPill relationship={current} locale={locale} /> : null}
+                    <small>{relationshipPresentation(locale, user.currentRelationship).description}</small>
+                  </div>
+                  <div className="user-record__change">
+                    {change ? (
+                      <>
+                        <span className={`change-tag change-tag--${change.kind}`}>
+                          {relationshipPresentation(locale, change.kind).label}
+                          {change.pending ? <em>{t(locale, "changeFilterPending")}</em> : null}
+                        </span>
+                        <small>
+                          {relationshipPresentation(locale, change.previous).shortLabel} → {relationshipPresentation(locale, change.current).shortLabel}
+                          {change.detectedAt ? ` · ${t(locale, "changeDetectedAt", { time: relativeTime(change.detectedAt, locale) })}` : ""}
+                        </small>
+                      </>
+                    ) : (
+                      <small className="user-record__no-change">{t(locale, "noChangeRecorded")}</small>
+                    )}
                   </div>
                   <div className="user-record__observation">
                     <span><Icon name="clock" />{relativeTime(user.lastSeenAt, locale)}</span>
                     <small>{t(locale, "observationCount", { count: user.observationCount, source: sourceTypeLabel(locale, user.lastSourceType) })}</small>
                   </div>
                   <div className="user-record__actions">
-                    {user.hasChanged ? <button title={t(locale, "acknowledgeChangeTitle")} aria-label={t(locale, "acknowledgeChangeAria")} onClick={() => void acknowledgeChange(user.key)}><Icon name="check" /></button> : null}
-                    <button title={t(locale, "viewHistoryTitle")} aria-label={t(locale, "viewHistoryAria")} className={expanded ? "is-active" : ""} onClick={() => setExpandedUser(expanded ? null : user.key)}><Icon name="history" /></button>
+                    {change?.pending ? <button title={t(locale, "acknowledgeChangeTitle")} aria-label={t(locale, "acknowledgeChangeAria")} onClick={() => void acknowledgeChange(user.key)}><Icon name="check" /></button> : null}
+                    <button title={t(locale, "viewHistoryTitle")} aria-label={t(locale, "viewHistoryAria")} aria-expanded={expanded} className={expanded ? "is-active" : ""} onClick={() => setExpandedUser(expanded ? null : user.key)}><Icon name="history" /></button>
                     <button title={t(locale, "deleteRecordTitle")} aria-label={t(locale, "deleteRecordAria")} onClick={() => void deleteOne(user)}><Icon name="trash" /></button>
                   </div>
                   {expanded && owner !== null ? <div className="user-record__history"><UserHistory viewer={owner} userKey={user.key} locale={locale} /></div> : null}

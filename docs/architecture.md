@@ -42,7 +42,7 @@ flowchart LR
 - 本地化 “Follows you” 文案兜底只匹配整段独立标签（单个文本节点的完整内容），显示名、卡片标题或句子里含有该短语不算；`userFollowIndicator` 仍是首选证据。X 只在对方已关注你时把关注按钮写成 “Follow back” / “フォローバック” / “回关”，该按钮文字等同 follows-you 证据；
 - 只有个人主页自身头部（主栏资料区）缺少 “Follows you” 才视为 `followsYou=false`；同一主页 URL 下的帖子和 UserCell 按普通卡片处理。SPA 切换时若资料头部仍显示另一个 handle，不把新 URL 的 handle 与旧头部配对；
 - 把同一 handle 的候选按证据强度合并；
-- 从本地用户记录的前后基础关系动态推导变化展示：当前已是互关则显示“互关”；当前是我单向关注则默认显示“单向关注”，只有历史比对证明对方曾经关注我、现在我仍关注且对方不再关注才显示“对方取关”；其他单方可归因时显示“你已取关”或“对方拉黑”；明确双方都已取消关注（含 follows-you-only 变为 none）则不显示徽标；无法单方归因的转换保留通用 changed，dock 继续按 `hasChanged` 汇总；
+- 页面徽标、Side Panel 行和档案库关系标签只显示当前已知基础关系（互关、单向关注、关注了你、拉黑了你），不再显示任何变化文案；明确双方都已取消关注（含 follows-you-only 变为 none）则不显示徽标，也不形成变化。关系变化只作为档案数据：`previousRelationship`、`currentRelationship`、`changeDetectedAt` 与待确认的 `hasChanged` 保持不变，由 `recordedRelationshipChange` 仅为档案库推导变化类型：`mutual → following_only` 或 `follows_you_only → following_only` 为“对方取关”，`mutual → follows_you_only` 为“你已取关”，任意已知非拉黑状态变为 `blocked_by` 为“对方把我拉黑”，其余转换一律归为通用“其他变化”，不把我的操作说成对方的操作；确认只清除 `hasChanged`，变化记录保留并可筛选；dock 与 Side Panel 继续按 `hasChanged` 汇总待确认变化；
 - Who-to-follow / 跟隨誰等建议模块的 UserCell 不得把缺少 “Follows you” 写成 `followsYou=false`；DOM 证据不足时保持 unknown，也不接受 page-store 把建议卡填成 none；
 - 将 unknown 保留为短暂内部结果，只用于移除过期徽标；不发送、不收集；
 - 在个人主页把当前 handle 主栏里的明确屏蔽通知作为强证据，即使没有任何帖子；匹配排除用户名、个人简介、帖子正文、嵌套帖子/UserCell 关系表面和扩展自身徽标。已加载实体的 `blocked_by=true` 是不依赖界面语言的同级强证据；两者均覆盖残留的普通关注信号，最终显示 blocked-by；

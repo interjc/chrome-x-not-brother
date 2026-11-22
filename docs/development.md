@@ -45,7 +45,7 @@ npm run dev
 - X 页面观察 dock：`src/content/observer-panel.ts`、`public/content-script.css`；收起球贴右下角，Chat/Grok 上移选择器在 `x-adapter.ts`；同意后展开 dock 的拦截规则状态走 `filter-rules:status`，拦截累计走 `hide-stats:increment`，编辑入口打开侧栏规则页；
 - 工具栏状态与安装引导：`src/background/action-state.ts`、`src/background/service-worker.ts`；
 - Side Panel：`src/ui/sidepanel.tsx`；
-- 管理页：`src/ui/dashboard.tsx`；
+- 管理页：`src/ui/dashboard.tsx`；档案库筛选、分面计数与排序的纯函数模型在 `src/ui/archive-model.ts`；
 - Chrome 选项页：`src/ui/options.tsx`、`src/ui/open-options-tab.ts`、`public/options.html`；右键「选项」应打开侧栏 Options 标签；
 - 可选时间线隐藏：`src/content/timeline-hide.ts`、`public/content-script.css`；
 - 时间线快速加规则：`src/content/quick-rules.ts`，HoverCard 入口贴在名字旁，帖子 `caret` 菜单也可加 handle 规则，保存走 service worker `filter-rules:quick-add`；
