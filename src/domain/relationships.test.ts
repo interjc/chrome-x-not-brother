@@ -6,6 +6,7 @@ import {
   isDisplayedUser,
   isVisibleRelationship,
   mergeUserObservation,
+  recordedRelationshipChange,
   relationshipChangeKind,
   resolveRelationship,
   shouldPersistObservation,
@@ -196,16 +197,18 @@ describe("mergeUserObservation", () => {
 
 describe("relationship change presentation", () => {
   it.each([
-    ["mutual", "following_only", "unfollowed_you", "unfollowed_you"],
-    ["follows_you_only", "following_only", "unfollowed_you", "unfollowed_you"],
+    ["mutual", "following_only", "unfollowed_you", "following_only"],
+    ["follows_you_only", "following_only", "unfollowed_you", "following_only"],
     ["follows_you_only", "none", null, "unknown"],
-    ["mutual", "follows_you_only", "you_unfollowed", "you_unfollowed"],
-    ["mutual", "blocked_by", "blocked_you", "blocked_you"],
-    ["following_only", "blocked_by", "blocked_you", "blocked_you"],
-    ["follows_you_only", "blocked_by", "blocked_you", "blocked_you"],
-    ["following_only", "mutual", null, "mutual"],
-    ["follows_you_only", "mutual", null, "mutual"],
-  ] as const)("describes %s → %s as %s / %s", (previous, current, event, display) => {
+    ["mutual", "follows_you_only", "you_unfollowed", "follows_you_only"],
+    ["mutual", "blocked_by", "blocked_you", "blocked_by"],
+    ["following_only", "blocked_by", "blocked_you", "blocked_by"],
+    ["follows_you_only", "blocked_by", "blocked_you", "blocked_by"],
+    ["following_only", "mutual", "changed", "mutual"],
+    ["follows_you_only", "mutual", "changed", "mutual"],
+    ["following_only", "follows_you_only", "changed", "follows_you_only"],
+    ["blocked_by", "following_only", "changed", "following_only"],
+  ] as const)("records %s → %s as %s and labels the current %s", (previous, current, event, display) => {
     const changed = mergeUserObservation(
       existing(previous),
       observation(current, 2_000),
@@ -214,28 +217,27 @@ describe("relationship change presentation", () => {
     expect(displayRelationship(changed)).toBe(display);
   });
 
-  it("keeps double-action transitions generic", () => {
-    const changed = mergeUserObservation(
-      existing("following_only"),
-      observation("follows_you_only", 2_000),
-    ).user;
-    expect(relationshipChangeKind(changed)).toBeNull();
-    expect(displayRelationship(changed)).toBe("changed");
+  it("badges a fresh card with its current state even when history shows a change", () => {
+    expect(candidateDisplayRelationship("following_only", existing("mutual"))).toBe("following_only");
+    expect(candidateDisplayRelationship("following_only", existing("follows_you_only")))
+      .toBe("following_only");
+    expect(candidateDisplayRelationship("blocked_by", existing("mutual"))).toBe("blocked_by");
+    const stored = mergeUserObservation(existing("mutual"), observation("following_only", 2_000)).user;
+    expect(candidateDisplayRelationship("unknown", stored)).toBe("following_only");
   });
 
-  it("shows one-way following unless history says they used to follow you", () => {
-    expect(displayRelationship(existing("following_only"))).toBe("following_only");
-    expect(candidateDisplayRelationship("following_only", undefined)).toBe("following_only");
-    const fromBlocked = mergeUserObservation(
-      existing("blocked_by"),
-      observation("following_only", 2_000),
-    ).user;
-    expect(fromBlocked.hasChanged).toBe(true);
-    expect(relationshipChangeKind(fromBlocked)).toBeNull();
-    expect(displayRelationship(fromBlocked)).toBe("following_only");
-    expect(candidateDisplayRelationship("following_only", existing("follows_you_only")))
-      .toBe("unfollowed_you");
-    expect(candidateDisplayRelationship("following_only", existing("mutual")))
-      .toBe("unfollowed_you");
+  it("keeps a reviewed change in the record without the pending flag", () => {
+    const changed = mergeUserObservation(existing("mutual"), observation("following_only", 2_000)).user;
+    expect(recordedRelationshipChange(changed)).toEqual({
+      kind: "unfollowed_you",
+      previous: "mutual",
+      current: "following_only",
+      detectedAt: 2_000,
+      pending: true,
+    });
+    const reviewed = { ...changed, hasChanged: false };
+    expect(recordedRelationshipChange(reviewed)?.pending).toBe(false);
+    expect(recordedRelationshipChange(reviewed)?.kind).toBe("unfollowed_you");
+    expect(recordedRelationshipChange(existing("mutual"))).toBeNull();
   });
 });

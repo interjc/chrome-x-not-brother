@@ -22,7 +22,7 @@ npm run skills:validate
 - 当前登录用户排除、评论区明确 blocked-by、无帖子 profile 的英/日/简中/繁中屏蔽通知、`blocked_by=true` 覆盖残留“关注了你”、profile 内嵌其他账号关系不污染当前账号、三项互动受限加同层基线、无计数浮窗独立证据，以及普通 unavailable、用户名/简介/正文/扩展旧 badge 防误判；
 - 工具栏 `ON` / `!` 三种状态，以及 X 页面观察 dock 的完整面板/悬浮球切换；同意后展开 dock 显示拦截规则应用状态、本页/累计拦截与编辑入口，未同意或收起为球时不出现该行；
 - 已知关系变化；
-- `following_only → mutual` 与 `follows_you_only → mutual` 显示互关；首次或非取关历史的 `following_only` 显示单向关注；`mutual → following_only` 与 `follows_you_only → following_only` 显示对方取关；`follows_you_only → none` 与其他明确双方都已取消关注不显示徽标；`mutual → follows_you_only` 和已知正常关系 `→ blocked_by` 分别显示你已取关和对方拉黑；双方同时变化保持通用 changed，确认后恢复基础关系；
+- 页面徽标与档案库关系标签只显示当前关系：`following_only → mutual` 与 `follows_you_only → mutual` 显示互关，`mutual → following_only` 显示单向关注，已知正常关系 `→ blocked_by` 显示拉黑了你；`follows_you_only → none` 与其他明确双方都已取消关注不显示徽标、不形成变化；档案库变化类型：`mutual → following_only` 与 `follows_you_only → following_only` 为对方取关，`mutual → follows_you_only` 为你已取关，已知非拉黑状态 `→ blocked_by` 为对方把我拉黑，其余转换（含双方同时变化、`blocked_by → following_only`、`→ mutual`）为通用其他变化；确认只清除 `hasChanged`，变化记录仍可筛选；
 - 「跟隨誰 / Who to follow」建议卡只有 Follow 按钮时保持 unknown，不得写成 none 或对方取关；有 Follows you 时仍可收集 follows-you-only；
 - unknown 不覆盖已知关系、不显示、不发送，旧 unknown 被清理；
 - 只有转发不可用、互动控件缺失（即使同页有正常对照）、空 testid 壳、滚动 `pointer-events: none`、`aria-hidden` 虚拟单元格、图片浮层借用背后时间线、三项受限但缺少同层对照、正常浮窗含计数时不误判 blocked-by；
@@ -74,7 +74,7 @@ npm run skills:validate
 17. 保持正常滚动一分钟，确认没有重复徽标、重复 dock、明显布局跳动或控制台异常。打开含大量 @提及的帖子详情（例如主贴和跟帖点名很多人的线程），确认页面保持可滚动、只给帖子作者打标、正文提及没有徽标。
 18. 分别以浅色和暗黑系统主题检查扩展页，再切换 X 主题检查页面徽标、完整 dock 与悬浮球。
 19. 打开 Side Panel，核对计数和最近列表；依次点击四个分类数字与变化提示，确认列表、标题、`aria-pressed` 和空筛选状态正确，再次点击同一分类恢复全部。用鼠标、Enter 和 Space 激活分类，点击或键盘激活具体用户，确认只在新标签页打开对应 `https://x.com/<handle>` Profile。
-20. 打开完整管理页，测试搜索、筛选、排序、展开历史与确认变化；核对互关覆盖显示，首次单向关注显示“单向关注”，以及仅在历史比对成立时显示“对方取关”“你已取关”“对方拉黑”；确认其他双方都已取消关注的账号不再出现徽标和概览计数，dock 仍只显示一个变化合计数字，确认事件后徽标恢复当前基础关系。
+20. 打开完整管理页，测试四张概览卡片快捷筛选与高亮、“当前关系”与“关系变化”两组筛选的组合与分面计数、搜索（忽略开头 @、Esc 清空、⌘K / Ctrl+K 聚焦）、四种排序（含最近变化）、筛选标签移除与“清除筛选”、展开历史中的变化标记与确认变化；核对页面徽标、Side Panel 和档案关系标签只显示当前关系，“关系变化”列仅在历史比对成立时显示“对方取关”“你已取关”“对方把我拉黑”，其余显示“关系发生变化”，从没变过的显示“无变化记录”；确认其他双方都已取消关注的账号不再出现徽标和概览计数，dock 仍只显示一个变化合计数字；确认后“待确认”标记和行底色消失，变化记录仍可按“有变化记录”筛选。窄屏下两组筛选变为横向滚动行，排序仍可见。
 21. 导出 JSON/CSV；确认没有 unknown，CSV 的关系标签使用当前插件语言，再在备份后测试 JSON 合并导入。
 22. 暂停观察器，确认工具栏变灰色 `!`、徽标移除且不再收集；恢复后确认继续工作。
 23. 导出备份后测试删除单条和清空全部本地数据。

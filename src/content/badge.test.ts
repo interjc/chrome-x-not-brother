@@ -10,9 +10,10 @@ describe("relationship badge", () => {
     const anchor = document.createElement("div");
     anchor.innerHTML = '<span>Name</span><a href="/Alice"><span>@Alice</span></a>';
     setRelationshipBadge(anchor, "mutual", "Alice", "zh-CN");
-    setRelationshipBadge(anchor, "changed", "Alice", "zh-CN");
+    setRelationshipBadge(anchor, "following_only", "Alice", "zh-CN");
     expect(anchor.querySelectorAll("[data-xro-badge]")).toHaveLength(1);
-    expect(anchor.textContent).toContain("关系变化");
+    expect(anchor.textContent).toContain("单向关注");
+    expect(anchor.textContent).not.toContain("互关");
     expect(anchor.innerHTML).not.toContain("script");
     expect(anchor.querySelector("[data-xro-badge] + a")).not.toBeNull();
   });
@@ -240,17 +241,23 @@ describe("relationship badge", () => {
     expect(anchor.querySelector("[data-xro-badge]")).toBeNull();
   });
 
-  it("keeps a newly blocked change prominent while showing the event label", () => {
+  it("labels only the current state, never the change that led there", () => {
     const anchor = document.createElement("div");
     anchor.innerHTML = '<a href="/Alice">@Alice</a>';
-    setRelationshipBadge(anchor, "blocked_you", "Alice", "zh-CN");
+    setRelationshipBadge(anchor, "blocked_by", "Alice", "zh-CN");
 
-    expect(anchor.dataset.xroRelationship).toBe("blocked_you");
+    expect(anchor.dataset.xroRelationship).toBe("blocked_by");
     expect(anchor.classList.contains("xro-identity-mark--blocked_by")).toBe(true);
-    expect(anchor.querySelector("[data-xro-badge='blocked_you']")?.textContent).toBe("对方拉黑");
+    expect(anchor.querySelector("[data-xro-badge='blocked_by']")?.textContent).toBe("拉黑了你");
+
+    const oneWay = document.createElement("div");
+    oneWay.innerHTML = '<a href="/Bob">@Bob</a>';
+    setRelationshipBadge(oneWay, "following_only", "Bob", "zh-CN");
+    expect(oneWay.querySelector("[data-xro-badge='following_only']")?.textContent).toBe("单向关注");
+    expect(oneWay.classList.contains("xro-identity-mark--following_only")).toBe(true);
   });
 
-  it("shows mutual instead of a follow-back event label", () => {
+  it("shows mutual for a mutual relationship", () => {
     const anchor = document.createElement("div");
     anchor.innerHTML = '<a href="/Alice">@Alice</a>';
     setRelationshipBadge(anchor, "mutual", "Alice", "zh-CN");
@@ -258,23 +265,10 @@ describe("relationship badge", () => {
     expect(anchor.querySelector("[data-xro-badge='mutual']")?.textContent).toBe("互关");
   });
 
-  it("marks one-way unfollow only when the viewer still follows", () => {
-    const stillFollowing = document.createElement("div");
-    stillFollowing.innerHTML = '<a href="/Alice">@Alice</a>';
-    setRelationshipBadge(stillFollowing, "unfollowed_you", "Alice", "zh-CN", "following_only");
-    expect(stillFollowing.classList.contains("xro-identity-mark--following_only")).toBe(true);
-
-    const theyUnfollowed = document.createElement("div");
-    theyUnfollowed.innerHTML = '<a href="/Bob">@Bob</a>';
-    setRelationshipBadge(theyUnfollowed, "unfollowed_you", "Bob", "zh-CN", "none");
-    expect(theyUnfollowed.querySelector("[data-xro-badge='unfollowed_you']")?.textContent).toBe("对方取关");
-    expect(theyUnfollowed.classList.contains("xro-identity-mark--following_only")).toBe(false);
-  });
-
   it("removes injected badges without touching the host content", () => {
     const root = document.createElement("div");
     root.textContent = "Host";
-    setRelationshipBadge(root, "unknown", "Alice", "en");
+    setRelationshipBadge(root, "mutual", "Alice", "en");
     removeRelationshipBadges(root);
     expect(root.textContent).toBe("Host");
   });
@@ -282,7 +276,7 @@ describe("relationship badge", () => {
   it("removes one stale unknown badge from its identity area", () => {
     const root = document.createElement("div");
     root.innerHTML = '<a href="/Alice">@Alice</a>';
-    setRelationshipBadge(root, "unknown", "Alice", "en");
+    setRelationshipBadge(root, "mutual", "Alice", "en");
     removeRelationshipBadge(root);
     expect(root.textContent).toBe("@Alice");
   });

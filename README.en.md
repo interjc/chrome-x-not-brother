@@ -8,8 +8,8 @@ The relationship archive stays on this device. It is not uploaded. Small prefere
 
 ## Features
 
-- **Relationship badges**: mutual follow, you follow only, they follow you, they blocked you, and attributable relationship changes.
-- **Local archive**: review, filter, and search accounts you have already seen, in the side panel and the full fieldbook.
+- **Relationship badges**: mutual follow, you follow only, they follow you, they blocked you. Badges always show the relationship as it is now.
+- **Local archive**: review, filter, and search accounts you have already seen, in the side panel and the full fieldbook; relationship changes (they unfollowed, you unfollowed, they blocked you, and so on) are recorded in the fieldbook.
 - **Preference sync**: small preferences can sync across Chrome profiles that are signed in with Chrome Sync enabled. The relationship archive and the current X handle do not sync.
 - **Optional timeline filters**: hide posts from muted accounts, from accounts already known to have blocked you, or from posts that match local custom filter rules. All of these stay off by default.
 - **Chinese, English, and Japanese UI**: follows the browser language, or you can pin Simplified Chinese, English, or Japanese in Options.
@@ -141,7 +141,7 @@ Toolbar icon states:
 
 Browse X normally. Home usually has enough already-loaded relationship fields. Likes, reposts, and follows on the notifications page get the same badge beside the person's name. If a card still has no badge, hover the author's avatar or ID and wait for X's own relationship hover card. Missing evidence does not show an "unknown" badge and is not archived.
 
-Change labels stay specific when they can: they unfollowed, you unfollowed, they blocked you. When a single-sided action cannot be inferred, the badge shows **Changed**.
+Badges show only the current relationship: Mutual, One-way, Follows you, Blocked you. When neither of you follows the other, there is no badge. When a relationship changes, the badge simply switches to the new state; the change itself is recorded in the [Relationship fieldbook](#relationship-fieldbook).
 
 ### Side panel
 
@@ -237,6 +237,15 @@ Full fields, size limits, and validation are in [Custom filter rules v1](docs/en
 ### Relationship fieldbook
 
 The bottom of the side panel opens the full archive: search, filter, sort, review changes, inspect history, export JSON/CSV, import a JSON backup, delete one record, or clear the selected account's archive.
+
+- **The four cards at the top** are shortcuts too: click one to see everyone, only accounts you follow one-way, only accounts that blocked you, or only changes to review.
+- **The relationship index** on the left has two filter groups you can combine: **Current relationship** (mutual, you follow only, follows you, blocked you) and **Relationship changes** (has a recorded change, to review, they unfollowed, you unfollowed, they blocked you, other changes). The number after each option is how many people you will see if you pick it.
+- **Search** by handle or display name, with or without the leading @. Esc clears it and ⌘K / Ctrl+K jumps to it. Sort by recently observed, recently changed, handle, or observation count.
+- Active filters appear as chips. Remove one with its ×, or click **Clear filters** to reset them all.
+- **Each row** has a current-relationship column and a relationship-changes column. The change column names the kind of change plus "previous → current · when it was seen". A change you have not reviewed yet carries a **To review** marker and a light rose tint. Clicking the check mark removes the marker; the change record stays, so you can still filter for it later.
+- Expanded history highlights the observations where the relationship changed.
+
+A specific kind is used only when it is clear who acted: mutual or follows-you to one-way is **They unfollowed**, mutual to follows-you is **You unfollowed**, and anything to blocked is **They blocked you**. Everything else reads **Relationship changed**, so your own action is never pinned on the other person.
 
 Export JSON, one file per X account, before you switch computers or clear data. Chrome does not sync this archive across profiles.
 

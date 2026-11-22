@@ -1,4 +1,4 @@
-import type { DisplayRelationship, RelationshipKind } from "../domain/types";
+import type { VisibleRelationship } from "../domain/types";
 import { relationshipPresentation, type AppLocale } from "../i18n";
 import {
   iterateOutsideUserContent,
@@ -327,22 +327,15 @@ function clearIdentityMark(anchor: HTMLElement): void {
 
 export function setRelationshipBadge(
   anchor: HTMLElement,
-  relationship: DisplayRelationship,
+  relationship: VisibleRelationship,
   handle: string,
   locale: AppLocale,
-  currentRelationship?: RelationshipKind,
 ): void {
   const card = compactAvatarCard(anchor);
   const searchRoot = card ?? anchor;
   const existing = searchRoot.querySelector<HTMLElement>(`[${BADGE_ATTRIBUTE}]`);
   const badge = existing ?? document.createElement("span");
   const presentation = relationshipPresentation(locale, relationship);
-  const identityRelationship = relationship === "blocked_you" || relationship === "blocked_by"
-    ? "blocked_by"
-    : relationship === "following_only" ||
-        (relationship === "unfollowed_you" && currentRelationship === "following_only")
-      ? "following_only"
-      : relationship;
   const identity = identityElement(anchor, handle);
   clearIdentityMark(anchor);
   if (card) {
@@ -351,10 +344,10 @@ export function setRelationshipBadge(
   }
   if (
     !card &&
-    (identityRelationship === "following_only" || identityRelationship === "blocked_by")
+    (relationship === "following_only" || relationship === "blocked_by")
   ) {
     anchor.setAttribute(IDENTITY_ATTRIBUTE, relationship);
-    anchor.classList.add("xro-identity-mark", `xro-identity-mark--${identityRelationship}`);
+    anchor.classList.add("xro-identity-mark", `xro-identity-mark--${relationship}`);
   }
   badge.setAttribute(BADGE_ATTRIBUTE, relationship);
   badge.className = `xro-badge xro-badge--${relationship}`;

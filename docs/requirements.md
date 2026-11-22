@@ -30,7 +30,7 @@
 19. 已完整加载并显示的作者浮窗只可补充同 handle 卡片的普通关系证据：`*-unfollow` 表示我已关注，`*-follow` 表示我未关注，`userFollowIndicator` 表示 TA 关注了我；取关控件存在但 follow indicator 不存在时可识别为我单向关注。不得跨作者复用浮窗证据，`hidden`、`inert`、`aria-hidden` 或样式隐藏的旧浮窗不得参与判断。
 20. 观察器运行但本地记录为零时，X 页面 dock 与 Side Panel 空状态必须明确提示：首页时间线和评论区需要用户悬停作者头像或 ID，由 X 显示关系浮窗后才能被动读取；不得让用户误以为观察器已扫描所有作者但没有结果。
 21. 页面识别采用混合实时机制：MutationObserver 响应新增节点、关键属性与关系文案变化，观察器运行且页面可见时每 2 秒进行一次兜底复扫，页面重新获得焦点或从后台恢复时立即复扫。复扫必须单航执行并复用签名去重，不得因轮询重复写历史；签名只能在 service worker 确认持久化后提交，使瞬时消息失败可以在后续复扫重试；后台隐藏页不做定期复扫。一个 X 标签页的新观察或档案页的确认、删除、导入、清空必须由 service worker 广播缓存失效，使其他已打开 X 标签页及时回标或移除本地已知关系。已打开的 Side Panel 与档案页必须监听设置存储变化，使当前 viewer 排除和观察开关跨扩展上下文即时一致。
-22. 未确认的关系变化必须尽量显示可归因的具体事件：当前已是 `mutual` 时一律显示“互关”。当前是我单向关注时默认显示“单向关注”；只有历史比对证明对方曾经关注我、现在我仍关注且对方不再关注才显示“对方取关”：`mutual → following_only` 或 `follows_you_only → following_only`。`mutual → follows_you_only` 显示“你已取关”，任意已知非 blocked 状态变为 `blocked_by` 显示“对方拉黑”。明确的 `following=false` 且 `followsYou=false` 是内部可持久化的 `none`：可覆盖旧的可见关系，但不得新建用户、不得显示徽标、不得计入概览，包括 `follows_you_only → none`。Who-to-follow / 跟隨誰等建议卡上只有 Follow 按钮时是 unknown，不是 none。双方同时变化、无法单方归因的切换保留通用“关系变化”，不得把用户自己的关注/取关误说成对方行为。X 页面观察 dock 只用一个“有变化”数字汇总所有未确认事件；Side Panel、页面徽标和档案记录显示具体事件。
+22. 页面徽标、Side Panel 行和档案库的关系标签只显示当前关系：`mutual` 显示“互关”、`following_only` 显示“单向关注”、`follows_you_only` 显示“关注了你”、`blocked_by` 显示“拉黑了你”，徽标不再表达任何变化。明确的 `following=false` 且 `followsYou=false` 是内部可持久化的 `none`：可覆盖旧的可见关系，但不得新建用户、不得显示徽标、不得计入概览，也不得形成变化，包括 `follows_you_only → none`。Who-to-follow / 跟隨誰等建议卡上只有 Follow 按钮时是 unknown，不是 none。关系变化只作为档案数据保存与展示，档案库尽量标出可归因的具体变化：`mutual → following_only` 或 `follows_you_only → following_only` 为“对方取关”，`mutual → follows_you_only` 为“你已取关”，任意已知非 blocked 状态变为 `blocked_by` 为“对方把我拉黑”；其余转换（变为互关、双方同时变化、`blocked_by → following_only` 等）一律归为通用“其他变化”，不得把用户自己的关注/取关误说成对方行为。确认变化只清除待确认标记，变化记录（之前 → 现在、发现时间）保留并可在档案库筛选。X 页面观察 dock 只用一个“有变化”数字汇总所有待确认变化，Side Panel 保留待确认变化提示。
 23. Side Panel 的互关、我单向关注、TA 关注了我、TA 拉黑了我分类数字必须是键盘可达的筛选按钮；变化提示也可筛选全部未确认变化。再次点击当前分类恢复全部最近观察，空分类显示明确空状态。点击具体用户整行必须由该用户手势在新标签页打开其标准 X Profile；档案库的头像、显示名和 @handle 也必须打开同一资料。不得自动打开、预取或遍历资料页。
 24. 可选时间线过滤默认关闭：彻底隐藏已静音账号（即使互关），以及隐藏扩展已经确认拉黑了你的账号。作用于首页、搜索、通知和帖子详情/评论区中的帖子单元格；个人主页、浮窗和关注列表保持可见。开关出现在 Chrome Options/选项页、Side Panel 和关系档案库，三处通过 `chrome.storage.sync` 同步。过滤只改变当前浏览器显示，不点击静音/拉黑，不枚举完整名单，也不把静音列表写入关系数据库。
 25. 小型偏好使用 `chrome.storage.sync` 跟随用户启用的 Chrome Sync；未登录 Chrome、关闭同步或离线时仍作为本机设置工作。关系 users/observations 和当前 X `viewerHandle` 不同步：前者留在 IndexedDB，后者留在 `chrome.storage.local`。旧 local 设置只在 sync 无值时迁入，不能覆盖另一设备已有的 sync 设置。
@@ -52,7 +52,7 @@
 - 页面插入的徽标不使用 `innerHTML`，重复扫描不会重复插入同一徽标。
 - 当前登录 handle 不得成为 observation；普通“帖子不可用”、用户自己写出的“blocked you”文字和仅转发不可用不得触发 blocked-by。
 - content script 不直接写页面 origin 的 IndexedDB；观察通过 service worker 写入扩展数据库。
-- 已知关系变化创建历史并标记 changed；内部 unknown 在持久化前被丢弃，旧 unknown 数据自动清理。
+- 已知关系变化创建历史并标记待确认（`hasChanged`）；确认后变化记录保留；内部 unknown 在持久化前被丢弃，旧 unknown 数据自动清理。
 - 管理页可完成确认变化、查看历史、导出、导入、删除单个记录和清空全部本地数据。
 - 自定义规则的三种类型、启停、到期与 OR 语义有单元测试；无效/未知字段、重复 id/handle、不安全正则、超过 1 MiB 的文件、非 HTTPS URL、多 JSON Gist 和被拒绝的 host permission 都必须安全失败且不覆盖现有规则。
 - 生产 Manifest 仅匹配 `https://x.com/*`，常驻 API 权限只有 `contextMenus`、`storage`、`sidePanel`，且不包含 `tabs`、`scripting`、`cookies` 或 `webRequest` 权限。
@@ -62,5 +62,5 @@
 - X 页面 dock 的完整面板与悬浮球可双向切换，键盘可达，并在浅色、暗黑和窄屏下保持可用；未同意时展开面板、收起状态和 action 右键菜单均有明确入口，且入口不能绕过披露直接同意。
 - 评论区卡片本身没有关系提示时，匹配作者的完整浮窗仍可补全 ordinary relationship；不匹配的浮窗不得改变该卡片结果。
 - MutationObserver 漏掉节点复用、属性更新或异步浮窗时，2 秒可见页兜底复扫能够恢复标注；多个触发同时发生时不并发扫描、不重复写 observation，未确认的消息仍可重试，扩展上下文失效后停止全部 Observer、定时器与焦点/Chrome 事件监听。
-- 关系变化从已有 `previousRelationship`、`currentRelationship` 和 `hasChanged` 动态推导三类可归因事件，不改变数据库 schema；确认变化后页面恢复显示当前基础关系，dock 的变化总数相应减少。
+- 档案库的变化类型从已有 `previousRelationship`、`currentRelationship`、`hasChanged` 与 `changeDetectedAt` 动态推导三类可归因事件和通用“其他变化”，不改变数据库 schema；页面徽标始终只显示当前基础关系；确认变化后 dock 的变化总数相应减少，档案库仍可按变化记录筛选。
 - Side Panel 分类筛选暴露 `aria-pressed` 与明确标签，用户行是标准安全链接；筛选不改变档案，打开 Profile 只发生在用户点击或键盘激活时。

@@ -798,15 +798,11 @@ function annotate(candidates: ExtractedCandidate[]): void {
       removeRelationshipBadge(candidate.anchor);
       continue;
     }
-    const currentRelationship = isVisibleRelationship(candidate.observation.relationship)
-      ? candidate.observation.relationship
-      : stored?.currentRelationship;
     setRelationshipBadge(
       candidate.anchor,
       relationship,
       candidate.observation.handle,
       locale,
-      currentRelationship,
     );
   }
 }
