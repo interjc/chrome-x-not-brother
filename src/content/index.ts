@@ -109,6 +109,7 @@ const CACHED_STATE_TTL_MS = 30_000;
 const observationSignatures = createObservationSignatureTracker();
 const recordCache = new Map<string, UserRecord>();
 const requestedUserKeys = new Set<string>();
+const followingControls = new Map<string, boolean>();
 const muteMemory = createMuteMemory();
 let latestPageUsers = new Map<string, PageUserRelationship>();
 let currentUrl = location.href;
@@ -168,15 +169,15 @@ let announcedViewer: string | null = null;
 
 /**
  * Each signed-in account has its own archive. When X switches accounts in place,
- * drop the previous account's records and sent signatures so the new archive is
- * queried and written from scratch.
+ * drop the previous account's records, follow-control memory, and sent
+ * signatures so the new archive is queried and written from scratch.
  */
-function syncArchiveViewer(): void {
-  const viewer = pageViewerHandle();
+function syncArchiveViewer(viewer: string | null): void {
   if (viewer === archiveViewer) return;
   archiveViewer = viewer;
   recordCache.clear();
   requestedUserKeys.clear();
+  followingControls.clear();
   observationSignatures.reset();
   latestSummary = null;
 }
@@ -620,6 +621,7 @@ function stopContentScript(): void {
   filterStatusLoading = null;
   filterStatusLoadingFor = null;
   latestPageUsers = new Map();
+  followingControls.clear();
   keywordWatcher?.stop();
   keywordWatcher = null;
   document.removeEventListener("click", handleTweetCaretClick, true);
@@ -841,7 +843,6 @@ async function processPage(): Promise<void> {
   const settings = await readSettings();
   if (stopped) return;
   latestSettings = settings;
-  syncArchiveViewer();
   if (settings.consentVersion >= CURRENT_CONSENT_VERSION && !filterStatusIsFresh()) {
     try {
       await refreshFilterStatus();
@@ -858,9 +859,12 @@ async function processPage(): Promise<void> {
     }
     if (stopped) return;
   }
+  const viewerHandle = pageViewerHandle();
+  syncArchiveViewer(viewerHandle);
   renderPanel(settings);
   const hasConsent = settings.consentVersion >= CURRENT_CONSENT_VERSION;
   const hidingEnabled = timelineHidingEnabled(settings);
+  if (!hasConsent || !settings.observerEnabled) followingControls.clear();
   if (!hasConsent) {
     removeRelationshipBadges();
     revealAllHiddenTweets();
@@ -879,7 +883,6 @@ async function processPage(): Promise<void> {
   if (latestSummary === null || Date.now() - latestSummaryReadAt > 30_000) {
     void refreshSummary();
   }
-  const viewerHandle = pageViewerHandle();
   const viewerKey = viewerHandle ?? settings.viewerHandle;
   const scanGeneration = evidenceGeneration;
   const scanHref = location.href;
@@ -891,9 +894,16 @@ async function processPage(): Promise<void> {
     window,
     [...new Set(candidates.map((item) => item.observation.userKey))],
   );
-  rememberPageUsers(pageUsers);
-  applyPageStoreRelationships(candidates, latestPageUsers);
   if (stopped) return;
+  if (viewerHandle !== pageViewerHandle()) {
+    scheduleProcess();
+    return;
+  }
+  rememberPageUsers(pageUsers);
+  const controlMemory = viewerHandle && settings.observerEnabled
+    ? { followingControls, freshPageUsers: pageUsers }
+    : undefined;
+  applyPageStoreRelationships(candidates, latestPageUsers, controlMemory);
   const collectableCandidates = candidates.filter((item) =>
     isCollectableRelationship(item.observation.relationship),
   );

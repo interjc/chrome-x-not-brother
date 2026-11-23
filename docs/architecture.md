@@ -48,6 +48,7 @@ flowchart LR
 - 在个人主页把当前 handle 主栏里的明确屏蔽通知作为强证据，即使没有任何帖子；匹配排除用户名、个人简介、帖子正文、嵌套帖子/UserCell 关系表面和扩展自身徽标。已加载实体的 `blocked_by=true` 是不依赖界面语言的同级强证据；两者均覆盖残留的普通关注信号，最终显示 blocked-by；
 - 在评论线程将三项互动均已渲染且明确禁用、并与同一浮层或页面层的正常对照组合，生成 `blocked-interaction-restriction`；空壳、滚动锁定和虚拟化隐藏单元格保持 unknown；图片查看器不得借用背后时间线当对照；将完整加载但缺少 following/follower 链接的已显示浮窗归一化为独立的 `blocked-profile-summary-restriction`；
 - 将完整加载的可见浮窗按 handle 精确配给底层作者卡片，并用 `*-follow`、`*-unfollow` 和 `userFollowIndicator` 补充普通关系事实；
+- 内容脚本按 handle 在当前登录账号的页面内存中保留最近一次明确的关注按钮状态。关闭浮窗后，该状态继续填补缺少关注控件的卡片，直到浮窗关闭后的新页面数据确认同一状态，或新的可见控件更新它。这样，通知行的旧页面实体不会把刚回关的互关徽标和档案记录改回「关注了你」。对方是否关注你仍独立取证，明确的拉黑证据仍优先；
 - 从首页时间线的 status permalink、作者头像和去掉格式字符的 `@handle` 识别作者身份；没有关注控件时仍输出内部 unknown，供本地档案回标，不把它当成未关注；帖子正文里的 @提及不是作者；
 - 通知页的点赞、转帖和关注活动行使用 `data-testid="notification"`。参与者只取该行头像（`UserAvatar-Container-<handle>` 或其资料链接），徽标放进同一 handle 的显示名链接，没有显示名链接时放进头像链接。活动句（“关注了你”“赞了你的帖子”）不是当前关系；该行上的关注/取关控件和 `userFollowIndicator` 仍有效。没有这些控件时保持 unknown，由当前页已载入的用户实体或本地档案回标。没有头像的预览链接、嵌套帖子里的 @提及不是参与者。同一条通知里的多名参与者不共享一枚关注按钮；
 - 头像只从同 handle 的资料链接或精确 `UserAvatar-Container-<handle>` 读取声明的 X CDN `src` / `srcset`；不读列表 DOM 复用时可能仍是上一账号的 `currentSrc`，不从复合卡片任取第一张图片；再次观察到不同非空 URL 时覆盖该账号的缓存头像；Side Panel 与档案库优先显示这个最近观察值，缺失或失败时按 handle 请求公开头像，再失败显示 handle 首字母；
