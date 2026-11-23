@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { applyPageStoreRelationships, type PageUserRelationship } from "./page-store";
+import {
+  applyPageStoreRelationships, mergePageUserMaps, type PageUserRelationship,
+} from "./page-store";
 import { setRelationshipBadge } from "./badge";
 import { hidableTweetCell } from "./timeline-hide";
 import {
@@ -122,6 +124,44 @@ describe("X frontend without data-testid", () => {
     expect(candidates.map(c => c.observation.handle)).toEqual(["Alice", "Bob"]);
     expect(candidates.every(c => c.observation.relationship === "unknown")).toBe(true);
   });
+
+  it.each([false, true])(
+    "keeps the notification badge after closing a hover card (page agrees while open: %s)",
+    (pageAgreesWhileOpen) => {
+      const doc = fixture(`<div id="urt:notifications:All"><div role="link" data-href="/Alice">
+        ${avatar("Alice")}${avatar("Bob")}<a href="/Alice">Alice Example</a>
+        <span>and others liked your post</span></div></div>`);
+      const followingControls = new Map<string, boolean>();
+      let users = new Map<string, PageUserRelationship>();
+      const scan = (freshPageUsers: Map<string, PageUserRelationship>) => {
+        users = mergePageUserMaps(users, freshPageUsers);
+        const candidates = scanXDocument(doc, "https://x.com/notifications");
+        applyPageStoreRelationships(candidates, users, { followingControls, freshPageUsers });
+        for (const { anchor, observation } of candidates) {
+          if (observation.relationship === "mutual" || observation.relationship === "follows_you_only") {
+            setRelationshipBadge(anchor, observation.relationship, observation.handle, "zh-CN");
+          }
+        }
+        return candidates.map(({ observation }) => observation.relationship);
+      };
+      const following = (value: boolean) => new Map([["alice", entity("Alice", value)]]);
+
+      expect(scan(new Map([...following(false), ["bob", entity("Bob", false)]])))
+        .toEqual(["follows_you_only", "follows_you_only"]);
+      doc.body.insertAdjacentHTML("beforeend", hover("Alice"));
+      expect(scan(following(pageAgreesWhileOpen))).toEqual(["mutual", "follows_you_only"]);
+      doc.querySelector("[data-base-ui-portal]")!.remove();
+
+      // A bridge miss can't confirm the value read while the hover card was open.
+      expect(scan(new Map())).toEqual(["mutual", "follows_you_only"]);
+      expect(scan(following(false))).toEqual(["mutual", "follows_you_only"]);
+      expect(doc.querySelector('a[href="/Alice"] [data-xro-badge]')?.textContent).toBe("互关");
+
+      expect(scan(following(true))).toEqual(["mutual", "follows_you_only"]);
+      expect(scan(following(false))).toEqual(["follows_you_only", "follows_you_only"]);
+      expect(doc.querySelector('a[href="/Alice"] [data-xro-badge]')?.textContent).toBe("关注了你");
+    },
+  );
 
   it.each([
     ['aria-hidden="true"', '<span data-xro-badge="mutual">Mutual</span>'],

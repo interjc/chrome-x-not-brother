@@ -508,11 +508,45 @@ function withPageStoreIdentity(
   return { ...observation, displayName, avatarUrl };
 }
 
+interface FollowingControlMemory {
+  followingControls: Map<string, boolean>;
+  freshPageUsers: ReadonlyMap<string, PageUserRelationship>;
+}
+
+function updateFollowingControlMemory(
+  candidates: ExtractedCandidate[],
+  { followingControls, freshPageUsers }: FollowingControlMemory,
+): void {
+  const liveControls = new Map<string, boolean | null>();
+  for (const { observation, facts, acceptPageStoreRelationship } of candidates) {
+    if (acceptPageStoreRelationship === false || facts?.following == null) continue;
+    const { userKey, evidence } = observation;
+    const following = facts.following;
+    if (!evidence.includes(following ? "following-control" : "follow-control")) continue;
+    const previous = liveControls.get(userKey);
+    liveControls.set(userKey, previous === undefined || previous === following ? following : null);
+  }
+
+  for (const [userKey, following] of liveControls) {
+    if (following === null) followingControls.delete(userKey);
+    else followingControls.set(userKey, following);
+  }
+  // A snapshot taken while the control is mounted can read from the
+  // HoverCard itself. Confirm only with a fresh read after it disappears.
+  for (const [userKey, user] of freshPageUsers) {
+    if (!liveControls.has(userKey) && followingControls.get(userKey) === user.following) {
+      followingControls.delete(userKey);
+    }
+  }
+}
+
 export function applyPageStoreRelationships(
   candidates: ExtractedCandidate[],
   users: Map<string, PageUserRelationship>,
+  controlMemory?: FollowingControlMemory,
 ): void {
-  if (users.size === 0) return;
+  if (controlMemory) updateFollowingControlMemory(candidates, controlMemory);
+  if (users.size === 0 && !controlMemory?.followingControls.size) return;
   for (const candidate of candidates) {
     const pageUser = users.get(candidate.observation.userKey);
     if (pageUser) {
@@ -530,24 +564,30 @@ export function applyPageStoreRelationships(
       continue;
     }
     if (isCollectableRelationship(candidate.observation.relationship)) continue;
-    if (!pageUser) continue;
-    // Fill only the fields the DOM left unknown. A painted follow control or
-    // follow indicator is what the viewer sees now and outranks a store field
-    // that may predate it; it also completes a store entity that omits a field.
+    // A visible control wins. Keep its following value when it disappears
+    // until a new store snapshot confirms it, so stale entities cannot turn
+    // dismissing a HoverCard into an apparent follow/unfollow.
     const dom = candidate.facts;
+    const rememberedFollowing = dom?.following == null
+      ? controlMemory?.followingControls.get(candidate.observation.userKey)
+      : undefined;
+    if (!pageUser && rememberedFollowing === undefined) continue;
+    const following = dom?.following ?? rememberedFollowing;
     const relationship = resolveRelationship({
-      following: dom?.following ?? pageUser.following,
-      followsYou: dom?.followsYou ?? pageUser.followsYou,
+      following: following ?? pageUser?.following ?? null,
+      followsYou: dom?.followsYou ?? pageUser?.followsYou ?? null,
       blockedBy: false,
     });
     if (!isCollectableRelationship(relationship)) continue;
+    const evidence = candidate.observation.evidence.filter((item) => item !== "insufficient-evidence");
+    if (rememberedFollowing !== undefined) {
+      evidence.push(rememberedFollowing ? "following-control" : "follow-control");
+    }
+    if (following == null || dom?.followsYou == null) evidence.push("page-user-entity");
     candidate.observation = {
       ...candidate.observation,
       relationship,
-      evidence: [
-        ...candidate.observation.evidence.filter((item) => item !== "insufficient-evidence"),
-        "page-user-entity",
-      ],
+      evidence,
     };
   }
 }

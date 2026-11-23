@@ -46,6 +46,8 @@ For Home timeline identity, keep fixtures where the display name links to `/hand
 
 For notification activity rows, keep a `data-testid="notification"` fixture whose actors come from `UserAvatar-Container-<handle>`. The badge anchor is the display-name link, or the avatar link when the row has no name link. A historical action sentence plus a Follow button stays unknown. Live unfollow plus `userFollowIndicator` on that single row can still be mutual. Grouped avatars stay separate, and a preview link with no avatar is not an actor.
 
+For follow-back regressions, scan a notification with stale page-store data before, during, and after a matching hover card. Keep the last explicit follow-control value by handle in the signed-in account's page memory until a fresh snapshot confirms it after the control disappears. Include a snapshot that agrees only while the hover card is open and a later genuine following change after the store catches up.
+
 For mention-heavy status threads, keep a fixture whose `tweetText` contains a large `@user` link list. Scanning must return only the post/reply authors, still honor a platform blocked notice outside `tweetText`, and must not treat in-post mentions as identity. Badge placement stays on the author `User-Name` and must not land inside `tweetText`.
 
 Never place credentials in the extension. The current release has no X API or AI integration.

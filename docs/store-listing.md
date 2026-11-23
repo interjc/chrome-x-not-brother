@@ -36,6 +36,10 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 - Adds local Zod-validated blacklist rules for handles, display names, and post content, with expiration, JSON file import/export, and one-time public HTTPS/Gist import behind optional per-site permission.
 - Makes first-run consent easier to find with a prominent entry beside the minimized NB button and an action-icon context-menu shortcut; both open the full disclosure before consent.
 
+### Version 0.7.1 release notes
+
+- Fixes notification badges reverting from Mutual to Follows you when you close the profile hover card after following someone back.
+
 ### Version 0.7.0 release notes
 
 - Badges, Side Panel rows, and archive entries now show only the current relationship: Mutual, One-way, Follows you, or Blocked you. Relationship changes are recorded in the fieldbook instead of replacing the badge, and reviewing a change keeps its record.
@@ -207,6 +211,10 @@ Source code is available at https://github.com/interjc/chrome-x-not-brother. Rep
 
 - 小型偏好可通过用户启用的 Chrome Sync 同步，关系档案和当前 X handle 仍只保存在本机。旧 local 偏好迁移时不会覆盖 Chrome Sync 已有设置。
 - 未同意时，收起后的 NB 悬浮球旁会显示醒目入口，工具栏图标右键菜单也能打开完整隐私说明；入口不会直接代替用户同意。
+
+### 0.7.1 更新说明
+
+- 修复回关后关闭资料悬浮卡时，通知里的徽章从「互关」退回「关注了你」的问题。
 
 ### 0.7.0 更新说明
 
@@ -380,6 +388,10 @@ Chrome のサイドパネルでは概要を確認できます。関係アーカ�
 
 - 小さな設定をユーザーが有効にした Chrome Sync で同期し、関係アーカイブと現在の X ハンドルはローカルに保ちます。旧 local 設定の移行時も、Chrome Sync に既存の設定があれば上書きしません。
 - 未同意の場合、収納した NB ボタンの横に目立つ入口を表示し、ツールバーアイコンの右クリックメニューからも完全なプライバシー説明を開けます。入口だけで同意が確定することはありません。
+
+### 0.7.1 更新内容
+
+- フォローバック後にプロフィールカードを閉じると、通知のバッジが「相互フォロー」から「フォローされています」に戻る問題を修正しました。
 
 ### 0.7.0 更新内容
 
